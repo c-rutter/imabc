@@ -1,0 +1,1 @@
+proxdist <- function(x){1*(min(x)<=3) + 2*(max(x)>=4)}
