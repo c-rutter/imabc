@@ -1,0 +1,39 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# IMABC
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+## Installation
+
+You can install the development version from [GitHub](https://github.com/) with:
+``` r
+# install.packages("devtools")
+# devtools::install_github("jozik/imabc")
+# library(imabc)
+```
+If working on the code, with the repo as your working directory, you can also use:
+``` r
+# devtools::load_all()
+```
+
+## To do
+* Get code working
+* Clean code
+* Document code
+
+
