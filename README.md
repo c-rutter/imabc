@@ -25,6 +25,9 @@ also use:
 
 ## To do
 
-  - Get code working
-  - Clean code
-  - Document code
+- [ ] Draft the IMABC function
+- [ ] Annotate the documentation
+- [ ] Test with the 3 scenarios
+  - [ ] Toy function from EasyABC
+  - [ ] COVID19 function
+  - [ ] Ozik function
