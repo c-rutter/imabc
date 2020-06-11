@@ -1,0 +1,6 @@
+rf.proximal.shift, 0,-0.005,0.05,-0.005,0.05
+rf.adeno.incidence,0,-0.1,0.2,-0.1,0.2
+rf.adeno.growth,0,0,0,0,0
+rf.preclin.trans,0,0,0,0,0
+rf.sojourn.time,0,0,0,0,0
+rf.oc.survival,0,0,0,0,0
