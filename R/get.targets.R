@@ -14,6 +14,8 @@ get.targets <- function(target.specs,
 
   for(i in 1:nrow(target.specs)){
     X = as.data.frame(read_excel(target.file, sheet = target.specs$data[i]))
+    X$binomial=TRUE
+    X$poisson=FALSE
 
     if(grepl('SEER',target.specs$data[i])){
       # SEER data of any type: a particular form is expected
@@ -28,6 +30,9 @@ get.targets <- function(target.specs,
                           byrow=FALSE,ncol=6))
       names(Y)=c('male','min.age','max.age','n','rectal','n.ca')
       Y = mutate(Y, p= n.ca /n)
+      Y$binomial=TRUE
+      Y$poisson=FALSE
+      
       
     }
     
@@ -39,16 +44,16 @@ get.targets <- function(target.specs,
       
     }
     
-    if(target.specs$data[i]=="Pickhardt"){
+    if(target.specs$data[i]=="Pickhardt"|target.specs$data[i]=="PickhardtPlus"){
     # ------------------------------------------------------------------------------------------
     # Pickhardt CTC+Colonoscopy
+      Y = mutate(X, p = n.adeno / n)
+      Y$binomial[Y$min.size==0] = FALSE
+      Y$poisson[Y$min.size==0] = TRUE
       
-      Y = X[X$min.size>0,] # for the moment, just use size distribution
-      Y = mutate(Y, p = n.adeno / n)
-  
       Y$min.size=NULL
       Y$n.adeno=NULL
-      setcolorder(Y,c('p','n'))
+      setcolorder(Y,c('p','n','binomial','poisson'))
   
     }
     
@@ -58,7 +63,7 @@ get.targets <- function(target.specs,
       
       Y = mutate(X, p = n.cancer / n)
       Y$n.cancer=NULL
-      setcolorder(Y,c('p','n'))
+      setcolorder(Y,c('p','n','binomial','poisson'))
   
     }
     
@@ -70,13 +75,15 @@ get.targets <- function(target.specs,
         # calibrate to screen detction in men and women
         Y = mutate(X, p = n.distal.ca / n)
         Y$n.distal.ca=NULL
-        setcolorder(Y,c('male','p','n'))
+        setcolorder(Y,c('male','p','n','binomial','poisson'))
       }
       if(grepl(".overall",target.specs$data[i])){
         # calibrate to just overall screen detection
         n = sum(X$n)
         p = sum(X$n.distal.ca)/n
         Y=data.frame(p= p, n=n)
+        Y$binomial=TRUE
+        Y$poisson=FALSE
       }
     }
     
