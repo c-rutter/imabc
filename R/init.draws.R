@@ -8,5 +8,5 @@ init.draws <- function(N,x.names){
    x[ , (x.names) := as.numeric(NA)]
 
    x
-   
+
 }

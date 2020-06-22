@@ -8,10 +8,9 @@ sourceFolder <- function(folder, recursive = FALSE, local=TRUE, ...){
     stop(simpleError(sprintf('No R files in folder "%s"', folder)))
    }
   src <- invisible(sapply(files, source, local, ...))
-  
+
   message(sprintf('%s files sourced from folder "%s"', ncol(src), folder))
   setwd(wd)
-  
+
 }
 
-                
