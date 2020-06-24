@@ -1,6 +1,7 @@
 #########################################################################################################################
 # Function Start ########################################################################################################
-# imabc <- function(priors, parm_names, targets, dist_func, N_start = 1, seed = 1234, latinHypercube = TRUE) {
+imabc <- function(priors, parm_names, targets, dist_func, N_start = 1, seed = 1234, latinHypercube = TRUE) {
+  # CM NOTE: Not taken care of throughout: Continue.runs
   # Checks --------------------------------------------------------------------------------------------------------------
   # Check all params found in models have priors
   n_parms <- length(parm_names)
@@ -73,10 +74,11 @@
 
   # Main Loop -----------------------------------------------------------------------------------------------------------
   for (i1 in start_iter:end_iter) {
-    if (TRUE) {
-      warning("In Testing iter is set to 1")
-      i1 <- 2
-    }
+    # CM NOTE: used for testing iterations 1 at a time
+    # if (TRUE) {
+    #   warning("In Testing iter is set to 1")
+    #   i1 <- 2
+    # }
     n_in_i <- 0 # CM NOTE: Better names
 
     # If not the first iteration on a continuing run
@@ -93,11 +95,6 @@
       }
 
       # Store results
-      # CM NOTE: 1:n_draw is here because target_dist, etc. is set to N_start and never reduced when the number of draws
-      #   is changed at each iteration... there are two things working against each other here. First, since these are
-      #   updating with each iteration, the ideal is to edit in place so R doesn't make a copy during each iteration
-      #   which is what this is doing, but if n_draw is <<< than N_start, this might create more waste than it is really
-      #   worth (waste in terms of unused memory and calculation steps)
       target_dist[1:n_draw, (target_names) := res$ll]
       sim_parm[1:n_draw, (parm_names) := res$sp]
       total_draws <- total_draws + n_draw
@@ -108,12 +105,6 @@
       # Count the good points: points associated with positive distances
       target_dist$n_good[1:n_draw] <- rowSums(target_dist[1:n_draw, (target_names), with = FALSE] >= 0, na.rm = TRUE)
       n_in_i <- sum(target_dist$n_good[target_dist$step <= N_centers] == n_targets, na.rm = TRUE)
-
-      # Check for acceptable parms
-      if (n_in + n_in_i == 0) {
-        if (print.status) { print("No parms to work from") }
-        break
-      }
 
       # replace re-simulated targets for center draws in good.* matrices
       # and recalculate p-value and distance
@@ -149,33 +140,30 @@
 
         # CM NOTE: Not worked on yet
         # Update good draw distance and stopping criteria
-        if (length(keep_draws) > 0) {
-          # if there are any centers that are kept, recalculate
-          # total distance and alpha-levels
-          good_target_dist[draw %in% keep.draws,]$tot.dist =
-            get.updating.dist(x=good_target_dist[draw %in% keep.draws,],
-                              update.names)
-
-          if(any(target.specs$update.alpha)){
-            good_target_dist[draw %in% keep.draws,]$alpha =
-              get.alpha(sim.p=good_sim_parm[draw %in% keep.draws,],
-                        sim.p.names=update.target.names,
-                        target.data=calib.targets,
-                        specs=target.specs[target.specs$update.alpha,])
-          }else{
-            good_target_dist$alpha = get.alpha(sim.p=good_sim_parm,
-                                               sim.p.names=calib.target.names,
-                                               target.data=calib.targets,
-                                               specs=target.specs)
-          }
-        } # length(keep_draws) > 0
+        # if (length(keep_draws) > 0) {
+        #   # if there are any centers that are kept, recalculate
+        #   # total distance and alpha-levels
+        #   good_target_dist[draw %in% keep.draws,]$tot.dist =
+        #     get.updating.dist(x=good_target_dist[draw %in% keep.draws,],
+        #                       update.names)
+        #
+        #   if(any(target.specs$update.alpha)){
+        #     good_target_dist[draw %in% keep.draws,]$alpha =
+        #       get.alpha(sim.p=good_sim_parm[draw %in% keep.draws,],
+        #                 sim.p.names=update.target.names,
+        #                 target.data=calib.targets,
+        #                 specs=target.specs[target.specs$update.alpha,])
+        #   }else{
+        #     good_target_dist$alpha = get.alpha(sim.p=good_sim_parm,
+        #                                        sim.p.names=calib.target.names,
+        #                                        target.data=calib.targets,
+        #                                        specs=target.specs)
+        #   }
+        #
+        # } # length(keep_draws) > 0
 
         # Remove bad draws
         if (length(remove_draws) > 0) {
-          # if (print.status) {
-          #   print(paste0("removing centers as good draws:",
-          #                paste0(remove.draws,collapse=", ")))
-          # }
           # Remove bad draws
           good_parm_draws[draw %in% remove_draws, names(good_parm_draws) := NA]
           good_sim_parm[draw %in% remove_draws, names(good_sim_parm) := NA]
@@ -210,25 +198,25 @@
           # CM NOTE: Not worked on yet
           # keep the N.store best draws (largest alpha level & smallest distance)
           # setorder(target_dist, -alpha, tot_dist, na.last = TRUE)
-          add.draws = target.dist$draw[1:N.store]
-          setorder(target.dist,draw,na.last=TRUE)  # likely an unnecessary sort
-          good_target_dist <- target.dist[draw %in% add.draws,]
-          good_parm_draws  <- parm.draws[draw %in% add.draws,]
-          good_sim_parm    <- sim.parm[draw %in% add.draws,]
-          add.row.range = 1:N.store
+          # add.draws = target.dist$draw[1:N.store]
+          # setorder(target.dist,draw,na.last=TRUE)  # likely an unnecessary sort
+          # good_target_dist <- target.dist[draw %in% add.draws,]
+          # good_parm_draws  <- parm.draws[draw %in% add.draws,]
+          # good_sim_parm    <- sim.parm[draw %in% add.draws,]
+          # add.row.range = 1:N.store
 
         } else { # ! (i1 == 1) & (n_in_i > n_store)
           if ((n_in + n_in_i) > n_store) {
             # CM NOTE: Not worked on yet
             # keep the best (N.store - n_in_i) draws (largest alpha level & smallest distance)
             # and add the current n_in_i runs to the bottom
-            N.keep=N.store-n_in_i
-            setorder(good_target_dist,-alpha,tot.dist,na.last=TRUE)
-            keep.draws = good_target_dist$draw[1:N.keep]
-            setorder(good_target_dist,draw,na.last=TRUE)  # likely an unnecessary sort
-            good_parm_draws[1:N.keep,]  <- good_parm_draws[draw %in% keep.draws,]
-            good_sim_parm [1:N.keep,]   <- good_sim_parm[draw %in% keep.draws,]
-            add.row.range = (N.keep+1):(N.store)
+            # N.keep=N.store-n_in_i
+            # setorder(good_target_dist,-alpha,tot.dist,na.last=TRUE)
+            # keep.draws = good_target_dist$draw[1:N.keep]
+            # setorder(good_target_dist,draw,na.last=TRUE)  # likely an unnecessary sort
+            # good_parm_draws[1:N.keep,]  <- good_parm_draws[draw %in% keep.draws,]
+            # good_sim_parm [1:N.keep,]   <- good_sim_parm[draw %in% keep.draws,]
+            # add.row.range = (N.keep+1):(N.store)
 
           } else { # ! (n_in + n_in_i) > n_store
             add_row_range <- (n_in + 1):(n_in + n_in_i)
@@ -270,7 +258,215 @@
     # Completed good rows
     good_row_range <- 1:n_in
 
-    # CM NOTE: STUFF FROM ABCloopFunction not included here but needs to be
+    #####################################################################################################################
+    # CM NOTE: Not worked on yet ########################################################################################
+    # if((N.in>=2*N.cov.points) & any(target.specs$update.alpha)){
+    #
+    #   ##########################################################################
+    #   # until target alpha-levels are reached, update alpha-levels every
+    #   # 2*N.cov.points, reducing good points by half
+    #   ###########################################################################
+    #
+    #   # 1. Identify the point that yields best n.keep draws,
+    #   #    based on \rho_{i\cdot} and  distance from targets still being updated.
+    #
+    #   good.target.dist$tot.dist = get.updating.dist(x=good.target.dist,
+    #                                                 target.names=update.names)
+    #
+    #   # ensure that we end up with at least N.cov.points.
+    #   # This is needed if alpha.target differs across targets & there is tension in targets
+    #
+    #   keep.points = c(trunc( seq(1.0,2.0,0.1)*N.cov.points),N.in)
+    #
+    #   for(N.get in keep.points){
+    #
+    #     if(N.get<N.in){
+    #
+    #       alpha.draw = good.target.dist[good.row.range,][
+    #         order(-alpha,tot.dist,na.last=TRUE)][N.get]$draw
+    #
+    #       # get new.alpha for all targets currently being updated,
+    #       # based on simulated values at alpha.draw
+    #       target.specs[target.specs$update.alpha,]$new.alpha =
+    #         update.alpha(sim.p=good.sim.parm[draw==alpha.draw,],
+    #                      sim.p.names=update.target.names,
+    #                      target.data=calib.targets,
+    #                      specs=target.specs[target.specs$update.alpha,])
+    #     }else{
+    #       # return target.specs to original values
+    #       target.specs[target.specs$update.alpha,]$new.alpha =
+    #         target.specs[target.specs$update.alpha,]$alpha
+    #
+    #     }
+    #
+    #     if(any(target.specs[target.specs$update.alpha,]$new.alpha>
+    #            target.specs[target.specs$update.alpha,]$alpha) | N.get==N.in){
+    #       # if any new.alpha>alpha
+    #
+    #       # don't go above specified target
+    #       target.specs[target.specs$update.alpha,]$new.alpha =
+    #         apply(target.specs[target.specs$update.alpha,
+    #                            c("new.alpha","alpha.target")], 1, FUN=min)
+    #
+    #       for(i in 1:length(update.names)){
+    #
+    #         # 2. update tolerance bounds
+    #         calib.targets[[update.names[i]]] =
+    #           get.bounds(x=calib.targets[[update.names[i]]],
+    #                      alpha.level=target.specs[
+    #                        target.specs$data==update.names[i],]$new.alpha)
+    #       }
+    #       # 3. update distances (values<0 indicate out of tolerance bounds)
+    #       good.target.dist[good.row.range,] =
+    #         update.in.range(target.dist=good.target.dist[good.row.range,],
+    #                         sim.parm=good.sim.parm[good.row.range,],
+    #                         target.specs=target.specs[target.specs$update.alpha,],
+    #                         calib.targets=calib.targets)
+    #
+    #       # update n.good
+    #       good.target.dist$n.good = as.integer(0)
+    #       good.target.dist[good.row.range]$n.good =
+    #         rowSums(good.target.dist[good.row.range,
+    #                                  (dist.names),with=FALSE]>=0,na.rm=TRUE)
+    #
+    #       N.in.new   = sum(good.target.dist$n.good==n.targets,na.rm=TRUE)
+    #       if(N.in.new>=N.cov.points) break
+    #     } # if any new.alpha>alpha
+    #   } # for(i.get in keep.points)
+    #
+    #   if(N.in.new>=N.cov.points & N.in.new<N.in){
+    #     # some points are dropped
+    #
+    #     target.specs[target.specs$update.alpha,]$alpha =
+    #       target.specs[target.specs$update.alpha,]$new.alpha
+    #
+    #     # update N.in
+    #     keep.draws = good.target.dist[n.good==n.targets,]$draw
+    #     N.in   = sum(good.target.dist$n.good==n.targets,na.rm=TRUE)
+    #
+    #
+    #     # update the names of targets with alpha-levels less than target alpha
+    #     update.names = target.specs$data[target.specs$alpha<
+    #                                        target.specs$alpha.target]
+    #
+    #     # if(N.in>N.cov.points &
+    #     #    (sum(target.specs$alpha<target.specs$alpha.target)>=1)){
+    #     #   # if more than N.cov.points that meet the updated alpha-criteria &
+    #     #   # we are still updating tolerance intervals for some targets, then
+    #     #   # keep only the closest N.cov.points among them, based on nearness
+    #     #   # to targets still being updated. needed b/c SEER data starts @ alpha=0
+    #     #
+    #     #   good.target.dist[,tot.dist := NA]
+    #     #   good.target.dist[draw %in% keep.draws,
+    #     #                    tot.dist :=
+    #     #                      get.updating.dist(x=good.target.dist[draw %in%
+    #     #                                                           keep.draws,],
+    #     #                                        update.names)]
+    #     #
+    #     #   setorder(good.target.dist,-n.good,-alpha,tot.dist,na.last=TRUE)
+    #     #   keep.draws = good.target.dist[1:N.cov.points,]$draw
+    #     #   setorder(good.target.dist,draw)
+    #     #   N.in=N.cov.points
+    #     #
+    #     # }
+    #
+    #     good.row.range = 1:N.in
+    #     good.target.dist[good.row.range,]<-good.target.dist[draw %in%
+    #                                                           keep.draws,]
+    #     good.parm.draws[good.row.range]  <-good.parm.draws[draw %in% keep.draws]
+    #     good.sim.parm[good.row.range]    <-good.sim.parm[draw %in% keep.draws]
+    #
+    #     if(N.in<N.store){
+    #       # clear unused rows in good.* data tables
+    #       blank.rows = (N.in+1):N.store
+    #
+    #       good.parm.draws[blank.rows,c("draw","step","iter") := as.integer(NA)]
+    #       good.parm.draws[blank.rows,c(parm.names,"scaled.dist","sample.wt") :=
+    #                         as.numeric(NA)]
+    #       good.parm.draws$seed[blank.rows]=""
+    #
+    #       good.sim.parm[blank.rows,c("draw","step","iter") := as.integer(NA)]
+    #       good.sim.parm[blank.rows,(sim.parm.names) := as.numeric(NA)]
+    #
+    #       good.target.dist[blank.rows,c("draw","step","iter") := as.integer(NA)]
+    #       good.target.dist[blank.rows,c(dist.names,"tot.dist","alpha") :=
+    #                          as.numeric(NA)]
+    #       good.target.dist$n.good[blank.rows]=as.integer(0)
+    #
+    #     } #  if(N.in<N.store)
+    #
+    #     if(print.status){
+    #       print(paste0("Updated alpha, new N.in=",N.in,
+    #                    " new alpha-levels: ",
+    #                    paste(target.specs[target.specs$update.alpha & !bias.info,]$data," ",
+    #                          format(
+    #                            target.specs[
+    #                              target.specs$update.alpha & !bias.info,]$alpha,
+    #                            digits=2),
+    #                          collapse="; ")
+    #       ))
+    #     }
+    #
+    #     # update.alpha: indicates if tolerance intervals are still being adjusted
+    #     target.specs$update.alpha = target.specs$alpha<target.specs$alpha.target
+    #     update.target.names = get.update.targets(calib.target.names,
+    #                                              target.specs$data[
+    #                                                target.specs$update.alpha])
+    #
+    #     # if N.in.new<N.in - alpha levels are updated
+    #   }else{
+    #     if(print.status){
+    #       print(paste0("Unable to update alpha-levels, N.in=",N.in,
+    #                    " alpha-levels below targets: ",
+    #                    paste(target.specs[target.specs$update.alpha & !bias.info,]$data," ",
+    #                          format(
+    #                            target.specs[
+    #                              target.specs$update.alpha & !bias.info,]$alpha,
+    #                            digits=2),
+    #                          collapse="; ")
+    #       ))
+    #     }
+    #
+    #   }
+    #
+    # }
+
+    # if((N.in>=N.post | !any(target.specs$update.alpha)) |
+    #    (iter>=end.iter & N.in>0)){
+    #
+    #   good.parm.draws$sample.wt = 0
+    #   in.draws = good.target.dist[!is.na(draw),]$draw
+    #   if(continue.runs==TRUE & iter==start.iter & start.iter>1){
+    #     # if continuing runs, at the first iter use only previous mixture distns
+    #     m.file=paste0(prevruns.dir,"/",outfile.sampling)
+    #   }
+    #   else if(continue.runs==TRUE & start.iter==1){
+    #     m.file=paste0(output.directory,"/",outfile.sampling)
+    #   }
+    #   else {
+    #     m.file=paste0(c(prevruns.dir,output.directory),"/",outfile.sampling)
+    #   }
+    #
+    #   good.parm.draws[draw %in% in.draws,]$sample.wt =
+    #     get.weight(parms=good.parm.draws[draw %in% in.draws,],
+    #                p.names=calib.parm.names,
+    #                priors=parm.priors.df,
+    #                mixture.file=m.file,
+    #                N0)
+    #
+    #   # calculate effective sample size using Kish formula. Here sum(sample.wt)=1
+    #   ESS = 1/sum(good.parm.draws[draw %in% in.draws,]$sample.wt^2)
+    #   if(print.status){
+    #     print(paste("    Effective Sample Size is",round(ESS,2)))
+    #   }
+    # }
+    #
+    # # Determine if there are enough points to quit
+    # # ---------------------------------------------------------------------------
+    # if(ESS>=N.post & !any(target.specs$update.alpha)){ # stop if ESS > N.post
+    #   break
+    # }
+    #####################################################################################################################
 
     # Simulate new draws
     if (i1 < end_iter) {
@@ -285,21 +481,20 @@
       center_draw_hiwt <- NULL
       # CM NOTE: Not worked on yet
       # if(!any(target.specs$update.alpha)){ # & N.in>500){
-      if(FALSE){
-        max.wt = max(good.parm.draws[draw %in% in.draws,]$sample.wt)
-        if(max.wt >= 10/N.in){
-          draw.order = setorder(good.parm.draws[good.row.range,],
-                                -sample.wt,na.last=TRUE)$draw
-          N.hiwt = min(N.centers,length(draw.order))
-          center_draw_hiwt= draw.order[1:N.hiwt]
-
-          if(print.status){
-            print(paste0("adding samples around high weight points: ",
-                         paste0(center_draw_hiwt,collapse=", ")))
-          } # print.status
-
-        } # max.wt >= 10/N.in
-      } # !any(target.specs$update.alpha)
+      #   max.wt = max(good.parm.draws[draw %in% in.draws,]$sample.wt)
+      #   if(max.wt >= 10/N.in){
+      #     draw.order = setorder(good.parm.draws[good.row.range,],
+      #                           -sample.wt,na.last=TRUE)$draw
+      #     N.hiwt = min(N.centers,length(draw.order))
+      #     center_draw_hiwt= draw.order[1:N.hiwt]
+      #
+      #     if(print.status){
+      #       print(paste0("adding samples around high weight points: ",
+      #                    paste0(center_draw_hiwt,collapse=", ")))
+      #     } # print.status
+      #
+      #   } # max.wt >= 10/N.in
+      # } # !any(target.specs$update.alpha)
 
       n_best_draw <- 0
       center_draw_best <- NULL
@@ -353,10 +548,9 @@
       # set any fixed parameter values (specified in parm.priors)
       # CM NOTE: Not worked on yet
       # if (length(fixed.parm.names) > 0) {
-      if (FALSE) {
-        names(fixed.parm.values)=fixed.parm.names
-        set(parm.draws,j=fixed.parm.names,value=as.data.table(t(fixed.parm.values)))
-      } # length(fixed.parm.names) > 0
+      #   names(fixed.parm.values)=fixed.parm.names
+      #   set(parm.draws,j=fixed.parm.names,value=as.data.table(t(fixed.parm.values)))
+      # } # length(fixed.parm.names) > 0
 
       # New draw sampling
       if (n_in < N_cov_points) {
@@ -412,129 +606,131 @@
         #             row.names=FALSE)
         # f.append=TRUE
       } else { # ! n_in < N_cov_points
-        # CM NOTE: Not worked on yet
+        #################################################################################################################
+        # CM NOTE: Not worked on yet ####################################################################################
         # sample MVN points around centers if there are enough points to
         # estimate the cov matrix
         #--------------------------------------------------------------------------
-        n.use = min(N.in,N.cov.points)
-        sample.mean = as.data.frame(center.next)
+        # n.use = min(N.in,N.cov.points)
+        # sample.mean = as.data.frame(center.next)
+        #
+        # if(N.in<=N.cov.points){
+        #   var.data=good.parm.draws[1:n.use,calib.parm.names,with=FALSE]
+        #   sample.cov = get.parm.cov(var.data)
+        #   if(sample.cov==-1) return()
+        #   if(any(diag(sample.cov)==0)){
+        #     # this occurs when adding a new parameter: it is set to default for all prior draws
+        #     is.zero=(diag(sample.cov)==0)
+        #     sd.next=0.5*parm.priors.df$sd
+        #     sd.next[!is.zero] = 0
+        #     diag(sample.cov) <- diag(sample.cov)+(sd.next^2)
+        #   }
+        # }
+        #
+        # for(i.center in 1:num.centers){
+        #   sample.mean.i = as.vector(
+        #     unlist(sample.mean[i.center,
+        #                        which(names(sample.mean) %in%
+        #                                calib.parm.names)]))
+        #   draw.rows = ((i.center-1)*B + 1):(i.center*B)
+        #
+        #   if(N.in>=N.cov.points){ # use different var-cov matrices for each center
+        #     # Find the n.use closest draws to each center point,
+        #     #------------------------------------------------------------------------
+        #     good.parm.draws$scaled.dist = Inf
+        #     good.parm.draws$scaled.dist[1:N.in] =
+        #       get.dist(p.draws=good.parm.draws[1:N.in,],
+        #                p.names=parm.names,
+        #                mu=as.vector(center.next[i.center,calib.parm.names]),
+        #                sd=parm.priors.df$sd)
+        #     setorder(good.parm.draws,scaled.dist,na.last=TRUE)
+        #     var.data=good.parm.draws[1:n.use,calib.parm.names,with=FALSE]
+        #     sample.cov = get.parm.cov(var.data)
+        #     if(sample.cov==-1) return()
+        #     if(any(diag(sample.cov)==0)){
+        #       # this occurs when adding a new parameter: it is set to default for all prior draws
+        #       is.zero=(diag(sample.cov)==0)
+        #       sd.next=0.5*parm.priors.df$sd
+        #       sd.next[!is.zero] = 0
+        #       diag(sample.cov) <- diag(sample.cov)+(sd.next^2)
+        #     }
+        #   }
+        #
+        #   # Draw B new parm values usign an MVN draw...............................
+        #
+        #   # assign fixed parameters
+        #   parm.draws[draw.rows,(fixed.parm.names) := as.list(fixed.parm.values)]
+        #
+        #   # simulate B random draws of calibrated parameters
+        #   if(abs(sum(sample.cov) - sum(diag(sample.cov)))<1e-10){
+        #     parm.draws[draw.rows,(calib.parm.names) := draw.parms(n.add=B,
+        #                                                           mu=as.matrix(t(sample.mean.i)),
+        #                                                           sigma=as.matrix(t(diag(sample.cov))),
+        #                                                           parm.priors=parm.priors.df,
+        #                                                           parm.names=calib.parm.names,
+        #                                                           calib.targets)]
+        #
+        #   }else{
+        #     x=get.B.draws(B,
+        #                   inflate=sample.inflate,
+        #                   center=sample.mean.i,
+        #                   cov=sample.cov,
+        #                   priors=parm.priors.df,
+        #                   p.names=calib.parm.names)
+        #     if(is.null(x)){
+        #       print(paste("iteration=",iter,"center=",i.center))
+        #       return()
+        #     }
+        #     parm.draws[draw.rows,(calib.parm.names) := x]
+        #   }
+        #   sample.mean.i =setnames(as.data.frame(t(sample.mean.i)),
+        #                           calib.parm.names)
+        #   sample.cov = setnames(as.data.frame(sample.cov),
+        #                         calib.parm.names)
+        #
+        #   sampling.output= data.table(rbind(sample.mean.i,sample.cov))
+        #   sampling.output$iter = iter+1
+        #   sampling.output$step = i.center
+        #   sampling.output$center=center.draw[i.center]
+        #   sampling.output$parm = 0:(length(calib.parm.names))
+        #   B.in = sum(get.in.range(parm.draws[draw.rows,],
+        #                           parm.priors.df,calib.parm.names))
+        #   sampling.output$B.in = B.in
+        #   if(B.in==0) print(paste("*** warning: B.in=",B.in,
+        #                           "for iter=",iter+1,"and center=",i.center))
+        #
+        #   setcolorder(sampling.output,
+        #               c("iter","step","center","B.in","parm",calib.parm.names))
+        #
+        #   write.table(sampling.output[,c("iter","step","center","B.in",
+        #                                  "parm",calib.parm.names),
+        #                               with=FALSE],
+        #               file=paste0(output.directory,"/",outfile.sampling),sep=",",
+        #               append=f.append,
+        #               col.names=!f.append,
+        #               row.names=FALSE)
+        #   f.append=TRUE
+        #
+        # } # loop over centers
+        #
+        # if(recalc.centers){
+        #   parm.draws[step==(N.centers+1),(parm.names)] = as.data.table(center.next)
+        #   parm.draws[step==(N.centers+1),]$draw = center.draw
+        #   sim.parm[step==(N.centers+1),]$draw = center.draw
+        #   target.dist[step==(N.centers+1),]$draw = center.draw
+        # }
+        #
+        # # put good.* data tables in draw order
+        # # (though all references are by draw %in% avoid potential problems)
+        # setorder(good.parm.draws,draw,na.last = TRUE)
+        # setorder(good.sim.parm,draw,na.last = TRUE)
+        # setorder(good.target.dist,draw,na.last = TRUE)
 
-        if(N.in<=N.cov.points){
-          var.data=good.parm.draws[1:n.use,calib.parm.names,with=FALSE]
-          sample.cov = get.parm.cov(var.data)
-          if(sample.cov==-1) return()
-          if(any(diag(sample.cov)==0)){
-            # this occurs when adding a new parameter: it is set to default for all prior draws
-            is.zero=(diag(sample.cov)==0)
-            sd.next=0.5*parm.priors.df$sd
-            sd.next[!is.zero] = 0
-            diag(sample.cov) <- diag(sample.cov)+(sd.next^2)
-          }
-        }
-
-        for(i.center in 1:num.centers){
-          sample.mean.i = as.vector(
-            unlist(sample.mean[i.center,
-                               which(names(sample.mean) %in%
-                                       calib.parm.names)]))
-          draw.rows = ((i.center-1)*B + 1):(i.center*B)
-
-          if(N.in>=N.cov.points){ # use different var-cov matrices for each center
-            # Find the n.use closest draws to each center point,
-            #------------------------------------------------------------------------
-            good.parm.draws$scaled.dist = Inf
-            good.parm.draws$scaled.dist[1:N.in] =
-              get.dist(p.draws=good.parm.draws[1:N.in,],
-                       p.names=parm.names,
-                       mu=as.vector(center.next[i.center,calib.parm.names]),
-                       sd=parm.priors.df$sd)
-            setorder(good.parm.draws,scaled.dist,na.last=TRUE)
-            var.data=good.parm.draws[1:n.use,calib.parm.names,with=FALSE]
-            sample.cov = get.parm.cov(var.data)
-            if(sample.cov==-1) return()
-            if(any(diag(sample.cov)==0)){
-              # this occurs when adding a new parameter: it is set to default for all prior draws
-              is.zero=(diag(sample.cov)==0)
-              sd.next=0.5*parm.priors.df$sd
-              sd.next[!is.zero] = 0
-              diag(sample.cov) <- diag(sample.cov)+(sd.next^2)
-            }
-          }
-
-          # Draw B new parm values usign an MVN draw...............................
-
-          # assign fixed parameters
-          parm.draws[draw.rows,(fixed.parm.names) := as.list(fixed.parm.values)]
-
-          # simulate B random draws of calibrated parameters
-          if(abs(sum(sample.cov) - sum(diag(sample.cov)))<1e-10){
-            parm.draws[draw.rows,(calib.parm.names) := draw.parms(n.add=B,
-                                                                  mu=as.matrix(t(sample.mean.i)),
-                                                                  sigma=as.matrix(t(diag(sample.cov))),
-                                                                  parm.priors=parm.priors.df,
-                                                                  parm.names=calib.parm.names,
-                                                                  calib.targets)]
-
-          }else{
-            x=get.B.draws(B,
-                          inflate=sample.inflate,
-                          center=sample.mean.i,
-                          cov=sample.cov,
-                          priors=parm.priors.df,
-                          p.names=calib.parm.names)
-            if(is.null(x)){
-              print(paste("iteration=",iter,"center=",i.center))
-              return()
-            }
-            parm.draws[draw.rows,(calib.parm.names) := x]
-          }
-          sample.mean.i =setnames(as.data.frame(t(sample.mean.i)),
-                                  calib.parm.names)
-          sample.cov = setnames(as.data.frame(sample.cov),
-                                calib.parm.names)
-
-          sampling.output= data.table(rbind(sample.mean.i,sample.cov))
-          sampling.output$iter = iter+1
-          sampling.output$step = i.center
-          sampling.output$center=center.draw[i.center]
-          sampling.output$parm = 0:(length(calib.parm.names))
-          B.in = sum(get.in.range(parm.draws[draw.rows,],
-                                  parm.priors.df,calib.parm.names))
-          sampling.output$B.in = B.in
-          if(B.in==0) print(paste("*** warning: B.in=",B.in,
-                                  "for iter=",iter+1,"and center=",i.center))
-
-          setcolorder(sampling.output,
-                      c("iter","step","center","B.in","parm",calib.parm.names))
-
-          write.table(sampling.output[,c("iter","step","center","B.in",
-                                         "parm",calib.parm.names),
-                                      with=FALSE],
-                      file=paste0(output.directory,"/",outfile.sampling),sep=",",
-                      append=f.append,
-                      col.names=!f.append,
-                      row.names=FALSE)
-          f.append=TRUE
-
-        } # loop over centers
-
-        if(recalc.centers){
-          parm.draws[step==(N.centers+1),(parm.names)] = as.data.table(center.next)
-          parm.draws[step==(N.centers+1),]$draw = center.draw
-          sim.parm[step==(N.centers+1),]$draw = center.draw
-          target.dist[step==(N.centers+1),]$draw = center.draw
-        }
-
-        # put good.* data tables in draw order
-        # (though all references are by draw %in% avoid potential problems)
-        setorder(good.parm.draws,draw,na.last = TRUE)
-        setorder(good.sim.parm,draw,na.last = TRUE)
-        setorder(good.target.dist,draw,na.last = TRUE)
       } # !(n_in < N_cov_points)
+      # if (continue.runs == TRUE & i1 == start_iter) { f.append <- FALSE }
+      ###################################################################################################################
 
-      if (continue.runs == TRUE & i1 == start_iter) { f.append <- FALSE }
-
-    } # if(iter<end_iter)
+    } # if (i1 < end_iter)
 
   } # End Main Loop
 
@@ -564,7 +760,7 @@
     sim_parm = good_sim_parm,
     target_dist = good_target_dist
   ))
-# }
+}
 
 #########################################################################################################################
 #########################################################################################################################
