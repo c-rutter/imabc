@@ -1,13 +1,31 @@
-eval_targets <- function(dist_target, target_names, target_list) {
-  # Flips targets to negative if they are not in their bounds
-  dist_target[, (target_names) := lapply(target_names, FUN = function(x, target_list, df) {
-    y <- df[[x]]
-    check <- in_range(y, target_list[[x]]$low_bound_start, target_list[[x]]$up_bound_start)
-    y <- y*(check*2 - 1)
-    y
-  }, target_list = target_list, df = dist_target)]
-  # Calculate the distance
-  dist_target <- get_distance(dt = dist_target, target_names = target_names)
+eval_targets <- function(sim_targets, target_list, criteria = c("start", "update", "stop")) {
+  # selected criteria point
+  criteria <- match.arg(criteria, c("start", "update", "stop"))
 
-  return(dist_target)
+  # Calculate Good Distances by major targets
+  tot_dist <- sapply(target_list, FUN = function(x, dt) {
+    # Get total distance for a given major target
+    tot_dist <- get_distance(dt = dt, target_list = x)
+
+    # Determine if all sub targets are in their appropriate ranges
+    check <- rep.int(1, times = nrow(dt))
+    for (sub in x$names) {
+      if (criteria == "start") {
+        check <- check*in_range(dt[, sub, with = FALSE], x$lower_bounds_start[sub], x$upper_bounds_start[sub])
+      } else if (criteria == "update") {
+        check <- check*in_range(dt[, sub, with = FALSE], x$lower_bounds_new[sub], x$upper_bounds_new[sub])
+      } else if (criteria == "stop") {
+        check <- check*in_range(dt[, sub, with = FALSE], x$lower_bounds_stop[sub], x$upper_bounds_stop[sub])
+      } else {
+        stop("criteria must be either start, update, or stop")
+      }
+    }
+
+    # Turn total distance negative if sub targets aren't all in the appropriate range
+    fin_distance <- tot_dist*(check*2 - 1)
+
+    return(fin_distance)
+  }, dt = sim_targets)
+
+  return(tot_dist)
 }
