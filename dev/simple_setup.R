@@ -7,12 +7,10 @@
 ### Writing results
 # writing results out
 
-### Printing info during loop
-
 ### Better names
 # Many places noted in code
 # draw_parms() vs get_B_draws() vs parms_from_priors() and sort of related is parm_draws
-devtools::load_all("R/")
+devtools::load_all()
 
 
 rm(list = ls(all = TRUE))
@@ -21,6 +19,8 @@ gc()
 library(MASS) # Must be loaded before tidyverse
 library(data.table)
 
+# CM NOTE: My computer for some reason no longer as OpenMP support (even though it used to and OpenMP is installed.). Just
+#   need to figure out what is wrong. Calculations are a little slower but otherwise work all the same.
 # data.table 1.12.8 using 1 threads (see ?getDTthreads).  Latest news: r-datatable.com
 # **********
 #   This installation of data.table has not detected OpenMP support. It should still work but in single-threaded mode.
@@ -38,6 +38,7 @@ library(doParallel)
 library(lhs)
 library(truncnorm)
 
+# OLD INPUTS
 # N_start <- 500 # starting points (from priors)
 # N_centers <- 4 # how many different points to add mass around
 # B <- 50 # number of points around each center to sample. CM NOTE: now Center_n
@@ -73,7 +74,6 @@ targets <- define_targets(
   m1 = add_targets(
     t1 = list(
       target = 1.5,
-      # Lets a lot in on first iteration (n_in_i, n_in = 267)
       low_bound_start = 1.0,
       up_bound_start = 2.0,
 
@@ -87,7 +87,6 @@ targets <- define_targets(
   m2 = add_targets(
     t2 = list(
       target = 0.5,
-      # Lets a lot in on first iteration (n_in_i, n_in = 267)
       low_bound_start = 0.2,
       up_bound_start = 0.9,
 
@@ -100,13 +99,13 @@ targets <- define_targets(
   )
 )
 
-target_fun <- function(x) { # optional thresholds
+target_fun <- function(x) {
   res <- c()
 
   res[1] <- fn1(x[1], x[2])
   res[2] <- fn2(x[1], x[2])
 
-  return(res) # Returns distance for each target
+  return(res)
 }
 
 # x1_min <- 0.5
@@ -175,9 +174,6 @@ results <- imabc(
   verbose = TRUE
 )
 
-
-# CM NOTE: when iter and step are initialized as non-missing the sorting is going
-
 # TO DO:
 #   TESTING
 #   TESTING
@@ -189,6 +185,16 @@ results <- imabc(
 #   print vs warning vs error
 #   TESTING
 #   TESTING
+
+# Test with
+# small noise
+# large noise (visually inspect which points are good vs bad)
+# Deterministic function for testing
+
+# straight restart
+# target modification
+# parameter modification
+
 
 #########################################################################################################################
 #########################################################################################################################
