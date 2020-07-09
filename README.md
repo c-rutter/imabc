@@ -41,30 +41,41 @@ basic example of the code but below will be a brief explanation of the
 components as well.
 
 The primary function is imabc(). The inputs and their descriptions are
-as follows: \* priors - list. A list of information on the prior
-distributions. Two helper functions exist for properly defining this
-list. See below for more details. \* targets - list. A list of
-information on the targets. Two helper functions exist for properly
-defining this list as well. See below for more details. \* target\_fun -
-function. A function that returns a data set of the predicted targets
-from simulated parameters. See below for more details. \* N\_start -
-integer. The sample size used for the first set of simulated parameters.
-\* seed - integer. The seed value for reproducability. \* latinHypercube
-- boolean. Should first simulated set of paramters use a latinHypercube
-to generate parameters. \* N\_centers - integer. The number of centers
-to use for simulating parameters. \* Center\_n - integer. Sample size
-per center for simulating parameters (used to be called B). \* N\_post -
-integer. The minimum sample required for stopping the simulation before
-max\_iter is reached. \* max\_iter - integer. The maximum number of
-iterations the code will attempt if N\_post is never reached. \*
-N\_cov\_points - integer. The number of points needed to move from a
-independent assumption. \* sample\_inflate - numeric. When simulating
-results under certain conditions, how much more sample should be
-simulated to make sure there are parameters within the appropriate
-bounds. (See R/get\_B\_draws.R) \* recalc\_centers - boolean. Should the
-centers be recalculated each iteration. \* continue\_runs - boolean.
-FALSE is the only valid option for now. \* verbose - boolean. Should
-various information be printed while the algorithm is running.
+as follows:
+
+  - priors - list. A list of information on the prior distributions. Two
+    helper functions exist for properly defining this list. See below
+    for more details.
+  - targets - list. A list of information on the targets. Two helper
+    functions exist for properly defining this list as well. See below
+    for more details.
+  - target\_fun - function. A function that returns a data set of the
+    predicted targets from simulated parameters. See below for more
+    details.
+  - N\_start - integer. The sample size used for the first set of
+    simulated parameters.
+  - seed - integer. The seed value for reproducability.
+  - latinHypercube - boolean. Should first simulated set of paramters
+    use a latinHypercube to generate parameters.
+  - N\_centers - integer. The number of centers to use for simulating
+    parameters.
+  - Center\_n - integer. Sample size per center for simulating
+    parameters (used to be called B).
+  - N\_post - integer. The minimum sample required for stopping the
+    simulation before max\_iter is reached.
+  - max\_iter - integer. The maximum number of iterations the code will
+    attempt if N\_post is never reached.
+  - N\_cov\_points - integer. The number of points needed to move from a
+    independent assumption.
+  - sample\_inflate - numeric. When simulating results under certain
+    conditions, how much more sample should be simulated to make sure
+    there are parameters within the appropriate bounds. (See
+    R/get\_B\_draws.R)
+  - recalc\_centers - boolean. Should the centers be recalculated each
+    iteration.
+  - continue\_runs - boolean. FALSE is the only valid option for now.
+  - verbose - boolean. Should various information be printed while the
+    algorithm is running.
 
 ### priors
 
@@ -74,26 +85,31 @@ list.
 add\_prior(): Using the function the user defines all the information
 associated with a specific parameter that is being calibrated. For the
 current version of the code the user should specify at least the
-following things: \* FUN - string. This is a character string for the R
-function that will be used to generate random values. (e.g. “runif”,
-“qtruncnorm”, etc.). While add\_prior can currently handle this value
-not being given the rest of the code will not work properly in that
-scenario. In the future, not giving a value for FUN will result in a
-non-calibrated parameter from the models perspective. \* use\_length -
-boolean. This tells imabc whether the prior expects a scalar input or a
-vector of inputs. Functions like runif expect a scalar value n and then
-return a vector of length n, while others expect a vector of values and
-return a vector with the same length. Setting use\_length = TRUE tells
-imabc that the function being used behaves like runif and only accepts a
-scalar value as input. \* dtruncnorm - boolean. This tells imabc that
-when calculating the weights (R/get\_weight.R), the parameter will use a
-dtruncnorm function for the log\_prior\_d (R/get\_log\_prior\_d.R). If
-dtruncnorm = FALSE, log\_prior\_d will just be 0 for all values of that
-simulated paramter. \* min - numeric. The minimum value that parameter
-can be. \* max - numeric. The maximum value that parameter can be. \* sd
-- numeric. The standard deviation that the parameter follows. \* mean -
-numeric. the average value that the parameter should have. \* … - Any
-inputs that are required by FUN that are not defined already.
+following things:
+
+  - FUN - string. This is a character string for the R function that
+    will be used to generate random values. (e.g. “runif”, “qtruncnorm”,
+    etc.). While add\_prior can currently handle this value not being
+    given the rest of the code will not work properly in that scenario.
+    In the future, not giving a value for FUN will result in a
+    non-calibrated parameter from the models perspective.
+  - use\_length - boolean. This tells imabc whether the prior expects a
+    scalar input or a vector of inputs. Functions like runif expect a
+    scalar value n and then return a vector of length n, while others
+    expect a vector of values and return a vector with the same length.
+    Setting use\_length = TRUE tells imabc that the function being used
+    behaves like runif and only accepts a scalar value as input.
+  - dtruncnorm - boolean. This tells imabc that when calculating the
+    weights (R/get\_weight.R), the parameter will use a dtruncnorm
+    function for the log\_prior\_d (R/get\_log\_prior\_d.R). If
+    dtruncnorm = FALSE, log\_prior\_d will just be 0 for all values of
+    that simulated paramter.
+  - min - numeric. The minimum value that parameter can be.
+  - max - numeric. The maximum value that parameter can be.
+  - sd - numeric. The standard deviation that the parameter follows.
+  - mean - numeric. the average value that the parameter should have.
+  - … - Any inputs that are required by FUN that are not defined
+    already.
 
 min, max, and sd are used beyond the initial simulation of parameters
 and are required regardless of the inputs into FUN. mean is only
