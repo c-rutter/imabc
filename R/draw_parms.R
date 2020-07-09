@@ -7,7 +7,9 @@ draw_parms <- function(n_add, mu, sigma, priors_list, targets_list) {
 
   # Make sure mu is a matrix
   if (is.vector(mu)) {
+    mu_name <- names(mu)
     mu <- matrix(mu, byrow = TRUE, nrow = 1)
+    colnames(mu) <- mu_name
   } # is.vector(mu)
 
   # Prepare information for calculation
@@ -15,8 +17,8 @@ draw_parms <- function(n_add, mu, sigma, priors_list, targets_list) {
   n_parms <- ncol(mu)
   n_row_final <- n_add*n_centers
   parm_names <- names(priors_list)
-  lower_bounds <- unlist(lapply(priors_list, FUN = function(x) { attr(x, "min") }))
-  upper_bounds <- unlist(lapply(priors_list, FUN = function(x) { attr(x, "max") }))
+  lower_bounds <- attr(priors_list, "mins")
+  upper_bounds <- attr(priors_list, "maxs")
 
   # Initialize results data.table
   draws <- data.table(matrix(0, nrow = n_row_final, ncol = n_parms))
@@ -39,7 +41,7 @@ draw_parms <- function(n_add, mu, sigma, priors_list, targets_list) {
     )
   }, n = n_add, mu = mu, sigma = sigma, lower = lower_bounds, upper = upper_bounds), by = center_id]
   draws$center_id <- NULL
-  # CM NOTE: Old method used loop
+  # CM NOTE: Old method used loop and handled Range.p10mmIn10yrs differently
   # for (center_i1 in 1:n_centers) {
   #   row_range = ((center_i1 - 1)*n_add + 1):(center_i1*n_add)
   #   for(i.parm in 1:n.parms){

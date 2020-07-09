@@ -1,5 +1,14 @@
-get_distance <- function(dt, target_names, scale = FALSE) {
-  dt[, tot_dist := rowSums(.SD^2), .SDcols = target_names]
+get_distance <- function(dt, target_list) {
 
-  return(dt)
+  distance <- Reduce(`+`, lapply(target_list$names, FUN = function(x, dt, target_list) {
+    sim <- dt[, x, with = FALSE]
+    obs <- target_list$targets[x]
+
+    return(((obs - sim)^2)/(obs^2))
+  }, dt = dt, target_list = target_list))
+
+
+  return(distance)
 }
+
+
