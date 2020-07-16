@@ -66,9 +66,17 @@ library(truncnorm)
 # print.status = FALSE
 # recalc_centers <- TRUE
 
-
+# Target functions
 fn1 <- function(x1, x2) {x1 + x2 + rnorm(1, 0, 0.01)}
 fn2 <- function(x1, x2) {x1 * x2 + rnorm(1, 0, 0.01)}
+target_fun <- function(x) {
+  res <- c()
+
+  res[1] <- fn1(x[1], x[2])
+  res[2] <- fn2(x[1], x[2])
+
+  return(res)
+}
 
 targets <- define_targets(
   m1 = add_targets(
@@ -76,7 +84,6 @@ targets <- define_targets(
       target = 1.5,
       low_bound_start = 1.0,
       up_bound_start = 2.0,
-
       # low_bound_start = 1.4,
       # up_bound_start = 2.6,
 
@@ -89,7 +96,6 @@ targets <- define_targets(
       target = 0.5,
       low_bound_start = 0.2,
       up_bound_start = 0.9,
-
       # low_bound_start = 0.4,
       # up_bound_start = 0.6,
 
@@ -99,24 +105,9 @@ targets <- define_targets(
   )
 )
 
-target_fun <- function(x) {
-  res <- c()
-
-  res[1] <- fn1(x[1], x[2])
-  res[2] <- fn2(x[1], x[2])
-
-  return(res)
-}
-
-# x1_min <- 0.5
-# x1_max <- 0.99
-#
-# x2_min <- 0.25
-# x2_max <- 0.95
-
+# Priors
 x1_min <- 0.7
 x1_max <- 0.8
-
 x2_min <- 0.7
 x2_max <- 0.8
 # If a function is specified, add_prior requires min, max, and sd. If those are inputs into the specified FUN function
@@ -148,13 +139,15 @@ seed = 1234
 latinHypercube = TRUE
 N_centers = 2
 Center_n = 50
-N_post = 100
+N_post = 90
 max_iter = 1000
-N_cov_points = 0
+max_iter = 100
+N_cov_points = 250
 sample_inflate = 1.5
 recalc_centers = TRUE
 continue_runs = FALSE
 verbose = TRUE
+output_directory = "~/Downloads"
 
 results <- imabc(
   priors = priors,
@@ -170,9 +163,72 @@ results <- imabc(
   N_cov_points = 0,
   sample_inflate = 1.5,
   recalc_centers = TRUE,
-  continue_runs = FALSE,
-  verbose = TRUE
+  verbose = TRUE,
+  output_directory = output_directory
 )
+
+# Test continue runs
+last_target_list <- read.csv(paste(output_directory, "TargetList_20200715_1254PDT.csv", sep = "/"))
+new_targets <- define_targets(previous_run_targets = last_target_list)
+
+previous_results <- list(
+  parm_draws = read.csv(paste(output_directory, "SimulatedParameters_20200715_1254PDT.csv", sep = "/")),
+  sim_parm = read.csv(paste(output_directory, "SimulatedTargets_20200715_1254PDT.csv", sep = "/")),
+  target_dist = read.csv(paste(output_directory, "SimulatedDistances_20200715_1254PDT.csv", sep = "/")),
+  good_parm_draws = read.csv(paste(output_directory, "Good_SimulatedParameters_20200715_1254PDT.csv", sep = "/")),
+  good_sim_parm = read.csv(paste(output_directory, "Good_SimulatedTargets_20200715_1254PDT.csv", sep = "/")),
+  good_target_dist = read.csv(paste(output_directory, "Good_SimulatedDistances_20200715_1254PDT.csv", sep = "/")),
+  mean_cov = read.csv(paste(output_directory, "MeanCovariance_20200715_1254PDT.csv", sep = "/"))
+)
+new_results <- imabc(
+  priors = priors, # same as before
+  targets = new_targets, # from the end of the last calculation
+  target_fun = target_fun, # same as before
+  previous_results = previous_results, # NEW
+  N_start = N_start,
+  seed = 1234,
+  latinHypercube = TRUE,
+  N_centers = N_centers,
+  Center_n = Center_n,
+  N_post = N_post,
+  max_iter = max_iter,
+  N_cov_points = 0,
+  sample_inflate = 1.5,
+  recalc_centers = TRUE,
+  verbose = TRUE,
+  output_directory = output_directory
+)
+
+# CM NOTE:
+# What is difference between get_mean_cov and version if # ! n_in < N_cov_points?
+# In future we could have the results of imabc be all that is needed for continue_runs
+#   that means storing all the inputs and appropriate outputs
+#   we could still make a version that takes the componenents individually as well
+
+# I like the idea of trying for a framework more in line with modern machine learning methods I.e a run would look like:
+# imabc(
+#   general options such as seed, N_start, verbose, output_directory, etc.
+#   AND/OR
+#   an imabc object (a previous run)
+#   if general options and previous runs contradict than warnings are given that the new options are prioritized
+# ) %>%
+#   define_priors( OPTIONAL IF PREVIOUS RUN PROVIDED
+#     like current version but with ability to pull from previous results if changes are desired
+#   ) %>%
+#   define_targets( OPTIONAL IF PREVIOUS RUN PROVIDED
+#     like current version but instead of previous_run_targets, function would get previous results from imabc()
+#   ) %>%
+#   define_target_function( OPTIONAL IF PREVIOUS RUN PROVIDED
+#     The input would be target_fun (where the user includes early stopping) or a list of target functions
+#   ) %>%
+#   # Do we need a define_mean_cov() %>% ?
+#   # Nothing runs until the next line is added
+#   estimate_parameters(
+#     if previous run provided than don't need define_priors, define_targets and define_target_function
+#     would include an optional input that lets the user change parallel backend
+#   )
+# CM NOTE: Should have option to save intermediate results as an R object or csv
+# CM NOTE: Additionally should have function that can read all intermediate csv files and convert to imabc object
 
 # TO DO:
 #   TESTING
