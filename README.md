@@ -36,7 +36,7 @@ parallel \* foreach \* doParallel \* lhs \* truncnorm
 
 ## Running the Code
 
-In the dev branch is an R script simple\_setup.R that goes through a
+In the dev directory is an R script simple\_setup.R that goes through a
 basic example of the code but below will be a brief explanation of the
 components as well.
 
@@ -54,9 +54,9 @@ as follows:
     details.
   - N\_start - integer. The sample size used for the first set of
     simulated parameters.
-  - seed - integer. The seed value for reproducability.
-  - latinHypercube - boolean. Should first simulated set of paramters
-    use a latinHypercube to generate parameters.
+  - seed - integer. The seed value for reproducibility.
+  - latinHypercube - boolean. Should the first simulated set of
+    paramters use a latinHypercube to generate parameters.
   - N\_centers - integer. The number of centers to use for simulating
     parameters.
   - Center\_n - integer. Sample size per center for simulating
@@ -65,16 +65,17 @@ as follows:
     simulation before max\_iter is reached.
   - max\_iter - integer. The maximum number of iterations the code will
     attempt if N\_post is never reached.
-  - N\_cov\_points - integer. The number of points needed to move from a
-    independent assumption.
+  - N\_cov\_points - integer. The number of points needed to move from
+    an independent covariance assumption.
   - sample\_inflate - numeric. When simulating results under certain
-    conditions, how much more sample should be simulated to make sure
-    there are parameters within the appropriate bounds. (See
+    conditions, how much more should the sample be simulated to make
+    sure there are parameters within the appropriate bounds. (See
     R/get\_B\_draws.R)
-  - recalc\_centers - boolean. Should the centers be recalculated each
-    iteration.
+  - recalc\_centers - boolean. Should the centers be recalculated in
+    each iteration.
   - continue\_runs - boolean. FALSE is the only valid option for now.
-  - verbose - boolean. Should various information be printed while the
+    (**FIX**)
+  - verbose - boolean. Should verbose information be printed while the
     algorithm is running.
 
 ### priors
@@ -90,9 +91,9 @@ following things:
   - FUN - string. This is a character string for the R function that
     will be used to generate random values. (e.g. “runif”, “qtruncnorm”,
     etc.). While add\_prior can currently handle this value not being
-    given the rest of the code will not work properly in that scenario.
+    given, the rest of the code will not work properly in that scenario.
     In the future, not giving a value for FUN will result in a
-    non-calibrated parameter from the models perspective.
+    non-calibrated parameter from the model’s perspective.
   - use\_length - boolean. This tells imabc whether the prior expects a
     scalar input or a vector of inputs. Functions like runif expect a
     scalar value n and then return a vector of length n, while others
@@ -103,7 +104,7 @@ following things:
     weights (R/get\_weight.R), the parameter will use a dtruncnorm
     function for the log\_prior\_d (R/get\_log\_prior\_d.R). If
     dtruncnorm = FALSE, log\_prior\_d will just be 0 for all values of
-    that simulated paramter.
+    that simulated parameter.
   - min - numeric. The minimum value that parameter can be.
   - max - numeric. The maximum value that parameter can be.
   - sd - numeric. The standard deviation that the parameter follows.
@@ -152,7 +153,7 @@ priors <- define_priors(
 
 ### targets
 
-Just like the prior distribution information the user has a couple
+Just like the prior distribution information the user has the following
 functions for helping them specify the target values and structure of
 the targets.
 
@@ -192,13 +193,13 @@ targets <- define_targets(
 
 ### target\_fun
 
-a user defined function that takes in a vector of all parameters being
+A user defined function that takes in a vector of all parameters being
 calibrated and returns a simulated value for each subtarget as a vector.
-The current version of the code converts each row the simulate
+The current version of the code converts each row of the simulate
 parameters data frame (parm\_draws) into a vector that is passed to this
 function. This means that the order of the parameters can matter. The
 order that the parameters are given to this function is determined by
-the order they are defined in define\_priors(). On the opposite side the
+the order they are defined in define\_priors(). Correspondingly, the
 order that imabc expected the simulated target values is the same as the
 order they are defined in define\_targets(). This is something that we
 could change with some moderate tweaks to the code but will be partially

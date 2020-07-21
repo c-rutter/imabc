@@ -47,7 +47,7 @@ Other packages needed are:
 * truncnorm
 
 ## Running the Code
-In the dev branch is an R script simple_setup.R that goes through a basic example of the code but below will be a brief explanation of the components as well.
+In the dev directory is an R script simple_setup.R that goes through a basic example of the code but below will be a brief explanation of the components as well.
 
 The primary function is imabc(). The inputs and their descriptions are as follows:
 
@@ -55,26 +55,26 @@ The primary function is imabc(). The inputs and their descriptions are as follow
 * targets - list. A list of information on the targets. Two helper functions exist for properly defining this list as well. See below for more details.
 * target_fun - function. A function that returns a data set of the predicted targets from simulated parameters. See below for more details.
 * N_start - integer. The sample size used for the first set of simulated parameters.
-* seed - integer. The seed value for reproducability.
-* latinHypercube - boolean. Should first simulated set of paramters use a latinHypercube to generate parameters.
+* seed - integer. The seed value for reproducibility.
+* latinHypercube - boolean. Should the first simulated set of paramters use a latinHypercube to generate parameters.
 * N_centers - integer. The number of centers to use for simulating parameters.
 * Center_n - integer. Sample size per center for simulating parameters (used to be called B).
 * N_post - integer. The minimum sample required for stopping the simulation before max_iter is reached.
 * max_iter - integer. The maximum number of iterations the code will attempt if N_post is never reached.
-* N_cov_points - integer. The number of points needed to move from a independent assumption.
-* sample_inflate - numeric. When simulating results under certain conditions, how much more sample should be simulated to make sure there are parameters within the appropriate bounds. (See R/get_B_draws.R)
-* recalc_centers - boolean. Should the centers be recalculated each iteration.
-* continue_runs - boolean. FALSE is the only valid option for now.
-* verbose - boolean. Should various information be printed while the algorithm is running.
+* N_cov_points - integer. The number of points needed to move from an independent covariance assumption.
+* sample_inflate - numeric. When simulating results under certain conditions, how much more should the sample be simulated to make sure there are parameters within the appropriate bounds. (See R/get_B_draws.R)
+* recalc_centers - boolean. Should the centers be recalculated in each iteration.
+* continue_runs - boolean. FALSE is the only valid option for now. (**FIX**)
+* verbose - boolean. Should verbose information be printed while the algorithm is running.
 
 ### priors
 There are two functions to help the user define the appropriate priors list. 
 
 add_prior(): Using the function the user defines all the information associated with a specific parameter that is being calibrated. For the current version of the code the user should specify at least the following things:
 
-* FUN - string. This is a character string for the R function that will be used to generate random values. (e.g. "runif", "qtruncnorm", etc.). While add_prior can currently handle this value not being given the rest of the code will not work properly in that scenario. In the future, not giving a value for FUN will result in a non-calibrated parameter from the models perspective.
+* FUN - string. This is a character string for the R function that will be used to generate random values. (e.g. "runif", "qtruncnorm", etc.). While add_prior can currently handle this value not being given, the rest of the code will not work properly in that scenario. In the future, not giving a value for FUN will result in a non-calibrated parameter from the model's perspective.
 * use_length - boolean. This tells imabc whether the prior expects a scalar input or a vector of inputs. Functions like runif expect a scalar value n and then return a vector of length n, while others expect a vector of values and return a vector with the same length. Setting use_length = TRUE tells imabc that the function being used behaves like runif and only accepts a scalar value as input.
-* dtruncnorm - boolean. This tells imabc that when calculating the weights (R/get_weight.R), the parameter will use a dtruncnorm function for the log_prior_d (R/get_log_prior_d.R). If dtruncnorm = FALSE, log_prior_d will just be 0 for all values of that simulated paramter.
+* dtruncnorm - boolean. This tells imabc that when calculating the weights (R/get_weight.R), the parameter will use a dtruncnorm function for the log_prior_d (R/get_log_prior_d.R). If dtruncnorm = FALSE, log_prior_d will just be 0 for all values of that simulated parameter.
 * min - numeric. The minimum value that parameter can be.
 * max - numeric. The maximum value that parameter can be.
 * sd - numeric. The standard deviation that the parameter follows.
@@ -97,7 +97,7 @@ priors <- define_priors(
 ```
 
 ### targets
-Just like the prior distribution information the user has a couple functions for helping them specify the target values and structure of the targets.
+Just like the prior distribution information the user has the following functions for helping them specify the target values and structure of the targets.
 
 add_targets(): this lets the user define a group of subtargets associated with a main target. Each subtarget must be a list of the following values: target, low_bound_start, up_bound_start, low_bound_stop, and up_bound_stop. There can be as many subtargets as you want.
 
@@ -119,7 +119,7 @@ targets <- define_targets(
 ```
 
 ### target_fun
-a user defined function that takes in a vector of all parameters being calibrated and returns a simulated value for each subtarget as a vector. The current version of the code converts each row the simulate parameters data frame (parm_draws) into a vector that is passed to this function. This means that the order of the parameters can matter. The order that the parameters are given to this function is determined by the order they are defined in define_priors(). On the opposite side the order that imabc expected the simulated target values is the same as the order they are defined in define_targets(). This is something that we could change with some moderate tweaks to the code but will be partially determined by how we want the user to define this function.
+A user defined function that takes in a vector of all parameters being calibrated and returns a simulated value for each subtarget as a vector. The current version of the code converts each row of the simulate parameters data frame (parm_draws) into a vector that is passed to this function. This means that the order of the parameters can matter. The order that the parameters are given to this function is determined by the order they are defined in define_priors(). Correspondingly, the order that imabc expected the simulated target values is the same as the order they are defined in define_targets(). This is something that we could change with some moderate tweaks to the code but will be partially determined by how we want the user to define this function.
 
 What the user does with the parameters and how it calculates results within this function is completely up to them.
 
