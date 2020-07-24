@@ -9,7 +9,7 @@ get_B_draws <- function(B, inflate, center, cov_matrix, priors, parm_names) {
     return(x[1:B, ])
   } else {
     # CM NOTE: Should this be an actual error?
-    print(paste("get_B_draws error: no parameter draws are in range with inflate=", inflate))
+    print(paste("get_B_draws error: no parameter draws are in range with inflate =", inflate))
 
     return(NULL)
   }

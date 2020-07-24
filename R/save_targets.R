@@ -1,7 +1,7 @@
 save_targets <- function(targets_list, filename, out_dir) {
   dta <- do.call(rbind, lapply(names(targets_list), FUN = function(x, targ) {
     dta <- do.call(cbind, targ[[x]])
-    cbind(MainTarget = x, update = attr(targ, "update")[x], dta)
+    cbind(TargetGroups = x, update = attr(targ, "update")[x], dta)
   }, targ = targets_list))
   dta <- data.table(dta)
   checkcols <- c("lower_bounds_new", "upper_bounds_new")

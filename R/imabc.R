@@ -71,6 +71,9 @@ imabc <- function(
   }
 
   # Environment setup ---------------------------------------------------------------------------------------------------
+  # Create output directory if it doesn't already exist
+  dir.create(output_directory, showWarnings = FALSE, recursive = TRUE)
+
   # Randomization method (must be L'Ecuyer-CMRG for parallelization)
   rngKind <- "L'Ecuyer-CMRG"
   RNGkind(kind = rngKind, normal.kind = NULL)
@@ -109,9 +112,9 @@ imabc <- function(
   # Determine number of paramters to calibrate
   all_parm_names <- names(priors)
   n_parms <- length(priors)
-  calibrate_parms <- !attr(priors, "fixed")
-  calibrate_parms <- names(calibrate_parms)[calibrate_parms]
-  n_calib_parms <- length(calibrate_parms)
+  # calibrate_parms <- !attr(priors, "fixed") # CM NOTE: Now we tract distribution names
+  # calibrate_parms <- names(calibrate_parms)[calibrate_parms]
+  # n_calib_parms <- length(calibrate_parms)
 
   # Priors Handling -----------------------------------------------------------------------------------------------------
   # Initialize inputs/results data frames
@@ -156,6 +159,8 @@ imabc <- function(
       prior_list = priors,
       sampling = u_draws
     )
+    # Get empirical standard deviation of parameters
+    priors <- update_parm_sds(priors, dt = parm_draws, parms = all_parm_names)
   } # !continue_runs
 
   # Targets Handling ----------------------------------------------------------------------------------------------------
@@ -177,7 +182,7 @@ imabc <- function(
     init_run_dt(n_store, target_names, type = "distance", out_final = TRUE)
   }
   # These are sub-targets within each of the main targets
-  sim_parm_names <- attributes(targets)$sub_targets
+  sim_parm_names <- attributes(targets)$target_ids
   sim_parm <- init_run_dt(n_rows_init, sim_parm_names, type = "sim", out_final = FALSE)
   # CM NOTE: See continue_runs for good_parm_draws
   good_sim_parm <- if (continue_runs) {
@@ -590,7 +595,7 @@ imabc <- function(
         mean_cov <- data.table(previous_results$mean_cov)
       }
       stopifnot(
-        "imabc: Missing mean_cov object" =
+        "Missing mean_cov object" =
           exists("mean_cov")
       )
       good_parm_draws[draw %in% in_draws, ]$sample_wt <-
@@ -701,6 +706,7 @@ imabc <- function(
       if (n_in < N_cov_points) {
         # if there are too few good points
         # Pull standard deviations of parameters provided with the prior information
+        # CM NOTE: Uses prior SD
         prior_sds <- attr(priors, "sds")
         sd_next <- matrix(0.5*prior_sds, ncol = n_parms, nrow = num_centers, byrow = TRUE)
         colnames(sd_next) <- names(priors)
@@ -769,6 +775,7 @@ imabc <- function(
         n_use <- min(n_in, N_cov_points)
         sample_mean <- as.data.frame(center_next)
 
+        # CM NOTE: I am pretty sure this doesn't matter because we recalculate this in the for loop below
         # Given place in code this is really n_in == N_cov_points
         if (n_in <= N_cov_points) {
           var_data <- good_parm_draws[1:n_use, all_parm_names, with = FALSE] # CM NOTE: calib.parm.names
@@ -779,6 +786,7 @@ imabc <- function(
           # CM NOTE: Should this be an error?
           if (all(sample_cov == -1)) { return() }
           if (any(diag(sample_cov) == 0)) {
+            # CM NOTE: Uses prior SD
             # this occurs when adding a new parameter: it is set to default for all prior draws
             is_zero <- diag(sample_cov) == 0
             sd_next <- 0.5*attr(priors, "sds")
@@ -790,7 +798,7 @@ imabc <- function(
         # For tracking which rows need to be written out
         new_rows <- c()
         for (center_i1 in 1:num_centers) {
-          sample_mean_i1 <- unlist(sample_mean[center_i1, all_parm_names]) # if fixed vs calibrated parms are defined this needs to be calibrated parms
+          sample_mean_i1 <- unlist(sample_mean[center_i1, all_parm_names]) # CM NOTE: calib.parm.names
           draw_rows <- ((center_i1 - 1)*Center_n + 1):(center_i1*Center_n)
 
           if (n_in >= N_cov_points) {
@@ -798,6 +806,7 @@ imabc <- function(
             # Find the n.use closest draws to each center point,
             #------------------------------------------------------------------------
             # Find scaled distance
+            # CM NOTE: Uses prior SD
             prior_sds <- attr(priors, "sds")
             good_parm_draws$scaled_dist <- Inf
             good_parm_draws[1:n_in, ]$scaled_dist <- total_distance(
@@ -823,6 +832,7 @@ imabc <- function(
               diag(sample_cov) <- diag(sample_cov) + (sd_next^2)
             }
           } # n_in >= N_cov_points
+          # CM NOTE: I think we
 
           # Draw Center_n new parm values usign an MVN draw...............................
           # assign fixed parameters
@@ -832,12 +842,6 @@ imabc <- function(
           if (abs(sum(sample_cov) - sum(diag(sample_cov))) < 1e-10) {
             warning("abs(sum(sample_cov) - sum(diag(sample_cov))) < 1e-10: This part of code hasn't been tested")
             # CM NOTE: Not worked on yet
-            # parm_draws[draw_rows, (all_parm_names) := draw.parms(n_add=Center_n,
-            #                                                       mu=as.matrix(t(sample_mean_i1)),
-            #                                                       sigma=as.matrix(t(diag(sample_cov))),
-            #                                                       parm.priors=parm.priors.df,
-            #                                                       parm.names=calib.parm.names,
-            #                                                       calib.targets)] # CM NOTE: calib.parm.names
             # Perform random draws
             parm_draws[1:(num_centers*Center_n), (all_parm_names) := draw_parms(
               n_add = Center_n,
@@ -897,6 +901,11 @@ imabc <- function(
           mean_cov[new_rows, c("iter", "step", "center", "B.in", "parm", all_parm_names), with = FALSE], meancov_outfile,
           out_dir = output_directory, append = f_append
         ) # CM NOTE: calib.parm.names
+
+        # Get updated empirical standard deviation of parameters
+        # CM NOTE: Search "CM NOTE: Uses prior SD" for places this impacts
+        priors <- update_parm_sds(priors = priors, dt = parm_draws, parms = all_parm_names)
+
         f_append <- TRUE
 
         if (recalc_centers) {

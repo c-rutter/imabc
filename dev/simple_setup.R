@@ -79,35 +79,25 @@ target_fun <- function(x) {
 }
 
 targets <- define_targets(
-  m1 = add_targets(
-    t1 = list(
+  # new_targets <- list(
+  m1 = group_targets(
+    s1 = add_target(
       target = 1.5,
-      low_bound_start = 1.0,
-      up_bound_start = 2.0,
-      # low_bound_start = 1.4,
-      # up_bound_start = 2.6,
-
-      low_bound_stop = 1.49,
-      up_bound_stop = 1.51
+      starting_range = c(1.0, 2.0),
+      stopping_range = c(1.49, 1.51)
     )
   ),
-  m2 = add_targets(
-    t2 = list(
-      target = 0.5,
-      low_bound_start = 0.2,
-      up_bound_start = 0.9,
-      # low_bound_start = 0.4,
-      # up_bound_start = 0.6,
-
-      low_bound_stop = 0.49,
-      up_bound_stop = 0.51
-    )
+  add_target(
+    target = 0.5,
+    starting_range = c(0.2, 0.9),
+    stopping_range = c(0.49, 0.51)
   )
+  # )
 )
 
 # Priors
-x1_min <- 0.7
-x1_max <- 0.8
+x1_min <- 0.1
+x1_max <- 0.9
 x2_min <- 0.7
 x2_max <- 0.8
 # If a function is specified, add_prior requires min, max, and sd. If those are inputs into the specified FUN function
@@ -115,15 +105,13 @@ x2_max <- 0.8
 #   with both the names that FUN is looking for and min, max, and/or sd.
 priors <- define_priors(
   x1 = add_prior(
-    FUN = "runif",
-    min = x1_min, max = x1_max, # Inputs into runif
-    sd = ((x1_max - x1_min)^2)/12, # Info required for imabc not defined in runif
-    dtruncnorm = FALSE # this is for get_weights. Might want to specify it differently (or let user provide function e.g. dunif)
+    density_fn = "dunif",
+    min = x1_min, max = x1_max # Inputs into runif
   ),
   x2 = add_prior(
-    FUN = "qtruncnorm",
-    mean = 0.75, sd = 0.2, a = x2_min, b = x2_max, # Inputs into qtruncnorm
-    min = x2_min, max = x2_max, use_length = FALSE # Info required for imabc not defined in qtruncnorm
+    quantile_fn = "qtruncnorm",
+    mean = 0.75, sd = 0.05, a = x2_min, b = x2_max, # Inputs into qtruncnorm
+    min = x2_min, max = x2_max # Info required for imabc not defined in qtruncnorm
   )#,
   # x2 = add_prior(quantile_f = "qtruncnorm", density_f = "dtruncnorm", mean = 0.14, sd = 0.20, a = 0, b = 0.95, use_length = FALSE),
   # For a fixed parameter we expect an "n" but we will give it a vector so use_length = TRUE is needed
@@ -131,9 +119,14 @@ priors <- define_priors(
 )
 
 
+
+
+
+
 priors = priors
 targets = targets
 target_fun = target_fun
+previous_results = NULL
 N_start = 1000
 seed = 1234
 latinHypercube = TRUE
@@ -142,12 +135,11 @@ Center_n = 50
 N_post = 90
 max_iter = 1000
 max_iter = 100
-N_cov_points = 250
+N_cov_points = 50
 sample_inflate = 1.5
 recalc_centers = TRUE
-continue_runs = FALSE
 verbose = TRUE
-output_directory = "~/Downloads"
+output_directory = "dev/outputs"
 
 results <- imabc(
   priors = priors,
@@ -251,6 +243,22 @@ new_results <- imabc(
 # target modification
 # parameter modification
 
+# TO DO:
+
+
+# Questions:
+# 1) Where did we say we wanted to update the empirical standard deviations of the parameters?
+#     right now we are doing it only when ! n_in < N_cov_points and we are doing it at the end of an iteration - after
+#     we have simulated a new set of parm_draws
+#   Where it matters is in calculating the following functions:
+#     draw_parms() when n_in < N_cov_points. We use the priors sds attribute to estimate the new sample.
+#     total_distance() to calculate good_parm_draws[1:n_in, ]$scaled_dist. We use the priors sds attribute to calculate
+#       the scaled distance that then determines which observations to estimate parm_covariance() with. This feeds into
+#       get_B_draws()
+#   I think the end of an iteration that has n_in >= N_cov_points makes the most sense because it keeps the SD used for
+#     sampling wide until we start to get more confident in our simulated samples then it starts to tighten it for the
+#     next iteration. It also calculates the SD using parm_draws (rather the good_parm_draws) just like we do when we get
+#     the first empirical sample at the start of the algorithm
 
 #########################################################################################################################
 #########################################################################################################################
