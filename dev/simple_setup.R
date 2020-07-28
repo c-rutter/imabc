@@ -69,19 +69,30 @@ library(truncnorm)
 # Target functions
 fn1 <- function(x1, x2) {x1 + x2 + rnorm(1, 0, 0.01)}
 fn2 <- function(x1, x2) {x1 * x2 + rnorm(1, 0, 0.01)}
-target_fun <- function(x) {
+
+target_fun <- function(x, lower_bounds, upper_bounds) {
   res <- c()
 
-  res[1] <- fn1(x[1], x[2])
-  res[2] <- fn2(x[1], x[2])
+  # lower/upper bounds are now accessible in target_fun.
+  # Either using the name of sim parm or the order they are created in define_targets
+  res[1] <- fn1(x[1], x[2]) # lower_bounds[1], upper_bounds[1] # OR # lower_bounds["m1s1"], upper_bounds["m1s1"]
+  res[2] <- fn2(x[1], x[2]) # lower_bounds[2], upper_bounds[2] # OR # lower_bounds["m2s1"], upper_bounds["m2s1"]
+
 
   return(res)
 }
 
+# Rename lower_bounds_start to lower_bounds_now
+# If no name is provided, function assigns name based on group and target.
+#   Groups are of the format m[0-9]+
+#   sub-targets are of the format s[0-9]+
+# So the below generates two targets with IDs m1s1 and m2s1.
+#   if the group_targets had two targets in it the second one would be m1s2 and so on.
+# There are checks to make sure the name is completely unique
+# If names are provided then the target ID is just equal to sprintf(%s%s, group_target name, add_target name)
 targets <- define_targets(
-  # new_targets <- list(
-  m1 = group_targets(
-    s1 = add_target(
+  group_targets(
+    add_target(
       target = 1.5,
       starting_range = c(1.0, 2.0),
       stopping_range = c(1.49, 1.51)
@@ -92,7 +103,6 @@ targets <- define_targets(
     starting_range = c(0.2, 0.9),
     stopping_range = c(0.49, 0.51)
   )
-  # )
 )
 
 # Priors
@@ -105,11 +115,11 @@ x2_max <- 0.8
 #   with both the names that FUN is looking for and min, max, and/or sd.
 priors <- define_priors(
   x1 = add_prior(
-    density_fn = "dunif",
+    dist_base_name = "unif",
     min = x1_min, max = x1_max # Inputs into runif
   ),
   x2 = add_prior(
-    quantile_fn = "qtruncnorm",
+    dist_base_name = "truncnorm",
     mean = 0.75, sd = 0.05, a = x2_min, b = x2_max, # Inputs into qtruncnorm
     min = x2_min, max = x2_max # Info required for imabc not defined in qtruncnorm
   )#,
@@ -117,9 +127,6 @@ priors <- define_priors(
   # For a fixed parameter we expect an "n" but we will give it a vector so use_length = TRUE is needed
   # x3 = add_prior(0.5, use_length = FALSE) # Fixed Param
 )
-
-
-
 
 
 

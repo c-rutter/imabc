@@ -30,6 +30,11 @@ define_targets <- function(..., previous_run_targets = NULL) {
     attributes(new_targets)$target_groups <- new_names
     attributes(new_targets)$sub_targets <- sub_targets
     attributes(new_targets)$target_ids <- target_ids
+
+    # Check all names are unique
+    stopifnot(
+      "Target names must be unique by group and target" = length(target_ids) == length(unique(target_ids))
+    )
   } # length(new_targets) > 0
 
   # If reading from a previous set of results

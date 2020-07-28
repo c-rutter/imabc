@@ -14,13 +14,13 @@
 #' @export
 #'
 #' @examples
-add_prior <- function(..., density_fn = NULL, quantile_fn = NULL) {
+add_prior <- function(..., dist_base_name = NULL, density_fn = NULL, quantile_fn = NULL) {
   inputs <- list(...)
 
   # if FUN is NULL, assume a fixed parameter
-  if (is.null(density_fn) & is.null(quantile_fn)) {
+  if (is.null(dist_base_name) & is.null(density_fn) & is.null(quantile_fn)) {
     if (length(inputs) != 1) {
-      stop("add_prior: For a Fixed Parameter only supply a single numeric value of length 1")
+      stop("For a Fixed Parameter only supply a single numeric value of length 1")
     }
     inputs <- as.numeric(inputs)
     density_fn <- quantile_fn <- function(n) {
@@ -32,44 +32,89 @@ add_prior <- function(..., density_fn = NULL, quantile_fn = NULL) {
     min <- inputs
     max <- inputs
     distribution <- "fixed"
-  } else { # is.null(density_fn) & is.null(quantile_fn)
-    # Find and use the appropriate distribution functions based on user input
-    if (!is.null(density_fn) & is.null(quantile_fn)) {
-      # Check that density function provided exists
-      fn_name <- eval(density_fn)
-      e <- sprintf("The function %s cannot be found. Check the spelling or that it is loaded into your environment", eval(fn_name))
-      if (!exists(fn_name, mode = 'function')) { stop(e) }
+  } else { # is.null(dist_base_name) & is.null(density_fn) & is.null(quantile_fn)
+    if (is.null(dist_base_name)) {
+      if (!is.null(density_fn) & is.null(quantile_fn)) {
+        # dist_base_name  density_fn  quantile_fn
+        #           NULL    provided         NULL
+        # Check that density function provided exists
+        density_fn <- validate_prior_function(density_fn)
+        # Check that best guess quantile function exists
+        quantile_fn <- validate_prior_function(gsub("^d", "q", density_fn))
 
-      # Check that best guess quantile function exists
-      quantile_fn <- gsub("^d", "q", fn_name)
-      e <- sprintf("The function %s cannot be found. Check the spelling or that it is loaded into your environment", eval(quantile_fn))
-      if (!exists(quantile_fn, mode = 'function')) { stop(e) }
-    } else if (is.null(density_fn) & !is.null(quantile_fn)) { # !is.null(density_fn) & is.null(quantile_fn)
+      } else if (is.null(density_fn) & !is.null(quantile_fn)) {
+        # dist_base_name  density_fn  quantile_fn
+        #           NULL        NULL     provided
+        # Check that quantile function provided exists
+        quantile_fn <- validate_prior_function(quantile_fn)
+        # Check that best guess density function exists
+        density_fn <- validate_prior_function(gsub("^q", "d", quantile_fn))
+
+      } else if (!is.null(density_fn) & !is.null(quantile_fn)) {
+        # dist_base_name  density_fn  quantile_fn
+        #           NULL    provided     provided
+        # Check that density function provided exists
+        density_fn <- validate_prior_function(density_fn)
+        # Check that quantile function provided exists
+        quantile_fn <- validate_prior_function(quantile_fn)
+      }
+      # Distribution shorthand
+      dist_base_name <- gsub("^d", "", density_fn)
+
+    } else if (!is.null(dist_base_name)) {
+      # Check that base name converts to existing function
+      density_fn_guess <- validate_prior_function(paste0("d", dist_base_name))
       # Check that quantile function provided exists
-      fn_name <- eval(quantile_fn)
-      e <- sprintf("The function %s cannot be found. Check the spelling or that it is loaded into your environment", eval(fn_name))
-      if (!exists(fn_name, mode = 'function')) { stop(e) }
+      quantile_fn_guess <- validate_prior_function(paste0("q", dist_base_name))
 
-      # Check that best guess density function exists
-      density_fn <- gsub("^q", "d", fn_name)
-      e <- sprintf("The function %s cannot be found. Check the spelling or that it is loaded into your environment", eval(density_fn))
-      if (!exists(density_fn, mode = 'function')) { stop(e) }
-    } else { # is.null(density_fn) & !is.null(quantile_fn)
-      # Check that density function provided exists
-      e <- sprintf("The function %s cannot be found. Check the spelling or that it is loaded into your environment", eval(density_fn))
-      if (!exists(density_fn, mode = 'function')) { stop(e) }
+      if (is.null(density_fn) & is.null(quantile_fn)) {
+        # dist_base_name  density_fn  quantile_fn
+        #       provided        NULL         NULL
+        density_fn <- density_fn_guess
+        quantile_fn <- quantile_fn_guess
 
-      # Check that quantile function provided exists
-      e <- sprintf("The function %s cannot be found. Check the spelling or that it is loaded into your environment", eval(quantile_fn))
-      if (!exists(quantile_fn, mode = 'function')) { stop(e) }
-    } # !is.null(density_fn) & !is.null(quantile_fn)
-    # Distribution shorthand
-    dist_shorthand <- gsub("^d", "", density_fn)
+      } else if (!is.null(density_fn) & is.null(quantile_fn)) {
+        # dist_base_name  density_fn  quantile_fn
+        #       provided    provided         NULL
+        density_fn <- validate_prior_function(density_fn)
+        # Warn if density function from dist_base_name != density_fn
+        if (density_fn_guess != density_fn) {
+          warning("Base distribution name does not convert to provided density function. Using density_fn.")
+        }
+        quantile_fn <- quantile_fn_guess
+
+      } else if (is.null(density_fn) & !is.null(quantile_fn)) {
+        # dist_base_name  density_fn  quantile_fn
+        #       provided        NULL     provided
+        quantile_fn <- validate_prior_function(quantile_fn)
+        # Warn if quantile function from dist_base_name != quantile_fn
+        if (quantile_fn_guess != quantile_fn) {
+          warning("Base distribution name does not convert to provided quantile function. Using quantile_fn.")
+        }
+        density_fn <- density_fn_guess
+
+      } else if (!is.null(density_fn) & !is.null(quantile_fn)) {
+        # dist_base_name  density_fn  quantile_fn
+        #       provided    provided     provided
+        density_fn <- validate_prior_function(density_fn)
+        quantile_fn <- validate_prior_function(quantile_fn)
+
+        # Warn if density function from dist_base_name != density_fn
+        if (density_fn_guess != density_fn) {
+          warning("Base distribution name does not convert to provided density function. Using density_fn.")
+        }
+        # Warn if quantile function from dist_base_name != quantile_fn
+        if (quantile_fn_guess != quantile_fn) {
+          warning("Base distribution name does not convert to provided quantile function. Using quantile_fn.")
+        }
+
+      }
+    }
 
     # Check for min and max which are required
     check_names <- names(inputs)
     # min, and max are all required
-    e <- sprintf("The user must provide min and max to the prior function in addition to the inputs needed by %s functions", eval(dist_shorthand))
+    e <- sprintf("The user must provide min and max to the prior function in addition to the inputs needed by %s functions", eval(dist_base_name))
     if (!(all(c("min", "max") %in% check_names))) { stop(e) }
 
     # Define the density function call
@@ -92,8 +137,8 @@ add_prior <- function(..., density_fn = NULL, quantile_fn = NULL) {
 
     min <- inputs$min
     max <- inputs$max
-    distribution <- dist_shorthand
-  } # ! is.null(density_fn) & is.null(quantile_fn)
+    distribution <- dist_base_name
+  } # ! is.null(dist_base_name) & is.null(density_fn) & is.null(quantile_fn)
 
   return(list(
     density_function = density_function,

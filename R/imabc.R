@@ -243,6 +243,12 @@ imabc <- function(
 
     # If not the first iteration on a continuing run
     if (!(continue_runs == TRUE & main_i1 == start_iter)) {
+      # Pull current bounds
+      lower_bounds <- unlist(lapply(targets, FUN = function(x) { x[["lower_bounds_start"]] }))
+      upper_bounds <- unlist(lapply(targets, FUN = function(x) { x[["upper_bounds_start"]] }))
+      names(lower_bounds) <- attr(targets, which = "target_ids")
+      names(upper_bounds) <- attr(targets, which = "target_ids")
+
       # Parms to check
       parms_to_run <- parm_draws[1:n_draw, c("seed", all_parm_names), with = FALSE]
       # Setup parallel handling
@@ -251,7 +257,7 @@ imabc <- function(
       # CM NOTE: If expecting a list of objects (ll, sp) then need to change combine_results (see combine_results.R)
       res <- foreach(i1 = 1:nrow(parms_to_run), .combine = combine_results) %dopar% {
         inp <- as.numeric(parms_to_run[i1, all_parm_names, with = FALSE])
-        sim_target <- target_fun(inp)
+        sim_target <- target_fun(inp, lower_bounds = lower_bounds, upper_bounds = upper_bounds)
         # CM NOTE: res is supposed to be a measure of how all the subtargets did to match for a given main target
         #   e.g. Pickhardt has 4 sub targets that make up sim_target
         # list(ll = res, sp = sim_target) # CM NOTE: Better names
@@ -706,7 +712,6 @@ imabc <- function(
       if (n_in < N_cov_points) {
         # if there are too few good points
         # Pull standard deviations of parameters provided with the prior information
-        # CM NOTE: Uses prior SD
         prior_sds <- attr(priors, "sds")
         sd_next <- matrix(0.5*prior_sds, ncol = n_parms, nrow = num_centers, byrow = TRUE)
         colnames(sd_next) <- names(priors)
@@ -786,7 +791,6 @@ imabc <- function(
           # CM NOTE: Should this be an error?
           if (all(sample_cov == -1)) { return() }
           if (any(diag(sample_cov) == 0)) {
-            # CM NOTE: Uses prior SD
             # this occurs when adding a new parameter: it is set to default for all prior draws
             is_zero <- diag(sample_cov) == 0
             sd_next <- 0.5*attr(priors, "sds")
@@ -806,7 +810,6 @@ imabc <- function(
             # Find the n.use closest draws to each center point,
             #------------------------------------------------------------------------
             # Find scaled distance
-            # CM NOTE: Uses prior SD
             prior_sds <- attr(priors, "sds")
             good_parm_draws$scaled_dist <- Inf
             good_parm_draws[1:n_in, ]$scaled_dist <- total_distance(
@@ -901,11 +904,6 @@ imabc <- function(
           mean_cov[new_rows, c("iter", "step", "center", "B.in", "parm", all_parm_names), with = FALSE], meancov_outfile,
           out_dir = output_directory, append = f_append
         ) # CM NOTE: calib.parm.names
-
-        # Get updated empirical standard deviation of parameters
-        # CM NOTE: Search "CM NOTE: Uses prior SD" for places this impacts
-        priors <- update_parm_sds(priors = priors, dt = parm_draws, parms = all_parm_names)
-
         f_append <- TRUE
 
         if (recalc_centers) {
@@ -923,7 +921,7 @@ imabc <- function(
       } # ! n_in < N_cov_points
       if (continue_runs == TRUE & main_i1 == start_iter) { f_append <- FALSE }
     } # if (main_i1 < end_iter)
-    if (verbose) { cat("---------- Iter Complete ---------\n") }
+    if (verbose) { cat("\n---------- Iter Complete ---------\n") }
     # CM NOTE: Should store prior list and target list
   } # main_i1 in start_iter:end_iter
 
