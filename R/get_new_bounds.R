@@ -1,7 +1,7 @@
 get_new_bounds <- function(targets_list, sims) {
   targets_list <- lapply(targets_list, FUN = function(x, sim) {
     # Pull empirical bounds and starting/stopping bounds into matrices
-    new_bounds <- apply(sim[, (x$names), with = FALSE], 2, range)
+    new_bounds <- apply(sim[, attr(x, "target_ids"), with = FALSE], 2, range)
     starts <- matrix(c(x$lower_bounds_start, x$upper_bounds_start), nrow = 2, byrow = TRUE)
     stops <- matrix(c(x$lower_bounds_stop, x$upper_bounds_stop), nrow = 2, byrow = TRUE)
 

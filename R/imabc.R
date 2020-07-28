@@ -71,6 +71,9 @@ imabc <- function(
   }
 
   # Environment setup ---------------------------------------------------------------------------------------------------
+  # Create output directory if it doesn't already exist
+  dir.create(output_directory, showWarnings = FALSE, recursive = TRUE)
+
   # Randomization method (must be L'Ecuyer-CMRG for parallelization)
   rngKind <- "L'Ecuyer-CMRG"
   RNGkind(kind = rngKind, normal.kind = NULL)
@@ -109,9 +112,9 @@ imabc <- function(
   # Determine number of paramters to calibrate
   all_parm_names <- names(priors)
   n_parms <- length(priors)
-  calibrate_parms <- !attr(priors, "fixed")
-  calibrate_parms <- names(calibrate_parms)[calibrate_parms]
-  n_calib_parms <- length(calibrate_parms)
+  # calibrate_parms <- !attr(priors, "fixed") # CM NOTE: Now we tract distribution names
+  # calibrate_parms <- names(calibrate_parms)[calibrate_parms]
+  # n_calib_parms <- length(calibrate_parms)
 
   # Priors Handling -----------------------------------------------------------------------------------------------------
   # Initialize inputs/results data frames
@@ -156,6 +159,8 @@ imabc <- function(
       prior_list = priors,
       sampling = u_draws
     )
+    # Get empirical standard deviation of parameters
+    priors <- update_parm_sds(priors, dt = parm_draws, parms = all_parm_names)
   } # !continue_runs
 
   # Targets Handling ----------------------------------------------------------------------------------------------------
@@ -177,7 +182,7 @@ imabc <- function(
     init_run_dt(n_store, target_names, type = "distance", out_final = TRUE)
   }
   # These are sub-targets within each of the main targets
-  sim_parm_names <- attributes(targets)$sub_targets
+  sim_parm_names <- attributes(targets)$target_ids
   sim_parm <- init_run_dt(n_rows_init, sim_parm_names, type = "sim", out_final = FALSE)
   # CM NOTE: See continue_runs for good_parm_draws
   good_sim_parm <- if (continue_runs) {
@@ -238,6 +243,12 @@ imabc <- function(
 
     # If not the first iteration on a continuing run
     if (!(continue_runs == TRUE & main_i1 == start_iter)) {
+      # Pull current bounds
+      lower_bounds <- unlist(lapply(targets, FUN = function(x) { x[["lower_bounds_start"]] }))
+      upper_bounds <- unlist(lapply(targets, FUN = function(x) { x[["upper_bounds_start"]] }))
+      names(lower_bounds) <- attr(targets, which = "target_ids")
+      names(upper_bounds) <- attr(targets, which = "target_ids")
+
       # Parms to check
       parms_to_run <- parm_draws[1:n_draw, c("seed", all_parm_names), with = FALSE]
       # Setup parallel handling
@@ -246,7 +257,7 @@ imabc <- function(
       # CM NOTE: If expecting a list of objects (ll, sp) then need to change combine_results (see combine_results.R)
       res <- foreach(i1 = 1:nrow(parms_to_run), .combine = combine_results) %dopar% {
         inp <- as.numeric(parms_to_run[i1, all_parm_names, with = FALSE])
-        sim_target <- target_fun(inp)
+        sim_target <- target_fun(inp, lower_bounds = lower_bounds, upper_bounds = upper_bounds)
         # CM NOTE: res is supposed to be a measure of how all the subtargets did to match for a given main target
         #   e.g. Pickhardt has 4 sub targets that make up sim_target
         # list(ll = res, sp = sim_target) # CM NOTE: Better names
@@ -590,7 +601,7 @@ imabc <- function(
         mean_cov <- data.table(previous_results$mean_cov)
       }
       stopifnot(
-        "imabc: Missing mean_cov object" =
+        "Missing mean_cov object" =
           exists("mean_cov")
       )
       good_parm_draws[draw %in% in_draws, ]$sample_wt <-
@@ -769,6 +780,7 @@ imabc <- function(
         n_use <- min(n_in, N_cov_points)
         sample_mean <- as.data.frame(center_next)
 
+        # CM NOTE: I am pretty sure this doesn't matter because we recalculate this in the for loop below
         # Given place in code this is really n_in == N_cov_points
         if (n_in <= N_cov_points) {
           var_data <- good_parm_draws[1:n_use, all_parm_names, with = FALSE] # CM NOTE: calib.parm.names
@@ -790,7 +802,7 @@ imabc <- function(
         # For tracking which rows need to be written out
         new_rows <- c()
         for (center_i1 in 1:num_centers) {
-          sample_mean_i1 <- unlist(sample_mean[center_i1, all_parm_names]) # if fixed vs calibrated parms are defined this needs to be calibrated parms
+          sample_mean_i1 <- unlist(sample_mean[center_i1, all_parm_names]) # CM NOTE: calib.parm.names
           draw_rows <- ((center_i1 - 1)*Center_n + 1):(center_i1*Center_n)
 
           if (n_in >= N_cov_points) {
@@ -823,6 +835,7 @@ imabc <- function(
               diag(sample_cov) <- diag(sample_cov) + (sd_next^2)
             }
           } # n_in >= N_cov_points
+          # CM NOTE: I think we
 
           # Draw Center_n new parm values usign an MVN draw...............................
           # assign fixed parameters
@@ -832,12 +845,6 @@ imabc <- function(
           if (abs(sum(sample_cov) - sum(diag(sample_cov))) < 1e-10) {
             warning("abs(sum(sample_cov) - sum(diag(sample_cov))) < 1e-10: This part of code hasn't been tested")
             # CM NOTE: Not worked on yet
-            # parm_draws[draw_rows, (all_parm_names) := draw.parms(n_add=Center_n,
-            #                                                       mu=as.matrix(t(sample_mean_i1)),
-            #                                                       sigma=as.matrix(t(diag(sample_cov))),
-            #                                                       parm.priors=parm.priors.df,
-            #                                                       parm.names=calib.parm.names,
-            #                                                       calib.targets)] # CM NOTE: calib.parm.names
             # Perform random draws
             parm_draws[1:(num_centers*Center_n), (all_parm_names) := draw_parms(
               n_add = Center_n,
@@ -914,7 +921,7 @@ imabc <- function(
       } # ! n_in < N_cov_points
       if (continue_runs == TRUE & main_i1 == start_iter) { f_append <- FALSE }
     } # if (main_i1 < end_iter)
-    if (verbose) { cat("---------- Iter Complete ---------\n") }
+    if (verbose) { cat("\n---------- Iter Complete ---------\n") }
     # CM NOTE: Should store prior list and target list
   } # main_i1 in start_iter:end_iter
 

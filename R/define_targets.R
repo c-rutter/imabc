@@ -3,19 +3,44 @@ define_targets <- function(..., previous_run_targets = NULL) {
   new_targets <- list(...)
 
   if (length(new_targets) > 0) {
+    # Convert non-grouped targets to grouped targets for name control
+    to_group <- unlist(lapply(new_targets, FUN = function(x) { !"names" %in% names(x) }))
+    new_targets[to_group] <- lapply(new_targets[to_group], FUN = function(x) { group_targets(x) })
+
+    # Get target group names
+    new_names <- name_targets(new_targets, grouping = FALSE)
+
+    # Add names to targets
+    new_targets <- lapply(seq_along(new_names), FUN = function(x, targs, name) {
+      attr(targs[[x]], which = "target_group") <- name[x]
+      attr(targs[[x]], which = "target_ids") <- paste(name[x], targs[[x]]$names, sep = "")
+
+      targs[[x]]
+    }, targs = new_targets, name = new_names)
+    names(new_targets) <- new_names
+
     # Initialize update information
     update <- rep_len(TRUE, length.out = length(new_targets))
-    names(update) <- names(new_targets)
+    names(update) <- new_names
 
     # Store appropriate attributes
-    sub_targets <- as.character(unlist(lapply(new_targets, FUN = function(x) { x[["names"]] })))
+    sub_targets <- unlist(lapply(new_targets, FUN = function(x) { x[["names"]] }))
+    target_ids <- paste(new_names, sub_targets, sep = "")
     attributes(new_targets)$update <- update
+    attributes(new_targets)$target_groups <- new_names
     attributes(new_targets)$sub_targets <- sub_targets
+    attributes(new_targets)$target_ids <- target_ids
+
+    # Check all names are unique
+    stopifnot(
+      "Target names must be unique by group and target" = length(target_ids) == length(unique(target_ids))
+    )
   } # length(new_targets) > 0
 
   # If reading from a previous set of results
   old_targets <- list()
   if (!is.null(previous_run_targets)) {
+    stop("NEED TO UPDATE")
     # Main target information columns
     main_cols <- c("MainTarget", "update")
     # Subtarget information columns
@@ -52,16 +77,23 @@ define_targets <- function(..., previous_run_targets = NULL) {
     # Store appropriate attributes
     attributes(old_targets)$update <- update
     attributes(old_targets)$sub_targets <- infos$names
+
+    attributes(new_targets)$target_groups <- target_groups
+    attributes(new_targets)$sub_targets <- sub_targets
+    attributes(new_targets)$target_ids <- target_ids
+
   } # !is.null(previous_run_targets)
 
   # Handle all cases
   if (length(new_targets) == 0 & length(old_targets) == 0) { # No targets added
-    stop("define_targets: Need to add at least some targets.")
+    stop("Need to add at least some targets.")
   } else if (length(new_targets) != 0 & length(old_targets) == 0) { # Only new targets added
     all_targets <- new_targets
   } else if (length(new_targets) == 0 & length(old_targets) != 0) { # Only old targets added
+    stop("NEED TO UPDATE")
     all_targets <- old_targets
   } else {
+    stop("NEED TO UPDATE")
     # All sub_targets
     allsub_old <- attr(old_targets, "sub_targets")
     allsub_new <- attr(new_targets, "sub_targets")
