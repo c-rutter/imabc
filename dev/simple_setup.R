@@ -70,6 +70,8 @@ library(truncnorm)
 fn1 <- function(x1, x2) {x1 + x2 + rnorm(1, 0, 0.01)}
 fn2 <- function(x1, x2) {x1 * x2 + rnorm(1, 0, 0.01)}
 
+# CM NOTE: lower_bounds and upper_bounds must be inputs even if they are used. Need to adjust code so that they are
+#   optional inputs rather than required inputs
 target_fun <- function(x, lower_bounds, upper_bounds) {
   res <- c()
 
@@ -110,9 +112,9 @@ x1_min <- 0.1
 x1_max <- 0.9
 x2_min <- 0.7
 x2_max <- 0.8
-# If a function is specified, add_prior requires min, max, and sd. If those are inputs into the specified FUN function
-#   there is no need to supply them twice, but if FUN uses a different name for those inputs, they must be provided
-#   with both the names that FUN is looking for and min, max, and/or sd.
+# If a function is specified, add_prior requires min and max. If those are inputs into the specified FUN function
+#   there is no need to supply them twice, but if dist_base_name uses a different name for those inputs, they must be
+#   provided with both the names that FUN is looking for and min, max, and/or sd.
 priors <- define_priors(
   x1 = add_prior(
     dist_base_name = "unif",
@@ -120,12 +122,9 @@ priors <- define_priors(
   ),
   x2 = add_prior(
     dist_base_name = "truncnorm",
-    mean = 0.75, sd = 0.05, a = x2_min, b = x2_max, # Inputs into qtruncnorm
-    min = x2_min, max = x2_max # Info required for imabc not defined in qtruncnorm
-  )#,
-  # x2 = add_prior(quantile_f = "qtruncnorm", density_f = "dtruncnorm", mean = 0.14, sd = 0.20, a = 0, b = 0.95, use_length = FALSE),
-  # For a fixed parameter we expect an "n" but we will give it a vector so use_length = TRUE is needed
-  # x3 = add_prior(0.5, use_length = FALSE) # Fixed Param
+    mean = 0.75, sd = 0.05, a = x2_min, b = x2_max, # Inputs into *truncnorm
+    min = x2_min, max = x2_max # Info required for imabc not defined in *truncnorm
+  )
 )
 
 
@@ -167,39 +166,38 @@ results <- imabc(
 )
 
 # Test continue runs
-last_target_list <- read.csv(paste(output_directory, "TargetList_20200715_1254PDT.csv", sep = "/"))
-new_targets <- define_targets(previous_run_targets = last_target_list)
-
-previous_results <- list(
-  parm_draws = read.csv(paste(output_directory, "SimulatedParameters_20200715_1254PDT.csv", sep = "/")),
-  sim_parm = read.csv(paste(output_directory, "SimulatedTargets_20200715_1254PDT.csv", sep = "/")),
-  target_dist = read.csv(paste(output_directory, "SimulatedDistances_20200715_1254PDT.csv", sep = "/")),
-  good_parm_draws = read.csv(paste(output_directory, "Good_SimulatedParameters_20200715_1254PDT.csv", sep = "/")),
-  good_sim_parm = read.csv(paste(output_directory, "Good_SimulatedTargets_20200715_1254PDT.csv", sep = "/")),
-  good_target_dist = read.csv(paste(output_directory, "Good_SimulatedDistances_20200715_1254PDT.csv", sep = "/")),
-  mean_cov = read.csv(paste(output_directory, "MeanCovariance_20200715_1254PDT.csv", sep = "/"))
-)
-new_results <- imabc(
-  priors = priors, # same as before
-  targets = new_targets, # from the end of the last calculation
-  target_fun = target_fun, # same as before
-  previous_results = previous_results, # NEW
-  N_start = N_start,
-  seed = 1234,
-  latinHypercube = TRUE,
-  N_centers = N_centers,
-  Center_n = Center_n,
-  N_post = N_post,
-  max_iter = max_iter,
-  N_cov_points = 0,
-  sample_inflate = 1.5,
-  recalc_centers = TRUE,
-  verbose = TRUE,
-  output_directory = output_directory
-)
+# last_target_list <- read.csv(paste(output_directory, "TargetList_20200715_1254PDT.csv", sep = "/"))
+# new_targets <- define_targets(previous_run_targets = last_target_list)
+#
+# previous_results <- list(
+#   parm_draws = read.csv(paste(output_directory, "SimulatedParameters_20200715_1254PDT.csv", sep = "/")),
+#   sim_parm = read.csv(paste(output_directory, "SimulatedTargets_20200715_1254PDT.csv", sep = "/")),
+#   target_dist = read.csv(paste(output_directory, "SimulatedDistances_20200715_1254PDT.csv", sep = "/")),
+#   good_parm_draws = read.csv(paste(output_directory, "Good_SimulatedParameters_20200715_1254PDT.csv", sep = "/")),
+#   good_sim_parm = read.csv(paste(output_directory, "Good_SimulatedTargets_20200715_1254PDT.csv", sep = "/")),
+#   good_target_dist = read.csv(paste(output_directory, "Good_SimulatedDistances_20200715_1254PDT.csv", sep = "/")),
+#   mean_cov = read.csv(paste(output_directory, "MeanCovariance_20200715_1254PDT.csv", sep = "/"))
+# )
+# new_results <- imabc(
+#   priors = priors, # same as before
+#   targets = new_targets, # from the end of the last calculation
+#   target_fun = target_fun, # same as before
+#   previous_results = previous_results, # NEW
+#   N_start = N_start,
+#   seed = 1234,
+#   latinHypercube = TRUE,
+#   N_centers = N_centers,
+#   Center_n = Center_n,
+#   N_post = N_post,
+#   max_iter = max_iter,
+#   N_cov_points = 0,
+#   sample_inflate = 1.5,
+#   recalc_centers = TRUE,
+#   verbose = TRUE,
+#   output_directory = output_directory
+# )
 
 # CM NOTE:
-# What is difference between get_mean_cov and version if # ! n_in < N_cov_points?
 # In future we could have the results of imabc be all that is needed for continue_runs
 #   that means storing all the inputs and appropriate outputs
 #   we could still make a version that takes the componenents individually as well
@@ -249,23 +247,6 @@ new_results <- imabc(
 # straight restart
 # target modification
 # parameter modification
-
-# TO DO:
-
-
-# Questions:
-# 1) Where did we say we wanted to update the empirical standard deviations of the parameters?
-#     right now we are doing it only when ! n_in < N_cov_points and we are doing it at the end of an iteration - after
-#     we have simulated a new set of parm_draws
-#   Where it matters is in calculating the following functions:
-#     draw_parms() when n_in < N_cov_points. We use the priors sds attribute to estimate the new sample.
-#     total_distance() to calculate good_parm_draws[1:n_in, ]$scaled_dist. We use the priors sds attribute to calculate
-#       the scaled distance that then determines which observations to estimate parm_covariance() with. This feeds into
-#       get_B_draws()
-#   I think the end of an iteration that has n_in >= N_cov_points makes the most sense because it keeps the SD used for
-#     sampling wide until we start to get more confident in our simulated samples then it starts to tighten it for the
-#     next iteration. It also calculates the SD using parm_draws (rather the good_parm_draws) just like we do when we get
-#     the first empirical sample at the start of the algorithm
 
 #########################################################################################################################
 #########################################################################################################################
