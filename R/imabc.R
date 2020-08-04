@@ -251,6 +251,9 @@ imabc <- function(
 
       # Parms to check
       parms_to_run <- parm_draws[1:n_draw, c("seed", all_parm_names), with = FALSE]
+
+      # JO NOTES: From here to the end of the foreach loop, could go into a function that takes in parms_to_run and returns res/sim_targets
+      #           and we'd provide a default implementation if the user doesn't define their own
       # Setup parallel handling
       registerDoParallel(cores = detectCores() - 1) # cluster auto-closed with foreach
       # User defined Distance Function applied on all simulated parms
