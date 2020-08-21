@@ -1,4 +1,4 @@
-add_target <- function(target, starting_range, stopping_range) {
+add_target <- function(target, starting_range, stopping_range, target_name = NULL) {
   # Check inputs are appropriate ----------------------------------------------------------------------------------------
   stopifnot(
     "target must be numeric" = is.numeric(target),
@@ -17,6 +17,7 @@ add_target <- function(target, starting_range, stopping_range) {
 
   return(
     list(
+      target_name = target_name,
       target = target,
       low_bound_start = starting_range[1],
       up_bound_start = starting_range[2],

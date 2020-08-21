@@ -10,7 +10,7 @@ eval_targets <- function(sim_targets, target_list, criteria = c("start", "update
     # Determine if all sub targets are in their appropriate ranges
     check <- rep.int(1, times = nrow(dt))
     for (sub in x$names) {
-      targ_id <- paste(attr(x, "target_group"), sub, sep = "")
+      targ_id <- paste0(x["target_group"], "_", sub)
       if (criteria == "start") {
         check <- check*in_range(dt[, targ_id, with = FALSE], x$lower_bounds_start[sub], x$upper_bounds_start[sub])
       } else if (criteria == "update") {

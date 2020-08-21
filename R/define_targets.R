@@ -8,12 +8,12 @@ define_targets <- function(..., previous_run_targets = NULL) {
     new_targets[to_group] <- lapply(new_targets[to_group], FUN = function(x) { group_targets(x) })
 
     # Get target group names
-    new_names <- name_targets(new_targets, grouping = FALSE)
+    new_names <- .unique_names(things_list = new_targets, thing = "target_group")
 
     # Add names to targets
     new_targets <- lapply(seq_along(new_names), FUN = function(x, targs, name) {
-      attr(targs[[x]], which = "target_group") <- name[x]
-      attr(targs[[x]], which = "target_ids") <- paste(name[x], targs[[x]]$names, sep = "")
+      targs[[x]]$target_group <- name[x]
+      attr(targs[[x]], which = "target_ids") <- paste(name[x], targs[[x]]$names, sep = "_")
 
       targs[[x]]
     }, targs = new_targets, name = new_names)
@@ -25,72 +25,81 @@ define_targets <- function(..., previous_run_targets = NULL) {
 
     # Store appropriate attributes
     sub_targets <- unlist(lapply(new_targets, FUN = function(x) { x[["names"]] }))
-    target_ids <- paste(new_names, sub_targets, sep = "")
+    n_sub_targs <- unlist(lapply(new_targets, FUN = function(x) { length(x[["names"]]) }))
+    target_ids <- paste(rep(new_names, times = n_sub_targs), sub_targets, sep = "_")
     attributes(new_targets)$update <- update
     attributes(new_targets)$target_groups <- new_names
-    attributes(new_targets)$sub_targets <- sub_targets
+    # attributes(new_targets)$sub_targets <- sub_targets
     attributes(new_targets)$target_ids <- target_ids
-
-    # Check all names are unique
-    stopifnot(
-      "Target names must be unique by group and target" = length(target_ids) == length(unique(target_ids))
-    )
   } # length(new_targets) > 0
 
   # If reading from a previous set of results
   old_targets <- list()
   if (!is.null(previous_run_targets)) {
-    stop("NEED TO UPDATE")
-    # Main target information columns
-    main_cols <- c("MainTarget", "update")
-    # Subtarget information columns
-    info_cols <- colnames(previous_run_targets)[!colnames(previous_run_targets) %in% main_cols]
+    # Pull Target Specific Information
+    previous_run_targets <- previous_run_targets[previous_run_targets$IMABC == "Target", ]
+    previous_run_targets$IMABC <- NULL
 
-    # Unique main targets from last run
-    mains <- unique(previous_run_targets[ , main_cols])
-    # sub targets from last run
-    infos <- previous_run_targets[ , info_cols]
+    # Get target group attributes
+    groups <- previous_run_targets[previous_run_targets$INFO %in% c("group", "update"), ]
+    update <- as.logical(groups$VALUE[groups$INFO == "update"])
+    names(update) <- groups$ID[groups$INFO == "update"]
+    target_groups <- names(update)
 
-    # For each main target
-    for (i1 in 1:nrow(mains)) {
+    # Target information
+    sub_targets <- previous_run_targets[!previous_run_targets$INFO %in% c("group", "update"), ]
+
+    # For each target group
+    for (i1 in target_groups) {
       # Find appropriate subtargets
-      idx <- which(previous_run_targets$MainTarget == mains$MainTarget[i1])
-      # Convert info to list form
-      old_targets[[i1]] <- as.list(infos[idx, ])
+      idx <- grep(paste0("^", i1, "_"), sub_targets$ID)
+      tmp <- sub_targets[idx, ]
 
-      # apply subtarget names to sub elements of target list
-      sub_names <- infos$names[idx]
-      old_targets[[i1]] <- lapply(old_targets[[i1]], FUN = function(x, sub_names) {
-        names(x) <- sub_names
-        x
-      }, sub_names = sub_names)
-      names(old_targets[[i1]]$names) <- NULL
+      # Target IDs
+      target_ids <- unique(tmp$ID)
+      # Target names
+      target_names <- tmp$VALUE[tmp$INFO == "name"]
+      # Targets
+      target_values <- as.numeric(tmp$VALUE[tmp$INFO == "target"])
+      names(target_values) <- target_names
+      # Start values
+      lower_start <- as.numeric(tmp$VALUE[tmp$INFO == "lower_bound_current"])
+      names(lower_start) <- target_names
+      upper_start <- as.numeric(tmp$VALUE[tmp$INFO == "upper_bound_current"])
+      names(upper_start) <- target_names
+      # Stop values
+      lower_stop <- as.numeric(tmp$VALUE[tmp$INFO == "lower_bound_stop"])
+      names(lower_stop) <- target_names
+      upper_stop <- as.numeric(tmp$VALUE[tmp$INFO == "upper_bound_stop"])
+      names(upper_stop) <- target_names
+
+      old_tmp <- list(
+        target_group = i1,
+        names = target_names,
+        targets = target_values,
+        lower_bounds_start = lower_start,
+        upper_bounds_start = upper_start,
+        lower_bounds_stop = lower_stop,
+        upper_bounds_stop = upper_stop
+      )
+      attr(old_tmp, "target_ids") <- target_ids
+
+      # Add target group to old targets list
+      old_targets[[i1]] <- old_tmp
     }
 
-    # apply main target names to target list
-    names(old_targets) <- mains$MainTarget
-
-    # Pull update information
-    update <- mains$update
-    names(update) <- mains$MainTarget
-
-    # Store appropriate attributes
-    attributes(old_targets)$update <- update
-    attributes(old_targets)$sub_targets <- infos$names
-
-    attributes(new_targets)$target_groups <- target_groups
-    attributes(new_targets)$sub_targets <- sub_targets
-    attributes(new_targets)$target_ids <- target_ids
-
+    # Assign target group attributes
+    attr(old_targets, "update") <- update
+    attr(old_targets, "target_groups") <- target_groups
+    attr(old_targets, "target_ids") <- unique(sub_targets$ID)
   } # !is.null(previous_run_targets)
 
   # Handle all cases
   if (length(new_targets) == 0 & length(old_targets) == 0) { # No targets added
-    stop("Need to add at least some targets.")
+    stop("Need to add at least one target.")
   } else if (length(new_targets) != 0 & length(old_targets) == 0) { # Only new targets added
     all_targets <- new_targets
   } else if (length(new_targets) == 0 & length(old_targets) != 0) { # Only old targets added
-    stop("NEED TO UPDATE")
     all_targets <- old_targets
   } else {
     stop("NEED TO UPDATE")

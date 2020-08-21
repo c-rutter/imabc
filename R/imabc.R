@@ -26,7 +26,7 @@ imabc <- function(
   targets, # Always needed
   previous_results = NULL,
   N_start = 1,
-  seed = 1234,
+  seed = 12345,
   latinHypercube = TRUE,
   N_centers = 1,
   Center_n = 50,
@@ -82,11 +82,11 @@ imabc <- function(
 
   # Miscellaneous Initializations
   # CM NOTE: Better names
-  parm_df_outfile <- sprintf("SimulatedParameters_%s.csv", format(run_timestamp, write_time_fmt))
-  sims_df_outfile <- sprintf("SimulatedTargets_%s.csv", format(run_timestamp, write_time_fmt))
-  targ_df_outfile <- sprintf("SimulatedDistances_%s.csv", format(run_timestamp, write_time_fmt))
+  parm_df_outfile <- sprintf("Good_SimulatedParameters_%s.csv", format(run_timestamp, write_time_fmt))
+  sims_df_outfile <- sprintf("Good_SimulatedTargets_%s.csv", format(run_timestamp, write_time_fmt))
+  targ_df_outfile <- sprintf("Good_SimulatedDistances_%s.csv", format(run_timestamp, write_time_fmt))
   meancov_outfile <- sprintf("MeanCovariance_%s.csv", format(run_timestamp, write_time_fmt))
-  targ_ls_outfile <- sprintf("TargetList_%s.csv", format(run_timestamp, write_time_fmt))
+  run_meta_df_outfile <- sprintf("RunMetadata_%s.csv", format(run_timestamp, write_time_fmt))
 
   # CM NOTE: In original function there were very specific ways of handling certain cases (like N_centers = 0) when a
   #   previous set of results was supplied. I'm holding off on that for now since that information can just as easily be
@@ -98,15 +98,22 @@ imabc <- function(
   ESS <- 0 # Effective Sample Size
   n_store <- N_post + N_centers*(Center_n + 1)
   # Initializations needed for new runs
-  start_iter <- ifelse(continue_runs, max(previous_results$parm_draws$iter) + 1, 1)
+  start_iter <- ifelse(
+    continue_runs,
+    as.numeric(previous_results$prev_run_meta$VALUE[previous_results$prev_run_meta$INFO == "current_iter"]) + 1, 1
+  )
   end_iter <- (start_iter - 1) + max_iter
-  total_draws <- ifelse(continue_runs, max(previous_results$parm_draws$draw) + 1, 0)
+  total_draws <- ifelse(
+    continue_runs,
+    as.numeric(previous_results$prev_run_meta$VALUE[previous_results$prev_run_meta$INFO == "last_draw"]) + 1, 0
+  )
   n_draw <- ifelse(continue_runs, N_centers*Center_n, N_start)
   n_rows_init <- max(n_draw, N_centers*Center_n) + recalc_centers*N_centers
   n_in <- 0
   n_use <- 0
   target_names <- names(targets)
   n_targets <- length(target_names)
+  have_N_cov_points <- FALSE # For testing/checking everything runs ok
 
   # Parameter Handling --------------------------------------------------------------------------------------------------
   # Determine number of paramters to calibrate
@@ -214,11 +221,11 @@ imabc <- function(
   # Main Loop -----------------------------------------------------------------------------------------------------------
   for (main_i1 in start_iter:end_iter) {
     if (testing) {
-      warning("Testing. main_i1 artificially set")
       if (!exists("main_i1")) {
         main_i1 <- start_iter - 1
       }
       main_i1 <- main_i1 + 1
+      warning(sprintf("Testing. main_i1 artificially set to %s", main_i1))
     }
     n_in_i <- 0 # CM NOTE: Better names
     # What targets are left to update based on stopping bounds
@@ -227,7 +234,7 @@ imabc <- function(
 
     # Print information
     if (verbose) {
-      header <- sprintf("\n---------- Start Iter %s ----------\n", main_i1)
+      header <- sprintf("\n---------- Start Iter %s ----------", main_i1)
       iter_info <- sprintf("Starting at: %s", Sys.time())
       n_info <- sprintf("Current n_in = %s", n_in)
       if (length(update_targets) > 0) {
@@ -237,8 +244,15 @@ imabc <- function(
         bound_info <- paste(sprintf("---- %s ----", names(bound_info)), bound_info, sep = "\n", collapse = "\n")
         cat(header, iter_info, n_info, "Current bound info:", bound_info, sep = "\n")
       } else {
-        cat(header, iter_info, "All tolerance intervals at target bounds", "\n")
+        cat(header, iter_info, "All tolerance intervals at target bounds", sep = "\n")
       }
+    }
+
+    # CM NOTE: For testing code. Should not be in final version of model.
+    if (n_in >= N_cov_points & !have_N_cov_points) {
+      have_N_cov_points <- TRUE
+    } else if (n_in < N_cov_points & have_N_cov_points) {
+      stop(sprintf("n_in has moved below N_cov_points. Pass run info to Chris."))
     }
 
     # If not the first iteration on a continuing run
@@ -251,9 +265,6 @@ imabc <- function(
 
       # Parms to check
       parms_to_run <- parm_draws[1:n_draw, c("seed", all_parm_names), with = FALSE]
-
-      # JO NOTES: From here to the end of the foreach loop, could go into a function that takes in parms_to_run and returns res/sim_targets
-      #           and we'd provide a default implementation if the user doesn't define their own
       # Setup parallel handling
       registerDoParallel(cores = detectCores() - 1) # cluster auto-closed with foreach
       # User defined Distance Function applied on all simulated parms
@@ -280,13 +291,13 @@ imabc <- function(
       target_dist$n_good[1:n_draw] <- rowSums(target_dist[1:n_draw, (target_names), with = FALSE] >= 0, na.rm = TRUE)
       n_in_i <- sum(target_dist$n_good[target_dist$step <= N_centers] == n_targets, na.rm = TRUE)
 
-      # Store intermediate results
-      save_results(
-        list(parm_draws[1:n_draw, c("iter", "draw", "step", "seed", all_parm_names), with = FALSE], parm_df_outfile),
-        list(sim_parm[1:n_draw, c("iter", "draw", "step", sim_parm_names), with = FALSE], sims_df_outfile),
-        list(target_dist[1:n_draw, c("iter", "draw", "step", target_names), with = FALSE], targ_df_outfile),
-        out_dir = output_directory, append = f_append
-      )
+      # # Store intermediate results
+      # save_results(
+      #   list(parm_draws[1:n_draw, c("iter", "draw", "step", "seed", all_parm_names), with = FALSE], parm_df_outfile),
+      #   list(sim_parm[1:n_draw, c("iter", "draw", "step", sim_parm_names), with = FALSE], sims_df_outfile),
+      #   list(target_dist[1:n_draw, c("iter", "draw", "step", target_names), with = FALSE], targ_df_outfile),
+      #   out_dir = output_directory, append = f_append
+      # )
 
       # Stop if there are no close points (and so cannot continue)
       # CM NOTE: Should this be a warning, a stop, or just a print?
@@ -454,7 +465,6 @@ imabc <- function(
       # 2*N.cov.points, reducing good points by half
       ###########################################################################
       # Sort targets based on overall distance of major targets still being updated
-      # CM NOTE: This may be done already. May be able to remove
       good_target_dist$tot_dist <- total_distance(dt = good_target_dist, target_names = update_targets, scale = FALSE)
 
       # Ensure that we end up with at least N_cov_points
@@ -496,7 +506,7 @@ imabc <- function(
           # update n_good
           good_target_dist$n_good <- 0L
           good_target_dist[good_row_range]$n_good <-
-            rowSums(good_target_dist[good_row_range, (update_targets), with = FALSE] >= 0, na.rm = TRUE)
+            rowSums(good_target_dist[good_row_range, (target_names), with = FALSE] >= 0, na.rm = TRUE)
           n_in_new <- sum(good_target_dist$n_good == n_targets, na.rm = TRUE)
 
           # If we have enough points stop looking for more
@@ -564,6 +574,7 @@ imabc <- function(
             paste(sprintf("%s: %s - %s", x$names, x$lower_bounds_start, x$upper_bounds_start), collapse = "\n")
           })
           bound_info <- paste(sprintf("---- %s ----", names(bound_info)), bound_info, sep = "\n", collapse = "\n")
+          bound_info <- ifelse(bound_info == "", "All tolerance intervals at target bounds", bound_info)
           cat("Updated bounds:", n_info, bound_info, sep = "\n")
         }
       } else { # n_in_new >= N_cov_points & n_in_new < n_in
@@ -577,8 +588,6 @@ imabc <- function(
           cat("Unable to update bounds:", n_info, bound_info, sep = "\n")
         }
       } # ! n_in_new >= N_cov_points & n_in_new < n_in
-      # Save new target list
-      save_targets(targets_list = targets, filename = targ_ls_outfile, out_dir = output_directory)
     } # (n_in >= 2*N_cov_points) & length(update_targets) > 0
 
     # CM NOTE: Adding a condition that this can't be the first iteration. This is because mean_cov is not defined until
@@ -924,7 +933,28 @@ imabc <- function(
       } # ! n_in < N_cov_points
       if (continue_runs == TRUE & main_i1 == start_iter) { f_append <- FALSE }
     } # if (main_i1 < end_iter)
-    if (verbose) { cat("\n---------- Iter Complete ---------\n") }
+
+    # CM NOTE: Putting this here as an internal check. Should remove or change error message once we think problem is solved.
+    #   The reason there are NAs in good_parm_draws is because the last
+    #     iteration doesn't calculated scaled_dist again. This didn't show up in last version of code because scaled_dist
+    #     was not saved for future iterations. Just in case this will check for it before then. Need to determine how we
+    #     want to handle the last iteration. Do we remove "if (main_i1 < end_iter) {}" and do the stuff above for every
+    #     iteration? Or do we make sure to update scaled_dist at the start of a continuing run? I vote the former.
+    #   Other reason for NAs was because the function was comparing n_good to n_targets but only counting targets
+    #     that could be updated towards n_good. So once a target reached its bounds, n_good could never equal n_targets.
+    if (any(is.na(good_parm_draws$scaled_dist[!is.na(good_parm_draws$draw)])) & main_i1 != end_iter) {
+      stop(sprintf("Scaled Distance has missing values. Send inputs and last iteration (%s) to Chris.", main_i1))
+    }
+
+    # Save iteration results
+    save_results(
+      list(.run_info_to_df(targets = targets, priors = priors, iter = main_i1, draw = total_draws), run_meta_df_outfile),
+      list(good_parm_draws, parm_df_outfile),
+      list(good_sim_parm, sims_df_outfile),
+      list(good_target_dist, targ_df_outfile),
+      out_dir = output_directory, append = FALSE
+    )
+    if (verbose) { cat(sprintf("----------- End Iter %s -----------\n", main_i1)) }
     # CM NOTE: Should store prior list and target list
   } # main_i1 in start_iter:end_iter
 
@@ -932,7 +962,6 @@ imabc <- function(
   # Paramters
   good_parm_draws <- good_parm_draws[!is.na(draw), ]
   # scaled_dist is used for cov calcs only but no reason to remove it. Makes continue a little easier as well
-  # good_parm_draws[, scaled_dist := NULL]
   setorder(good_parm_draws, draw, na.last = TRUE)
   # Subtargets
   good_sim_parm <- good_sim_parm[!is.na(draw), ]
@@ -943,9 +972,10 @@ imabc <- function(
   setorder(good_target_dist, draw, na.last = TRUE)
   # Save
   save_results(
-    list(good_parm_draws, sprintf("Good_%s", parm_df_outfile)),
-    list(good_sim_parm, sprintf("Good_%s", sims_df_outfile)),
-    list(good_target_dist, sprintf("Good_%s", targ_df_outfile)),
+    list(.run_info_to_df(targets = targets, priors = priors, iter = main_i1, draw = total_draws), run_meta_df_outfile),
+    list(good_parm_draws, parm_df_outfile),
+    list(good_sim_parm, sims_df_outfile),
+    list(good_target_dist, targ_df_outfile),
     out_dir = output_directory, append = FALSE
   )
 
@@ -953,6 +983,7 @@ imabc <- function(
   done_timestamp <- Sys.time()
   calc_time <- done_timestamp - run_timestamp
   if (verbose) {
+    header <- "\n---------- Run Completed ----------"
     time_info <- sprintf("Finishing ABC at %s", format(done_timestamp, print_time_fmt))
     duration_info <- sprintf("Calculation took %s %s", round(calc_time, 2), attr(calc_time, "units"))
     seed_info <- sprintf("seed value is: %s", paste0(.Random.seed, collapse = ", "))
@@ -961,7 +992,7 @@ imabc <- function(
       paste(sprintf("%s: %s - %s", x$names, x$lower_bounds_start, x$upper_bounds_start), collapse = "\n")
     })
     bound_info <- paste(sprintf("---- %s ----", names(bound_info)), bound_info, sep = "\n", collapse = "\n")
-    cat(time_info, duration_info, seed_info, n_info, "Final bounds info:", bound_info, sep = "\n")
+    cat(header, time_info, duration_info, seed_info, n_info, "Final bounds info:", bound_info, sep = "\n")
   }
 
   return(list(
@@ -969,6 +1000,7 @@ imabc <- function(
     # e.g. in old code, we only used parm_draws in a new run to determine N_start and N_centers
     #   we could just return those values to keep memory and storage down. we could give an option to return intermediate
     #   results though as well
+    # CM NOTE: Only need iterations and draws
     # parm_draws = parm_draws,
     # sim_parm = sim_parm,
     # target_dist = target_dist,
