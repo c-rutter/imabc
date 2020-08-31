@@ -46,12 +46,15 @@ as follows:
   - priors - list. A list of information on the prior distributions. Two
     helper functions exist for properly defining this list. See below
     for more details.
-  - targets - list. A list of information on the targets. Two helper
+  - targets - list. A list of information on the targets. Four helper
     functions exist for properly defining this list as well. See below
     for more details.
   - target\_fun - function. A function that returns a data set of the
-    predicted targets from simulated parameters. See below for more
-    details.
+    predicted targets from simulated parameters. A helper function
+    exists for help defining this. See below for more details.
+  - previous\_results - list. A list of results saved during the last
+    run. A helper function exist for helping read in all results from a
+    previous run. See below for more details.
   - N\_start - integer. The sample size used for the first set of
     simulated parameters.
   - seed - integer. The seed value for reproducibility.
@@ -73,8 +76,18 @@ as follows:
     R/get\_B\_draws.R)
   - recalc\_centers - boolean. Should the centers be recalculated in
     each iteration.
-  - continue\_runs - boolean. FALSE is the only valid option for now.
-    (**FIX**)
+  - continue\_runs - DEPRECATED. boolean. previous\_results input lets
+    function know when to continue a run. Only does a simple restart (no
+    altering targets or parameters between runs).
+  - output\_directory - character. The path where you would like results
+    saved. Defaults to NULL which indicates the current directory is
+    where results should be saved. If path doesn’t exist, imabc will try
+    to create it.
+  - output\_tag - character. This value is affixed to the end of the
+    output files to make tracking multiple sets of results stored in the
+    same directory easy to differentiate. The default, “timestamp”, is a
+    special case where the date and time the run begins is affixed to
+    the end of the output files.
   - verbose - boolean. Should verbose information be printed while the
     algorithm is running.
 
@@ -88,66 +101,83 @@ associated with a specific parameter that is being calibrated. For the
 current version of the code the user should specify at least the
 following things:
 
-  - FUN - string. This is a character string for the R function that
-    will be used to generate random values. (e.g. “runif”, “qtruncnorm”,
-    etc.). While add\_prior can currently handle this value not being
-    given, the rest of the code will not work properly in that scenario.
-    In the future, not giving a value for FUN will result in a
-    non-calibrated parameter from the model’s perspective.
-  - use\_length - boolean. This tells imabc whether the prior expects a
-    scalar input or a vector of inputs. Functions like runif expect a
-    scalar value n and then return a vector of length n, while others
-    expect a vector of values and return a vector with the same length.
-    Setting use\_length = TRUE tells imabc that the function being used
-    behaves like runif and only accepts a scalar value as input.
-  - dtruncnorm - boolean. This tells imabc that when calculating the
-    weights (R/get\_weight.R), the parameter will use a dtruncnorm
-    function for the log\_prior\_d (R/get\_log\_prior\_d.R). If
-    dtruncnorm = FALSE, log\_prior\_d will just be 0 for all values of
-    that simulated parameter.
-  - min - numeric. The minimum value that parameter can be.
-  - max - numeric. The maximum value that parameter can be.
-  - sd - numeric. The standard deviation that the parameter follows.
-  - mean - numeric. the average value that the parameter should have.
-  - … - Any inputs that are required by FUN that are not defined
-    already.
-
-min, max, and sd are used beyond the initial simulation of parameters
-and are required regardless of the inputs into FUN. mean is only
-absolutely required when dtruncnorm is equal to TRUE. If FUN uses a min
-and max value there is no need to specify these values multiple times -
-imabc will use the same value for FUN and for the rest of the code.
-However if the names are different the user must specify a value or the
-default will be used. For example, qtruncnorm uses a, b, mean, and sd to
-specify the size and shape of the distribution it simulates. Since our
-function add\_prior already requires a mean and sd, the user just has to
-specify those once. However, while a and b are technically min and max
-values of the distribution, since they are not called min and max the
-user must specify values for a, min, b, and max even if they are the
-same.
-
-The only input the user does not specify from FUN is the input that
-determines how to generate values. In runif, the user does not specify a
-value for n. In qtruncnorm the user does not specify p. imabc will be
-responsible for inserting those values (via the LatinHypercube draws)
+  - … - The input(s) to feed into the distribution functions selected,
+    if any input is not provided, the default value from the
+    distribution functions will be used in its place. Additionally,
+    imabc uses min and max values of a parameter for certain
+    calculations. If not already setting these values as a part of the
+    inputs for the distribution functions the user can specify them
+    separately here. If these aren’t supplied by the user, the function
+    will first check if the distribution functions have default values
+    for them and use those if they exist. If they don’t have default
+    values, imabc will use -Inf/Inf respectively as defaults. The
+    function looks specifically for the option names of “min” and “max”.
+    This is important as some functions may use different names for
+    their min/max inputs (e.g. the truncnorm package uses a and b
+    respectively. If using truncnorm functions, you will need to specify
+    a, b, min, and max to have all these values set properly).
+  - dist\_base\_name, density\_fn, quantile\_fn - character. optional.
+    The names of the functions that will be used to generate random
+    values for the parameters. If the RNG functions follow most standard
+    RNG function sets (i.e. follow the same naming scheme as the uniform
+    or normal distribution functions, see ?dnorm and ?dunif), than only
+    one of these is required to be input by the user. The
+    dist\_base\_name is the function name without the first letter
+    (e.g. norm for dnorm, unif for dunif). If none of these are
+    supplied, a fixed parameter is created, however, it is not the most
+    efficient way to create/use a fixed parameter and is not
+    recommended.
+  - parameter\_name - character. optional. The name used to reference
+    this parameter in the target function and in the results files. This
+    can also be supplied via define\_priors().
 
 define\_priors(): this is a wrapper function that takes one or more
 priors generated by calls to add\_prior() and moves some of the
 information returned by add\_prior() around so that the code is a little
 bit more efficient. The only inputs into this function are objects
-created by add\_prior() calls. The only thing the use must do is make
-sure that each parameter that is being simulated for the target
-functions is named as an add\_prior object.
+created by add\_prior() calls. This is required to set up the prior
+distribution functions and every parameter in the model must have a
+prior defined with this function. If the user doesn’t provide a name to
+add\_prior(), they can still name the parameter by setting the parameter
+name equal to the add\_prior() call within the define\_priors() call
+(e.g. define\_priors(name\_of\_parm = add\_prior())). Can also create a
+target object (without FUN defined for the targets) from the meta data
+returned by the imabce function.
 
-For example, if the user wishes to make target functions f1(parm1,
-parm2) and f2(parm2, parm3). the user would have to create the priors
-list with something like:
+If no name is provided between add\_prior or define\_priors, a unique
+one will be generated following the format V\[0-9\]+. In the target
+function(s), the user can call the parameters using the names that are
+set for each parameter or they can use the order they were created in.
+See below for
+details.
 
 ``` r
+# If dist_base_name, density_fn, and quantile_fn are NULL, parameter will be fixed
+# If not provided by user, min/max default to the min/max defaults of the density function if they exist. If they do not
+#   exist as defaults in the density function they then default to -Inf/Inf respectively.
+# Names can be specified via:
+#   define_priors(name = add_prior(...))
+#   define_priors(add_prior(parameter = name, ...))
+# Names must be unique
+# If both name specifications are used for a given prior (e.g. define_priors(name1 = add_prior(parameter = name2, ...)))
+#   then the name specified with add_prior (in this case, name2) will be used over the other method
+# define_priors will assign a unique name, of the format V[0-9]+, for any parameter that isn't given a name.
+# The prior distribution information is returned in the same order they are input and can be called without their names
+#   using their index (e.g. priors[[1]]$density_function)
 priors <- define_priors(
-  parm1 = add_prior(FUN = "runif", min = 0, max = 1, sd = ((1 - 0)^2)/12, use_length = TRUE, dtruncnorm = FALSE),
-  parm2 = add_prior(FUN = "qtruncnorm", a = 0, b = 1, min = 0, max = 1, sd = 0.1, mean = 0.6, use_length = FALSE, dtruncnorm = TRUE),
-  parm3 = add_prior(FUN = "runif", min = -1, max = 99, sd = ((99 - -1)^2)/12, use_length = TRUE, dtruncnorm = FALSE)
+  x1 = add_prior(
+    density_fn = "unif",
+    min = 0.1, max = 0.9 # Would otherwise default to 0/1
+  ),
+  add_prior(
+    parameter_name = "x2",
+    quantile_fn = "truncnorm",
+    mean = 0.75, sd = 0.05, a = 0.6, b = 0.9, # Inputs into *truncnorm
+    min = 0.6, max = 1.1 # Would otherwise default to -Inf/Inf
+  ),
+  add_prior(
+    dist_base_name = "norm",
+  ) # Given the name V3, min/max default to -Inf/Inf
 )
 ```
 
@@ -157,71 +187,160 @@ Just like the prior distribution information the user has the following
 functions for helping them specify the target values and structure of
 the targets.
 
-add\_targets(): this lets the user define a group of subtargets
-associated with a main target. Each subtarget must be a list of the
-following values: target, low\_bound\_start, up\_bound\_start,
-low\_bound\_stop, and up\_bound\_stop. There can be as many subtargets
-as you want.
+add\_target(): This lets the user define a target. Each target must be a
+list of the following values: target, starting\_range, stopping\_range.
+starting\_range\[1\] \< stopping\_range\[1\] \< target \<
+stopping\_range\[2\] \< starting\_range\[2\] must be satisfied by these
+values. Optionally the user can give the target a name using
+target\_name and a target function using FUN. See below for details.
 
-define\_targets(): takes the collection of main targets and organizes
-the information so that imabc can use the information correctly and
-efficiently.
+group\_targets(): This lets the user group a set of targets that are to
+be calibrated together. As the calibration improves its estimation of
+the best parameter space, accepcted target values will be restricted to
+tighter ranges (up until the range is identical to the stopping\_range).
+In a group of targets, the ranges are tightened together according to
+the improvement of the least improved target (e.g. if you have two
+targets in a group and a set of parameters generate values all within
+the stopping range of one target but whose values could only improve the
+acceptable range of the second target by 10%, then both targets will
+have their acceptable ranges reduced by 10%). Optionally the user can
+give the target group a name using group\_name.
 
-As the model gets better at hitting the targets with the parameters it
-simulates, it will begin to close the bounds on the targets. Once all
-the subtargets under a main target have bounds equal to the stopping
-bounds the algorithm will stop trying to improve the main target and
-simulate the parameters according to their current distributions. It
-will then focus on improving the other main targets. I’m not 100% sure
-but I think it is fine for subtargets in different main targets to share
-the same name but I have not tested that yet. For now, I would recommend
-that the complete list of subtargets be unique.
+define\_targets(): Takes the collection of individual targets and target
+groups and organizes the information so that imabc can use the
+information correctly and efficiently. Just like the prior functions,
+names can be assigned when inserting the lower target object into the
+higher target function (e.g. define\_targets(name1 =
+group\_targets(name2 = add\_target()))). Can also create a target object
+(without FUN defined for the targets) from the meta data returned by the
+imabc function.
 
-For example, the user can specify something like:
+For tracking purposes, even if targets aren’t grouped they are
+implicitly given a group. This is important if the user wants to
+reference the values in the target function or in the results. If not
+defined by the user, group names will follow the format G\[0-9\]+ and
+target names will follow the format T\[0-9\]+. The final target ID is
+then returned as <group name>\_<target name>. The user can also
+reference the names using the order that the targets are added in
+
+as.targets(): This can convert a data frame of just target information
+to a target list (without FUN defined for the targets). The data frame
+must have columns for group names, target names, target value, start
+min, start max, stop min, stop max. There are default values for what
+these columns should be called but the user can also select which
+columns go with which value.
+
+For example, the user can specify something
+like:
 
 ``` r
+# If no name is provided, function assigns name based on group and target.
+#   Groups are of the format G[0-9]+
+#   sub-targets are of the format T[0-9]+
+# So the below generates two targets with IDs G1_T1 and G2_T1.
+#   if the group_targets had two targets in it the second one would be G1_T2 and so on.
+# There are checks to make sure the name is completely unique
+# If names are provided then the target ID is just equal to sprintf(%s_%s, group_target name, add_target name)
+# FUN (optional) can be defined as a function with only single input or as a function whose inputs are named for parameters
+#   defined by the priors object. In the former, a named vector is passed to the function and the user can either use the
+#   parameter names (e.g. x["V3"]) or the index (e.g. x[3]) to manipulate the simulated draws into an expected target value.
+#   The parameters are placed into the input vector in the same order they are defined by the user when building a priors
+#   object. If the inputs are named for parameters created in the priors object the function will only pass parameters
+#   that share a name with the input (i.e. if the priors object defines V1, V2, and V3 and a target function is defined
+#   as function(V1, V4) {...} the function will produce an error, as function(V1, V2) {V3*V2} the function will produce
+#   an error, but function(V1, V2) {V1*V2} will work just fine).
+#   regardless of the inputs the user defines, the functions will also have access to the seed and iteration current lower
+#   and upper bounds imabc has deemed as acceptable. these must be added as inputs to the target function as seed,
+#   lower_bound, and upper_bound. Use build_target_function() to create the final target function.
 targets <- define_targets(
-  m1 = add_targets(
-    t1 = list(target = 1, low_bound_start = 0, up_bound_start = 2, low_bound_stop = 0.99, and up_bound_stop = 1.01),
-    t2 = list(target = -3, low_bound_start = -5, up_bound_start = -2, low_bound_stop = -3.001, and up_bound_stop = -2.999)
+  group_targets(
+    group_name = "G1",
+    T1 = add_target(
+      target = 1.5,
+      starting_range = c(1.0, 2.0),
+      stopping_range = c(1.49, 1.51)
+    )
   ),
-  m2 = add_targets(
-    t3 = list(target = 8.5, low_bound_start = 8, up_bound_start = 8.8, low_bound_stop = 8.4, and up_bound_stop = 8.6)
+  add_target(
+    target = 0.5,
+    starting_range = c(0.2, 0.9),
+    stopping_range = c(0.49, 0.51)
   )
 )
+# df <- data.frame(
+#   group = c("G1", "G2", "G1"), name = c("T1", "T1", "T2"), target = c(1.5, 0.5, -1.5),
+#   lower_bounds_start = c(1, 0.2, -2), upper_bounds_start = c(2, 0.9, -1),
+#   lower_bounds_stop = c(1.49, 0.49, -1.51), upper_bounds_stop = c(1.51, 0.51, -1.49)
+# )
+# ex <- as.targets(df)
 ```
 
 ### target\_fun
 
-A user defined function that takes in a vector of all parameters being
-calibrated and returns a simulated value for each subtarget as a vector.
-The current version of the code converts each row of the simulate
-parameters data frame (parm\_draws) into a vector that is passed to this
-function. This means that the order of the parameters can matter. The
-order that the parameters are given to this function is determined by
-the order they are defined in define\_priors(). Correspondingly, the
-order that imabc expected the simulated target values is the same as the
-order they are defined in define\_targets(). This is something that we
-could change with some moderate tweaks to the code but will be partially
-determined by how we want the user to define this function.
+define\_target\_function(): A helper function that lets the user create
+a function that can be mapped to the appropriate simulated parameters.
+Requires the target object created by define\_targets() and the prior
+object created by define\_priors(). If the user defined the target
+functions using add\_target() this can create a function that will apply
+the inputs to all the target functions and return the vector of results.
+If the user doesn’t use add\_target() to create individual target
+functions the user can create their own target function and insert it
+into this function using the FUN option. The last option the user can
+set is use\_seed. imabc generates a random set of seed values for each
+simulated set of parameters. This lets the user control the RNG within
+each analysis of the target function(s) and thus be able to reproduce
+any set of results after the run has finished. In order to set the seed
+during the execution of the final target function, set use\_seed = TRUE.
 
-What the user does with the parameters and how it calculates results
-within this function is completely up to them.
+One feature of imabc is that the user can use three pieces of
+information from the simulation outside of the parameter values
+themselves. The first is a unique seed for each evaluation of the target
+function that was just discussed, this can be used using the use\_seed
+option. The second two values are the current min/max values targets can
+fall within at a particular iteration of the calibration. As the
+calibration gets better and picking parameters, it will tighten the
+bounds on the targets in order to make sure only “good” parameters are
+used for generating alternative parameters to try. When target functions
+require heavy computation it can be advantageous to use the target range
+values to fail out of a given test early. To utilize these, the user can
+add inputs for them in their target function(s). If the user is creating
+target functions individually using add\_target(), the user should use
+the input names lower\_bound and upper\_bound (e.g. ). If the user is
+creating a single target function using define\_target\_function() they
+would use the plural form, lower\_bounds and upper\_bounds. When
+add\_target() is used, imabc will map the appropriate bounds to the
+function when running the result. When the target function is defined
+with define\_target\_function(FUN = …) the user must take note of the
+target IDs or order in which they were defined.
+
+When defining a single target function with define\_target\_function()
+the user can define the function anyway they prefer but the returned
+result must a vector whose length is equal to the number of targets
+defined by the define\_targets() function. Just like the lower and upper
+bounds the user can either place the results into the vector in the
+order they are defined or they can use use the target IDs to assign
+values.
 
 For example, the user can specify something like:
 
 ``` r
-fn1 <- function(parm1, parm2) {parm1 + parm2 + rnorm(1, 0, 0.01)}
-fn2 <- function(parm2, parm3) {parm2 * parm3 + rnorm(1, 0, 0.01)}
-target_fun <- function(x) { 
+# Target functions
+fn1 <- function(x1, x2) { x1 + x2 + rnorm(1, 0, 0.01) }
+fn2 <- function(x1, x2, lower_bound) { max(lower_bound, x1 * x2 + rnorm(1, 0, 0.01)) }
+fn <- function(x1, x2, lower_bounds) {
   res <- c()
 
-  res[1] <- fn1(x[1], x[2])
-  res[2] <- fn2(x[2], x[3])
-  res[3] <- res[1] + res[2]^2
+  res["G2_T1"] <- fn2(x1, x2, lower_bound[2])
+  # OR
+  # res[2] <- fn2(x1, x2, lower_bound["G2_T1"])
+  # lower/upper bounds are now accessible in target_fun.
+  # Either using the name of sim parm or the order they are created in define_targets
+  res["G1_T1"] <- fn1(x1, x2)
 
   return(res)
 }
+
+target_fun <- define_target_function(targets, priors, FUN = fn, use_seed = FALSE)
 ```
 
 ## To do
@@ -229,14 +348,9 @@ target_fun <- function(x) {
   - Determine where we should place warnings vs errors vs simple prints
   - Clean code and better name conventions
   - Document code
-  - Save results during main loop as we go
   - Allow for continuing runs
-      - straight restart
       - target modification
       - parameter modification
-  - Helper functions for proper saving and reading in of prior and
-    target objects as well as previous results (this will help both with
-    continuing runs and with saving results during the main loop)
   - Allow for fixed vs calibrated parameters - This can be avoided if
     desired by having all fixed parameter values just be properly
     defined within the target\_fun by the user.
