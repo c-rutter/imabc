@@ -1,8 +1,8 @@
 #' imabc
 #'
-#' @param target_fun function. A function that takes in parameters and returns the predicted subtarget values
 #' @param priors list. A list with all the information required by define_priors and add_priors
 #' @param targets list. A list of the main targets and their subtargets
+#' @param target_fun function. A function that takes in parameters and returns the predicted subtarget values
 #' @param previous_results list. optional.
 #' @param N_start
 #' @param seed
@@ -21,9 +21,9 @@
 #'
 #' @examples
 imabc <- function(
-  target_fun, # Always needed
   priors, # Always needed
   targets, # Always needed
+  target_fun, # Always needed
   previous_results = NULL,
   N_start = 1,
   seed = 12345,
@@ -35,8 +35,9 @@ imabc <- function(
   N_cov_points = 0,
   sample_inflate = 1,
   recalc_centers = TRUE,
-  verbose = TRUE,
-  output_directory = NULL
+  output_directory = NULL,
+  output_tag = "timestamp",
+  verbose = TRUE
 ) {
   # Checks --------------------------------------------------------------------------------------------------------------
   # CM NOTE: Need to think about good checks (also good put some in add_* and define_* functions)
@@ -82,11 +83,12 @@ imabc <- function(
 
   # Miscellaneous Initializations
   # CM NOTE: Better names
-  parm_df_outfile <- sprintf("Good_SimulatedParameters_%s.csv", format(run_timestamp, write_time_fmt))
-  sims_df_outfile <- sprintf("Good_SimulatedTargets_%s.csv", format(run_timestamp, write_time_fmt))
-  targ_df_outfile <- sprintf("Good_SimulatedDistances_%s.csv", format(run_timestamp, write_time_fmt))
-  meancov_outfile <- sprintf("MeanCovariance_%s.csv", format(run_timestamp, write_time_fmt))
-  run_meta_df_outfile <- sprintf("RunMetadata_%s.csv", format(run_timestamp, write_time_fmt))
+  output_tag <- ifelse(output_tag == "timestamp", format(run_timestamp, write_time_fmt), output_tag)
+  parm_df_outfile <- sprintf("Good_SimulatedParameters_%s.csv", output_tag)
+  sims_df_outfile <- sprintf("Good_SimulatedTargets_%s.csv", output_tag)
+  targ_df_outfile <- sprintf("Good_SimulatedDistances_%s.csv", output_tag)
+  meancov_outfile <- sprintf("MeanCovariance_%s.csv", output_tag)
+  run_meta_df_outfile <- sprintf("RunMetadata_%s.csv", output_tag)
 
   # CM NOTE: In original function there were very specific ways of handling certain cases (like N_centers = 0) when a
   #   previous set of results was supplied. I'm holding off on that for now since that information can just as easily be
@@ -248,13 +250,6 @@ imabc <- function(
       }
     }
 
-    # CM NOTE: For testing code. Should not be in final version of model.
-    if (n_in >= N_cov_points & !have_N_cov_points) {
-      have_N_cov_points <- TRUE
-    } else if (n_in < N_cov_points & have_N_cov_points) {
-      stop(sprintf("n_in has moved below N_cov_points. Pass run info to Chris."))
-    }
-
     # If not the first iteration on a continuing run
     if (!(continue_runs == TRUE & main_i1 == start_iter)) {
       # Pull current bounds
@@ -265,18 +260,16 @@ imabc <- function(
 
       # Parms to check
       parms_to_run <- parm_draws[1:n_draw, c("seed", all_parm_names), with = FALSE]
-      # Setup parallel handling
-      registerDoParallel(cores = detectCores() - 1) # cluster auto-closed with foreach
       # User defined Distance Function applied on all simulated parms
-      # CM NOTE: If expecting a list of objects (ll, sp) then need to change combine_results (see combine_results.R)
       res <- foreach(i1 = 1:nrow(parms_to_run), .combine = combine_results) %dopar% {
-        inp <- as.numeric(parms_to_run[i1, all_parm_names, with = FALSE])
+        inp <- unlist(parms_to_run[i1, ..all_parm_names])
         sim_target <- target_fun(inp, lower_bounds = lower_bounds, upper_bounds = upper_bounds)
-        # CM NOTE: res is supposed to be a measure of how all the subtargets did to match for a given main target
-        #   e.g. Pickhardt has 4 sub targets that make up sim_target
-        # list(ll = res, sp = sim_target) # CM NOTE: Better names
 
-        return(sim_target) # CM NOTE: Better names
+        return(sim_target)
+      }
+      # Ensure order of columns matches order of sim_parm if names exist
+      if (all(names(res) %in% colnames(sim_parm))) {
+        res <- res[, match(colnames(res), sim_parm_names)]
       }
 
       # Store results
@@ -290,14 +283,6 @@ imabc <- function(
       # Count the good points: points associated with positive distances
       target_dist$n_good[1:n_draw] <- rowSums(target_dist[1:n_draw, (target_names), with = FALSE] >= 0, na.rm = TRUE)
       n_in_i <- sum(target_dist$n_good[target_dist$step <= N_centers] == n_targets, na.rm = TRUE)
-
-      # # Store intermediate results
-      # save_results(
-      #   list(parm_draws[1:n_draw, c("iter", "draw", "step", "seed", all_parm_names), with = FALSE], parm_df_outfile),
-      #   list(sim_parm[1:n_draw, c("iter", "draw", "step", sim_parm_names), with = FALSE], sims_df_outfile),
-      #   list(target_dist[1:n_draw, c("iter", "draw", "step", target_names), with = FALSE], targ_df_outfile),
-      #   out_dir = output_directory, append = f_append
-      # )
 
       # Stop if there are no close points (and so cannot continue)
       # CM NOTE: Should this be a warning, a stop, or just a print?
@@ -408,12 +393,9 @@ imabc <- function(
             # keep the best (n_store - n_in_i) draws (largest alpha level & smallest distance)
             # and add the current n_in_i runs to the bottom
             n_keep <- n_store - n_in_i
-            # CM NOTE: Adding a sort on n_good to make sure the ones that are actually in bounds are considered first
             setorder(good_target_dist, -n_good, tot_dist, na.last = TRUE)
             keep_draws <- good_target_dist$draw[1:n_keep]
             setorder(good_target_dist, draw, na.last = TRUE)
-            # CM NOTE: In the original code, good_target_dist does not have a thing here...
-            #   this leads to discrepancies and errors when any draw %in% keep_draws were in rows greater than n_keep
             good_target_dist[1:n_keep, ] <- good_target_dist[draw %in% keep_draws, ]
             good_parm_draws[1:n_keep, ] <- good_parm_draws[draw %in% keep_draws, ]
             good_sim_parm [1:n_keep, ] <- good_sim_parm[draw %in% keep_draws, ]
@@ -433,7 +415,7 @@ imabc <- function(
 
         } # (main_i1 == 1) & (n_in_i > n_store)
 
-        # CM NOTE: I think this taken care of by the fact that we do this above as well. May not need anymore
+        # Recalculate distances
         if (length(update_targets) == 0) {
           good_target_dist[add_row_range, ]$tot_dist <- total_distance(
             dt = good_target_dist[add_row_range, ],
@@ -452,10 +434,6 @@ imabc <- function(
       n_in <- sum(good_target_dist$n_good == n_targets, na.rm = TRUE)
     } # !(continue_runs == TRUE & iter == start_iter)
     # Completed good rows
-    # CM NOTE: Old method wouldn't work if good_target_dist was out of order which I think happens when there n_in_i == 0
-    #   new method is marginally slower but will always find the right rows. We can switch back if we want but then we
-    #   need to deal with n_in_i == 0 scenario
-    # good_row_range <- 1:n_in
     good_row_range <- which(good_target_dist$n_good == n_targets)
 
     # If we have enough points, try to contrict bounds that we use
@@ -789,7 +767,7 @@ imabc <- function(
         # sample MVN points around centers if there are enough points to
         # estimate the cov matrix
         #--------------------------------------------------------------------------
-        n_use <- min(n_in, N_cov_points)
+        n_use <- min(n_in, N_cov_points) # maybe here to have N_cov_points + N_centers
         sample_mean <- as.data.frame(center_next)
 
         # CM NOTE: I am pretty sure this doesn't matter because we recalculate this in the for loop below
@@ -847,7 +825,6 @@ imabc <- function(
               diag(sample_cov) <- diag(sample_cov) + (sd_next^2)
             }
           } # n_in >= N_cov_points
-          # CM NOTE: I think we
 
           # Draw Center_n new parm values usign an MVN draw...............................
           # assign fixed parameters
@@ -878,7 +855,8 @@ imabc <- function(
             if (is.null(x)) {
               # CM NOTE: Should this be an error?
               print(paste("iteration=", main_i1, "center=", center_i1))
-              return()
+              # return()
+              break
             }
             parm_draws[draw_rows, (all_parm_names) := x] # calib.parm.names
 
@@ -933,18 +911,6 @@ imabc <- function(
       } # ! n_in < N_cov_points
       if (continue_runs == TRUE & main_i1 == start_iter) { f_append <- FALSE }
     } # if (main_i1 < end_iter)
-
-    # CM NOTE: Putting this here as an internal check. Should remove or change error message once we think problem is solved.
-    #   The reason there are NAs in good_parm_draws is because the last
-    #     iteration doesn't calculated scaled_dist again. This didn't show up in last version of code because scaled_dist
-    #     was not saved for future iterations. Just in case this will check for it before then. Need to determine how we
-    #     want to handle the last iteration. Do we remove "if (main_i1 < end_iter) {}" and do the stuff above for every
-    #     iteration? Or do we make sure to update scaled_dist at the start of a continuing run? I vote the former.
-    #   Other reason for NAs was because the function was comparing n_good to n_targets but only counting targets
-    #     that could be updated towards n_good. So once a target reached its bounds, n_good could never equal n_targets.
-    if (any(is.na(good_parm_draws$scaled_dist[!is.na(good_parm_draws$draw)])) & main_i1 != end_iter) {
-      stop(sprintf("Scaled Distance has missing values. Send inputs and last iteration (%s) to Chris.", main_i1))
-    }
 
     # Save iteration results
     save_results(

@@ -1,4 +1,4 @@
-add_target <- function(target, starting_range, stopping_range, target_name = NULL) {
+add_target <- function(target, starting_range, stopping_range, FUN = NULL, target_name = NULL) {
   # Check inputs are appropriate ----------------------------------------------------------------------------------------
   stopifnot(
     "target must be numeric" = is.numeric(target),
@@ -12,7 +12,8 @@ add_target <- function(target, starting_range, stopping_range, target_name = NUL
       starting_range[1] <= stopping_range[1] &
       starting_range[2] >= stopping_range[2]
     },
-    "stopping_range should contain target" = in_range(target, stopping_range[1], stopping_range[2])
+    "stopping_range should contain target" = in_range(target, stopping_range[1], stopping_range[2]),
+    "FUN must be a function if provided" = is.null(FUN) || is.function(FUN)
   )
 
   return(
@@ -22,7 +23,8 @@ add_target <- function(target, starting_range, stopping_range, target_name = NUL
       low_bound_start = starting_range[1],
       up_bound_start = starting_range[2],
       low_bound_stop = stopping_range[1],
-      up_bound_stop = stopping_range[2]
+      up_bound_stop = stopping_range[2],
+      FUN = FUN
     )
   )
 }

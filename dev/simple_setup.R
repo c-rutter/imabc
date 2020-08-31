@@ -3,9 +3,6 @@
 ### Fixed Parms
 # fixed parameters are not dealt with right now. Just assumed all parameters want to be calculated
 
-### Continue
-# if (continue.runs) {} pre-Main loop
-
 ### Writing results
 # writing results out
 
@@ -102,7 +99,7 @@ library(truncnorm)
 # Names must be unique
 # If both name specifications are used for a given prior (e.g. define_priors(name1 = add_prior(parameter = name2, ...)))
 #   then the name specified with add_prior (in this case, name2) will be used over the other method
-# define_priors will assign a unique name for any parameter that isn't given a name
+# define_priors will assign a unique name, of the format V[0-9]+, for any parameter that isn't given a name.
 # The prior distribution information is returned in the same order they are input and can be called without their names
 #   using their index (e.g. priors[[1]]$density_function)
 x1_min <- 0.1
@@ -125,72 +122,89 @@ priors <- define_priors(
 # If no name is provided, function assigns name based on group and target.
 #   Groups are of the format G[0-9]+
 #   sub-targets are of the format T[0-9]+
-# So the below generates two targets with IDs G1T1 and G2T1.
-#   if the group_targets had two targets in it the second one would be G1T2 and so on.
+# So the below generates two targets with IDs G1_T1 and G2_T1.
+#   if the group_targets had two targets in it the second one would be G1_T2 and so on.
 # There are checks to make sure the name is completely unique
-# If names are provided then the target ID is just equal to sprintf(%s%s, group_target name, add_target name)
+# If names are provided then the target ID is just equal to sprintf(%s_%s, group_target name, add_target name)
+# FUN (optional) can be defined as a function with only single input or as a function whose inputs are named for parameters
+#   defined by the priors object. In the former, a named vector is passed to the function and the user can either use the
+#   parameter names (e.g. x["V3"]) or the index (e.g. x[3]) to manipulate the simulated draws into an expected target value.
+#   The parameters are placed into the input vector in the same order they are defined by the user when building a priors
+#   object. If the inputs are named for parameters created in the priors object the function will only pass parameters
+#   that share a name with the input (i.e. if the priors object defines V1, V2, and V3 and a target function is defined
+#   as function(V1, V4) {...} the function will produce an error, as function(V1, V2) {V3*V2} the function will produce
+#   an error, but function(V1, V2) {V1*V2} will work just fine).
+#   regardless of the inputs the user defines, the functions will also have access to the seed and iteration current lower
+#   and upper bounds imabc has deemed as acceptable. these must be added as inputs to the target function as seed,
+#   lower_bound, and upper_bound. Use build_target_function() to create the final target function.
 targets <- define_targets(
   group_targets(
-    add_target(
+    group_name = "G1",
+    T1 = add_target(
       target = 1.5,
       starting_range = c(1.0, 2.0),
-      stopping_range = c(1.49, 1.51)
-    ),
-    add_target(
-      target = -0.5,
-      starting_range = c(-0.9, -0.2),
-      stopping_range = c(-0.51, -0.49)
+      stopping_range = c(1.49, 1.51)#,
+      # FUN = function(x1, x2) { x1 + x2 + rnorm(1, 0, 0.01)}
     )
   ),
   add_target(
     target = 0.5,
     starting_range = c(0.2, 0.9),
-    stopping_range = c(0.49, 0.51)
+    stopping_range = c(0.49, 0.51)#,
+    # FUN = function(x, lower_bound) { max(lower_bound, x[1] * x[2] + rnorm(1, 0, 0.01)) }
   )
 )
 
-# Target functions
-fn1 <- function(x1, x2) {x1 + x2 + rnorm(1, 0, 0.01)}
-fn2 <- function(x1, x2) {x1 * x2 + rnorm(1, 0, 0.01)}
+# df <- data.frame(
+#   group = c("G1", "G2", "G1"), name = c("T1", "T1", "T2"), target = c(1.5, 0.5, -1.5),
+#   lower_bounds_start = c(1, 0.2, -2), upper_bounds_start = c(2, 0.9, -1),
+#   lower_bounds_stop = c(1.49, 0.49, -1.51), upper_bounds_stop = c(1.51, 0.51, -1.49)
+# )
+# ex <- as.targets(df)
 
+# Target functions
+fn1 <- function(x1, x2) { x1 + x2 + rnorm(1, 0, 0.01) }
+fn2 <- function(x1, x2) { x1 * x2 + rnorm(1, 0, 0.01) }
 # CM NOTE: lower_bounds and upper_bounds must be inputs even if they are used. Need to adjust code so that they are
 #   optional inputs rather than required inputs
-target_fun <- function(x, lower_bounds, upper_bounds) {
-  res <- c()
+fn <- function(x1, x2) {
 
+  res["G2_T1"] <- fn2(x1, x2)
   # lower/upper bounds are now accessible in target_fun.
   # Either using the name of sim parm or the order they are created in define_targets
-  res[1] <- fn1(x[1], x[2]) # lower_bounds[1], upper_bounds[1] # OR # lower_bounds["m1s1"], upper_bounds["m1s1"]
-  res[2] <- -0.5 # lower_bounds[2], upper_bounds[2] # OR # lower_bounds["m2s1"], upper_bounds["m2s1"]
-  res[3] <- fn2(x[1], x[2])
+  res["G1_T1"] <- fn1(x1, x2)
 
   return(res)
 }
+
+target_fun <- define_target_function(targets, priors, FUN = fn, use_seed = FALSE)
 
 priors = priors
 targets = targets
 target_fun = target_fun
 previous_results = NULL
 N_start = 1000
-seed = 1234
+seed = 12345
 latinHypercube = TRUE
 N_centers = 2
 Center_n = 50
 N_post = 90
-max_iter = 1000
-max_iter = 50
+max_iter = 100
 N_cov_points = 50
 sample_inflate = 1.5
 recalc_centers = TRUE
 verbose = TRUE
-output_directory = "dev/outputs"
+output_directory = "dev/outputs/out"
+
+# Setup parallel handling
+registerDoParallel(cores = detectCores() - 1) # cluster auto-closed with foreach
 
 results <- imabc(
   priors = priors,
   targets = targets,
   target_fun = target_fun,
   N_start = N_start,
-  seed = 1234,
+  seed = 12345,
   latinHypercube = TRUE,
   N_centers = N_centers,
   Center_n = Center_n,
@@ -200,24 +214,27 @@ results <- imabc(
   sample_inflate = 1.5,
   recalc_centers = TRUE,
   verbose = TRUE,
-  output_directory = output_directory
+  output_directory = output_directory,
+  output_tag = "test1"
 )
 
-# Test continue runs
-prev_run_meta <- read.csv(paste(output_directory, "RunMetadata_20200820_1629PDT.csv", sep = "/"))
-new_targets <- define_targets(previous_run_targets = prev_run_meta)
-new_priors <- define_priors(previous_run_priors = prev_run_meta)
+# # Test continue runs
+# prev_run_meta <- read.csv(paste(output_directory, "RunMetadata_test1.csv", sep = "/"))
+# new_targets <- define_targets(previous_run_targets = prev_run_meta)
+# new_priors <- define_priors(previous_run_priors = prev_run_meta)
+#
+# previous_results <- list(
+#   prev_run_meta = prev_run_meta,
+#   good_parm_draws = read.csv(paste(output_directory, "Good_SimulatedParameters_test1.csv", sep = "/")),
+#   good_sim_parm = read.csv(paste(output_directory, "Good_SimulatedTargets_test1.csv", sep = "/")),
+#   good_target_dist = read.csv(paste(output_directory, "Good_SimulatedDistances_test1.csv", sep = "/")),
+#   mean_cov = read.csv(paste(output_directory, "MeanCovariance_test1.csv", sep = "/"))
+# )
+last_run <- read_previous_results(output_directory)
 
-previous_results <- list(
-  prev_run_meta = prev_run_meta,
-  good_parm_draws = read.csv(paste(output_directory, "Good_SimulatedParameters_20200820_1629PDT.csv", sep = "/")),
-  good_sim_parm = read.csv(paste(output_directory, "Good_SimulatedTargets_20200820_1629PDT.csv", sep = "/")),
-  good_target_dist = read.csv(paste(output_directory, "Good_SimulatedDistances_20200820_1629PDT.csv", sep = "/")),
-  mean_cov = read.csv(paste(output_directory, "MeanCovariance_20200820_1629PDT.csv", sep = "/"))
-)
 new_results <- imabc(
-  priors = new_priors, # from last calculation (includes empirical SD from beginning of first run)
-  targets = new_targets, # from the end of the last calculation
+  priors = last_run$new_priors, # from last calculation (includes empirical SD from beginning of first run)
+  targets = last_run$new_targets, # from the end of the last calculation
   target_fun = target_fun, # same as before
   previous_results = previous_results, # NEW
   N_start = N_start,
@@ -231,8 +248,12 @@ new_results <- imabc(
   sample_inflate = 1.5,
   recalc_centers = TRUE,
   verbose = TRUE,
-  output_directory = output_directory
+  output_directory = output_directory,
+  output_tag = "test2"
 )
+
+
+
 
 #########################################################################################################################
 #########################################################################################################################

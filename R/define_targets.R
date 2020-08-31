@@ -23,14 +23,31 @@ define_targets <- function(..., previous_run_targets = NULL) {
     update <- rep_len(TRUE, length.out = length(new_targets))
     names(update) <- new_names
 
+    # Pull target functions from new_targets list
+    target_functions <- lapply(new_targets, FUN = function(x) { x[["FUNS"]] })
+    target_function_names <- lapply(new_targets, FUN = function(x) { names(x[["FUNS"]]) })
+    n_functions <- unlist(lapply(new_targets, FUN = function(x) { length(x[["FUNS"]]) }))
+    new_targets <- lapply(new_targets, FUN = function(x) { x[["FUNS"]] <- NULL; return(x) })
+    # Check to see if target functions were supplied
+    PickOut <- !unlist(lapply(target_functions, is.null))
+    if (all(!PickOut)) {
+      # No target functions provided
+      target_functions <- as.null()
+    } else {
+      # Target functions were provided
+      new_fun_names <- paste(rep(names(target_functions), times = n_functions), unlist(target_function_names), sep = "_")
+      target_functions <- unlist(target_functions)
+      names(target_functions) <- new_fun_names
+    }
+
     # Store appropriate attributes
     sub_targets <- unlist(lapply(new_targets, FUN = function(x) { x[["names"]] }))
     n_sub_targs <- unlist(lapply(new_targets, FUN = function(x) { length(x[["names"]]) }))
     target_ids <- paste(rep(new_names, times = n_sub_targs), sub_targets, sep = "_")
     attributes(new_targets)$update <- update
     attributes(new_targets)$target_groups <- new_names
-    # attributes(new_targets)$sub_targets <- sub_targets
     attributes(new_targets)$target_ids <- target_ids
+    attributes(new_targets)$target_functions <- target_functions
   } # length(new_targets) > 0
 
   # If reading from a previous set of results

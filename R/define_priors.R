@@ -60,6 +60,8 @@ define_priors <- function(..., previous_run_priors = NULL) {
       if (length(minmax) > 0) {
         imabc_minmax <- as.list(as.numeric(prior_tmp$VALUE[prior_tmp$INFO %in% paste0("imabc_", minmax)]))
         names(imabc_minmax) <- minmax
+      } else {
+        imabc_minmax <- as.null()
       }
       prior_args <- c(prior_args, imabc_minmax)
 

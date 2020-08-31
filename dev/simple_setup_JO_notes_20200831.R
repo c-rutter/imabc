@@ -182,7 +182,7 @@ target_fun <- function(x, lower_bounds, upper_bounds) {
 
   # lower/upper bounds are now accessible in target_fun.
   # Either using the name of sim parm or the order they are created in define_targets
-  res[1] <- fn1(x[1], x[2]) # lower_bounds[1], upper_bounds[1] # OR # lower_bounds["m1s1"], upper_bounds["m1s1"]
+  res[1] <- fn1(x[1], x[2]) # lower_bounds[1], upper_bounds[1] # OR # lower_bounds["G1_T1"], upper_bounds["G1_T1"]
   res[2] <- -0.5 # lower_bounds[2], upper_bounds[2] # OR # lower_bounds["m2s1"], upper_bounds["m2s1"]
   res[3] <- fn2(x[1], x[2])
 
@@ -242,7 +242,7 @@ results <- imabc(
 
 
 # Test continue runs
-prev_run_meta <- read.csv(paste(output_directory, "RunMetadata_20200831_1342CDT.csv", sep = "/"))
+prev_run_meta <- read.csv(paste(output_directory, "RunMetadata_20200831_1557PDT.csv", sep = "/"))
 new_targets <- define_targets(previous_run_targets = prev_run_meta)
 new_priors <- define_priors(previous_run_priors = prev_run_meta)
 
