@@ -269,7 +269,7 @@ imabc <- function(
       }
       # Ensure order of columns matches order of sim_parm if names exist
       if (all(names(res) %in% colnames(sim_parm))) {
-        res <- res[, match(colnames(res), sim_parm_names)]
+        res <- res[, match(sim_parm_names, colnames(res))]
       }
 
       # Store results

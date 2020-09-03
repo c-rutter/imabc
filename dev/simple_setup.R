@@ -145,11 +145,11 @@ targets <- define_targets(
       starting_range = c(1.0, 2.0),
       stopping_range = c(1.49, 1.51)#,
       # FUN = function(x1, x2) { x1 + x2 + rnorm(1, 0, 0.01) }
-    # ),
-    # T2 = add_target(
-    #   target = -1.5,
-    #   starting_range = -rev(c(1.0, 2.0)),
-    #   stopping_range = -rev(c(1.49, 1.51)),
+    ),
+    T2 = add_target(
+      target = 0,
+      starting_range = c(-1.0, 1.0),
+      stopping_range = c(-0.1, 0.1),
     #   FUN = function(x1, x2) { -1*(x1 + x2 + rnorm(1, 0, 0.01)) }
     )
   ),
@@ -176,9 +176,11 @@ fn2 <- function(x1, x2) { x1 * x2 + rnorm(1, 0, 0.01) }
 fn <- function(x1, x2) {
   res <- c()
   res["G2_T1"] <- fn2(x1, x2)
+
   # lower/upper bounds are now accessible in target_fun.
   # Either using the name of sim parm or the order they are created in define_targets
   res["G1_T1"] <- fn1(x1, x2)
+  res["G1_T2"] <- rnorm(1, 0, 0.01)
 
   return(res)
 }
