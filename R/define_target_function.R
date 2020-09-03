@@ -45,11 +45,6 @@ define_target_function <- function(targets, priors, FUN = NULL, use_seed = TRUE)
           ans <- y[[idx]]()
         }
 
-        # Check output is the proper length
-        stopifnot(
-          "Target function should produce a value for every target." = length(ans) == length(priors)
-        )
-
         return(ans)
       }, y = target_funs, x = x))
 
@@ -89,12 +84,6 @@ define_target_function <- function(targets, priors, FUN = NULL, use_seed = TRUE)
         # If targets are fixed
         ans <- FUN()
       }
-
-      # CM NOTE: Don't think we can use this here because if a function breaks out early the equality will fail
-      # # Check output is the proper length
-      # stopifnot(
-      #   "Target function should produce a value for every target." = length(ans) == length(priors)
-      # )
 
       return(ans)
     }

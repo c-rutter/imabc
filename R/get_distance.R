@@ -10,5 +10,3 @@ get_distance <- function(dt, target_list) {
 
   return(distance)
 }
-
-
