@@ -30,6 +30,10 @@ get_new_bounds <- function(targets_list, sims) {
     # Movements down from maximum bounds
     x$upper_bounds_new <- x$upper_bounds_start - final_movements[2, ]
 
+    # Extra check to make sure bounds do not go beyond the stopping point
+    x$lower_bounds_new <- ifelse(x$lower_bounds_new > stops[1, ], stops[1, ], x$lower_bounds_new)
+    x$upper_bounds_new <- ifelse(x$upper_bounds_new < stops[2, ], stops[2, ], x$upper_bounds_new)
+
     return(x)
   }, sim = sims)
 
