@@ -65,10 +65,20 @@ The primary function is imabc(). The inputs and their descriptions are as follow
 * N_cov_points - integer. The number of points needed to move from an independent covariance assumption.
 * sample_inflate - numeric. When simulating results under certain conditions, how much more should the sample be simulated to make sure there are parameters within the appropriate bounds. (See R/get_B_draws.R)
 * recalc_centers - boolean. Should the centers be recalculated in each iteration.
+* backend_fun - function. If the user wishes to use something other than foreach () %dopar% {} to apply the target function to simulated parameters in parallel they may define the function here. The minimum requirements are: 
+  * The first input is expected to be a data.table where the first column is called seed followed by columns for the parameters in the order and with the names they were given when initialized by define_priors().
+  * The second input is the target function which should be defined using define_target_function().
+  * The third input is a list of other inputs of potential use to the evaluation of the parameters and targets. As of right now all that is included in this list is all_parm_names (which is a vector of the parameter names), lower_bounds and upper_bounds (which are named vectors with the current bounds of each target, the names are the target IDs created when using define_targets()).
+  * The return value is a data.table with the estimated targets values for all simulated parameters
 * continue_runs - DEPRECATED. boolean. previous_results input lets function know when to continue a run. Only does a simple restart (no altering targets or parameters between runs).
 * output_directory - character. The path where you would like results saved. Defaults to NULL which indicates the current directory is where results should be saved. If path doesn't exist, imabc will try to create it.
 * output_tag - character. This value is affixed to the end of the output files to make tracking multiple sets of results stored in the same directory easy to differentiate. The default, "timestamp", is a special case where the date and time the run begins is affixed to the end of the output files.
 * verbose - boolean. Should verbose information be printed while the algorithm is running.
+
+Some additional notes:
+
+* Regarding parallelization: If the user wishes to take advantage of parallelization they can register a parallel backend before running the imabc function (e.g. registerDoParallel(cores = detectCores() - 1)). imabc() uses foreach to submit parameters to the target function so what works with it will work with imabc. If the register function the user wishes to use requires that additional inputs beyond the parameters data.table, the target function, and the special other values listed in the backend_fun description be passed to foreach specifically the user must handle the entire submission of runs themselves by defining the backend_fun option in imabc.
+* At the moment, The distance between simulated targets and set target values (desired targets) is calculated following a chisquare ((desired - simulated)^2^)/(desired^2^)) except in the case where the desired target is 0. For desired targets = 0, the function replaces the denominator with 0.5 x range(stopping bounds): ((simulated)^2^)/((0.5 x (upper_bound_stop - lower_bound_stop))^2^). If the user wishes to use the stopping range to scale all the target distances they can set the global option imabc.target_eval_distance to "stopping_range" (i.e. before running imabc, run `options(imabc.target_eval_distance = "stopping_range")`)
 
 ### priors
 There are two functions to help the user define the appropriate priors list. 
@@ -200,7 +210,7 @@ target_fun <- define_target_function(targets, priors, FUN = fn, use_seed = FALSE
 ## To do
 * Determine where we should place warnings vs errors vs simple prints
 * Clean code and better name conventions
-* Document code
+* Document code better/more
 * Allow for continuing runs
   * target modification
   * parameter modification

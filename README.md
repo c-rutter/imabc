@@ -76,6 +76,25 @@ as follows:
     R/get\_B\_draws.R)
   - recalc\_centers - boolean. Should the centers be recalculated in
     each iteration.
+  - backend\_fun - function. If the user wishes to use something other
+    than foreach () %dopar% {} to apply the target function to simulated
+    parameters in parallel they may define the function here. The
+    minimum requirements are:
+      - The first input is expected to be a data.table where the first
+        column is called seed followed by columns for the parameters in
+        the order and with the names they were given when initialized by
+        define\_priors().
+      - The second input is the target function which should be defined
+        using define\_target\_function().
+      - The third input is a list of other inputs of potential use to
+        the evaluation of the parameters and targets. As of right now
+        all that is included in this list is all\_parm\_names (which is
+        a vector of the parameter names), lower\_bounds and
+        upper\_bounds (which are named vectors with the current bounds
+        of each target, the names are the target IDs created when using
+        define\_targets()).
+      - The return value is a data.table with the estimated targets
+        values for all simulated parameters
   - continue\_runs - DEPRECATED. boolean. previous\_results input lets
     function know when to continue a run. Only does a simple restart (no
     altering targets or parameters between runs).
@@ -90,6 +109,31 @@ as follows:
     the end of the output files.
   - verbose - boolean. Should verbose information be printed while the
     algorithm is running.
+
+Some additional notes:
+
+  - Regarding parallelization: If the user wishes to take advantage of
+    parallelization they can register a parallel backend before running
+    the imabc function (e.g. registerDoParallel(cores = detectCores() -
+    1)). imabc() uses foreach to submit parameters to the target
+    function so what works with it will work with imabc. If the register
+    function the user wishes to use requires that additional inputs
+    beyond the parameters data.table, the target function, and the
+    special other values listed in the backend\_fun description be
+    passed to foreach specifically the user must handle the entire
+    submission of runs themselves by defining the backend\_fun option in
+    imabc.
+  - At the moment, The distance between simulated targets and set target
+    values (desired targets) is calculated following a chisquare
+    ((desired - simulated)<sup>2</sup>)/(desired<sup>2</sup>)) except in
+    the case where the desired target is 0. For desired targets = 0, the
+    function replaces the denominator with 0.5 x range(stopping bounds):
+    ((simulated)<sup>2</sup>)/((0.5 x (upper\_bound\_stop -
+    lower\_bound\_stop))<sup>2</sup>). If the user wishes to use the
+    stopping range to scale all the target distances they can set the
+    global option imabc.target\_eval\_distance to “stopping\_range”
+    (i.e. before running imabc, run `options(imabc.target_eval_distance
+    = "stopping_range")`)
 
 ### priors
 
@@ -347,7 +391,7 @@ target_fun <- define_target_function(targets, priors, FUN = fn, use_seed = FALSE
 
   - Determine where we should place warnings vs errors vs simple prints
   - Clean code and better name conventions
-  - Document code
+  - Document code better/more
   - Allow for continuing runs
       - target modification
       - parameter modification

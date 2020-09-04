@@ -35,6 +35,7 @@ imabc <- function(
   N_cov_points = 0,
   sample_inflate = 1,
   recalc_centers = TRUE,
+  backend_fun = NULL,
   output_directory = NULL,
   output_tag = "timestamp",
   verbose = TRUE
@@ -261,12 +262,16 @@ imabc <- function(
       # Parms to check
       parms_to_run <- parm_draws[1:n_draw, c("seed", all_parm_names), with = FALSE]
       # User defined Distance Function applied on all simulated parms
-      res <- foreach(i1 = 1:nrow(parms_to_run), .combine = combine_results) %dopar% {
-        inp <- unlist(parms_to_run[i1, ..all_parm_names])
-        sim_target <- target_fun(inp, lower_bounds = lower_bounds, upper_bounds = upper_bounds)
-
-        return(sim_target)
-      }
+      # res <- foreach(i1 = 1:nrow(parms_to_run), .combine = combine_results) %dopar% {
+      #   inp <- unlist(parms_to_run[i1, ..all_parm_names])
+      #   sim_target <- target_fun(inp, lower_bounds = lower_bounds, upper_bounds = upper_bounds)
+      #
+      #   return(sim_target)
+      # }
+      res <- run_handler(
+        parms_to_run = parms_to_run, target_fun = target_fun, custom_function = backend_fun,
+        lower_bounds = lower_bounds, upper_bounds = upper_bounds, all_parm_names = all_parm_names
+      )
       # Ensure order of columns matches order of sim_parm if names exist
       if (all(names(res) %in% colnames(sim_parm))) {
         res <- res[, match(sim_parm_names, colnames(res))]

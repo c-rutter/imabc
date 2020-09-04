@@ -84,9 +84,10 @@ library(data.table)
 library(tidyverse)
 library(parallel)
 library(foreach)
-library(doParallel)
 library(lhs)
 library(truncnorm)
+library(doParallel) # I don't think this is required by imabc specifically (it is only needed if using doParallel to manage
+#   the backend parallel process handling)
 
 #########################################################################################################################
 # Priors ################################################################################################################
@@ -201,6 +202,7 @@ max_iter = 100
 N_cov_points = 50
 sample_inflate = 1.5
 recalc_centers = TRUE
+backend_fun = NULL
 verbose = TRUE
 output_directory = "dev/outputs/out"
 output_tag = "timestamp"
@@ -222,6 +224,7 @@ results <- imabc(
   N_cov_points = 0,
   sample_inflate = 1.5,
   recalc_centers = TRUE,
+  backend_fun = backend_fun,
   verbose = TRUE,
   output_directory = output_directory,
   output_tag = "test1"
