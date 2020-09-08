@@ -3,7 +3,7 @@ get_distance <- function(dt, target_list, dist = getOption("imabc.target_eval_di
   if (is.null(dist)) { dist <- "chisquare" }
 
   distance <- Reduce(`+`, lapply(attr(target_list, which = "target_ids"), FUN = function(x, dt, target_list, dist_opt) {
-    sim <- dt[, x, with = FALSE]
+    sim <- dt[[x]]
     obs <- target_list$targets[gsub(paste0(target_list["target_group"], "_"), "", x)]
 
     if (obs == 0 | dist_opt == "stopping_range") {
