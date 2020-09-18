@@ -2,8 +2,8 @@ define_targets <- function(..., previous_run_targets = NULL) {
   # Newly added targets
   new_targets <- list(...)
 
-
-  targets_list <- list(
+# CM NOTE: Need to move new stuff into if (length(new_targets) > 0) {...} properly
+  new_targets <- list(
     add_target(
       target = -0.5,
       starting_range = -rev(c(0.2, 0.9)),
@@ -49,53 +49,60 @@ define_targets <- function(..., previous_run_targets = NULL) {
   )
 
   # Find grouped targets
-  is_grouped <- sapply(targets_list, function(x) inherits(x, "group"))
-  grouped_targets <- targets_list[is_grouped]
+  is_grouped <- sapply(new_targets, function(x) inherits(x, "group"))
+  grouped_targets <- new_targets[is_grouped]
   grouped_targets <- structure(grouped_targets, class = "groups")
 
   # Need to get the number of targets in a group
-  n_targets <- rep.int(1, length(targets_list))
+  n_targets <- rep.int(1, length(new_targets))
   n_targets[is_grouped] <- sapply(grouped_targets, function(x) length(x) - 1)
 
   # pull the names of groups if they exist
-  group_names <- get_list_element(targets_list, "group_name", unlist = TRUE)
+  group_names <- get_list_element(new_targets, "group_name", unlist = TRUE)
 
   # generate unique group names
   group_names[is_grouped] <- unique_names(grouped_targets, group_names[is_grouped])
+  target_groups <- rep(group_names, times = n_targets)
 
   # unlist grouped targets so each element of the list is a target
-  test <- lapply(targets_list, function(x) {
-    if (inherits(x, "group")) {
-      x$group_name <- NULL
-      c(x)
+  return_targets <- structure(list(), class = "targets")
+  i_loc <- 1
+  for (i1 in seq_along(new_targets)) {
+    if (inherits(new_targets[[i1]], "group")) {
+      to_add <- c(new_targets[[i1]])
+      to_add$group_name <- NULL
+      return_targets[i_loc:(i_loc + n_targets[i1] - 1)] <- to_add
     } else {
-      x
+      return_targets[[i_loc]] <- new_targets[[i1]]
     }
-  })
-  test1 <- unlist(test[is_grouped], recursive = FALSE)
-  # pull target names
-  # generate target names
+    i_loc <- i_loc + n_targets[i1]
+  }
 
-test <- unlist(targets_list, recursive = F)
+  # pull target names if they exist
+  name_vec <- get_list_element(return_targets, "target_name", unlist = TRUE)
 
-  # targets <- get_list_element(return_targets, "target", unlist = TRUE)
-  # lower_bounds_start <- get_list_element(return_targets, "current_lower_bound", unlist = TRUE)
-  # upper_bounds_start <- get_list_element(return_targets, "current_upper_bound", unlist = TRUE)
-  # lower_bounds_stop <- get_list_element(return_targets, "stopping_lower_bound", unlist = TRUE)
-  # upper_bounds_stop <- get_list_element(return_targets, "stopping_upper_bound", unlist = TRUE)
-  # FUNS <- get_list_element(return_targets, "FUN", unlist = TRUE)
-  # names(targets) <- target_names
-  # names(lower_bounds_start) <- target_names
-  # names(upper_bounds_start) <- target_names
-  # names(lower_bounds_stop) <- target_names
-  # names(upper_bounds_stop) <- target_names
-  # if (all(is.na(FUNS))) {
-  #   FUNS <- as.null()
-  # } else {
-  #   PickOut <- which(!is.na(FUNS))
-  #   FUNS <- FUNS[PickOut]
-  #   names(FUNS) <- target_names[PickOut]
-  # }
+  # generate unique target names
+  target_names <- unique_names(return_targets, name_vec)
+
+  # Pull all relevant information from targets list
+  targets <- get_list_element(return_targets, "target", unlist = TRUE)
+  lower_bounds_start <- get_list_element(return_targets, "current_lower_bound", unlist = TRUE)
+  upper_bounds_start <- get_list_element(return_targets, "current_upper_bound", unlist = TRUE)
+  lower_bounds_stop <- get_list_element(return_targets, "stopping_lower_bound", unlist = TRUE)
+  upper_bounds_stop <- get_list_element(return_targets, "stopping_upper_bound", unlist = TRUE)
+  FUNS <- get_list_element(return_targets, "FUN", unlist = TRUE)
+  names(targets) <- target_names
+  names(lower_bounds_start) <- target_names
+  names(upper_bounds_start) <- target_names
+  names(lower_bounds_stop) <- target_names
+  names(upper_bounds_stop) <- target_names
+  if (all(is.na(FUNS))) {
+    FUNS <- as.null()
+  } else {
+    PickOut <- which(!is.na(FUNS))
+    FUNS <- FUNS[PickOut]
+    names(FUNS) <- target_names[PickOut]
+  }
 
   if (length(new_targets) > 0) {
     # Convert non-grouped targets to grouped targets for name control
@@ -139,6 +146,12 @@ test <- unlist(targets_list, recursive = F)
     sub_targets <- unlist(lapply(new_targets, FUN = function(x) { x[["names"]] }))
     n_sub_targs <- unlist(lapply(new_targets, FUN = function(x) { length(x[["names"]]) }))
     target_ids <- paste(rep(new_names, times = n_sub_targs), sub_targets, sep = "_")
+
+
+    # Initialize update information
+    update <- rep_len(TRUE, length.out = length(new_targets))
+    names(update) <- new_names
+
     attributes(new_targets)$update <- update
     attributes(new_targets)$target_groups <- new_names
     attributes(new_targets)$target_ids <- target_ids
@@ -148,6 +161,7 @@ test <- unlist(targets_list, recursive = F)
   # If reading from a previous set of results
   old_targets <- list()
   if (!is.null(previous_run_targets)) {
+    stop("old_targets define_targets")
     # Pull Target Specific Information
     previous_run_targets <- previous_run_targets[previous_run_targets$IMABC == "Target", ]
     previous_run_targets$IMABC <- NULL
