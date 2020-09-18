@@ -21,6 +21,12 @@ unique_names.targets <- function(x, name_vec) {
   expected_fmt <- "T%s"
   gsub_pattern <- "(^T)([0-9]+)"
 
+  group_info <- attr(x, "groups")
+  if (!is.null(group_info) && any(!is.na(group_info))) {
+    name_vec <- ifelse(
+      !is.na(group_info) & !is.na(name_vec) & (duplicated(name_vec, fromLast = TRUE) | duplicated(name_vec, fromLast = FALSE)),
+      paste(name_vec, group_info, sep = "_"), name_vec)
+  }
   names <- .build_names(things_list = x, provided_names = name_vec, fmt = expected_fmt, pattern = gsub_pattern)
 
   return(names)

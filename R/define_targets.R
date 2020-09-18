@@ -4,7 +4,7 @@ define_targets <- function(..., previous_run_targets = NULL) {
 
 # CM NOTE: Need to move new stuff into if (length(new_targets) > 0) {...} properly
   new_targets <- list(
-    add_target(
+    T1 = add_target(
       target = -0.5,
       starting_range = -rev(c(0.2, 0.9)),
       stopping_range = -rev(c(0.49, 0.51)),
@@ -73,10 +73,19 @@ define_targets <- function(..., previous_run_targets = NULL) {
       to_add$group_name <- NULL
       return_targets[i_loc:(i_loc + n_targets[i1] - 1)] <- to_add
     } else {
-      return_targets[[i_loc]] <- new_targets[[i1]]
+      t_name <- names(new_targets[i1])
+      to_add <- new_targets[[i1]]
+      to_add$target_name <- ifelse(
+        (is.na(to_add$target_name) || is.null(to_add$target_name)) && t_name != "", t_name, ifelse(
+          is.null(to_add$target_name), NA, to_add$target_name
+        ))
+      return_targets[[i_loc]] <- to_add
     }
     i_loc <- i_loc + n_targets[i1]
   }
+
+  # Give targets their group attribute
+  attr(return_targets, "groups") <- target_groups
 
   # pull target names if they exist
   name_vec <- get_list_element(return_targets, "target_name", unlist = TRUE)
