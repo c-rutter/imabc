@@ -40,7 +40,7 @@ ABCloop(
 
 \item{B}{PLACEHOLDER}
 
-\item{N.post}{PLACEHOLDER}
+\item{N.post}{Final samples}
 
 \item{max.iter}{PLACEHOLDER}
 

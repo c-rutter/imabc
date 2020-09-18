@@ -103,6 +103,7 @@ library(doParallel) # I don't think this is required by imabc specifically (it i
 # define_priors will assign a unique name, of the format V[0-9]+, for any parameter that isn't given a name.
 # The prior distribution information is returned in the same order they are input and can be called without their names
 #   using their index (e.g. priors[[1]]$density_function)
+# Fixed parameters has not been implemented yet
 x1_min <- 0.1
 x1_max <- 0.9
 x2_min <- 0.7
@@ -117,8 +118,12 @@ priors <- define_priors(
     dist_base_name = "truncnorm",
     mean = 0.75, sd = 0.05, a = x2_min, b = x2_max, # Inputs into *truncnorm
     min = x2_min, max = x2_max # Would otherwise default to -Inf/Inf
+  ),
+  add_prior(
+    dist_base_name = "norm"
   )
 )
+print(priors, detail = T)
 
 # If no name is provided, function assigns name based on group and target.
 #   Groups are of the format G[0-9]+
@@ -265,7 +270,9 @@ new_results <- imabc(
 )
 
 
-
+#########################################################################################################################
+# NEW TO DO #############################################################################################################
+# Test define_priors() when using previous_run_priors
 
 #########################################################################################################################
 #########################################################################################################################

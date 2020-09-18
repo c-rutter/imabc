@@ -1,26 +1,46 @@
+#' @export
 define_priors <- function(..., previous_run_priors = NULL) {
-  fs <- list(...)
+  priors_list <- list(...)
 
   # When new priors are defined
-  if (length(fs) > 0) {
+  if (length(priors_list) > 0) {
+    # Check that only imabc_priors have been added
+    good <- unlist(lapply(priors_list, function(x) { all(inherits(x, c("prior", "imabc"), TRUE) != 0) }))
+    if (!all(good)) {
+      bad_noname <- which(names(good) == "" & !good)
+      bad_winame <- which(names(good) != "" & !good)
+      txt1 <- txt2 <- c()
+      if (length(bad_noname) > 0) {
+        txt1 <- paste("prior's at position(s)", paste(bad_noname, collapse = ", "), sep = ": ")
+      }
+      if (length(bad_winame) > 0) {
+        txt2 <- paste("prior's named", paste(names(bad_winame), collapse = ", "), sep = ": ")
+      }
+      if (!is.null(txt1) && !is.null(txt2)) {
+        txt <- paste(txt1, "and", txt2, sep = " ")
+      } else if (!is.null(txt1)) {
+        txt <- txt1
+      } else if (!is.null(txt2)) {
+        txt <- txt2
+      }
+      stop(sprintf("Inputs must be imabc priors. Use add_prior() to create prior objects for %s.", txt))
+    }
+
     # Store added functions
-    f <- lapply(fs, FUN = function(x) {
-      list(
-        density_function = x[["density_function"]],
-        quantile_function = x[["quantile_function"]]
-      )
-    })
+    return_priors <- get_list_element(priors_list, name = c("density_function", "quantile_function"), unlist = FALSE)
+    return_priors <- structure(return_priors, class = c("priors", "imabc"))
 
     # Pull all important attributes of the priors into lists
-    sd <- rep.int(0L, length(fs)) # empirically calculated in imabc
-    min <- unlist(lapply(fs, FUN = function(x) { x[["min"]] })) # if not set or given default by distribution functions, defaults to -Inf
-    max <- unlist(lapply(fs, FUN = function(x) { x[["max"]] })) # if not set or given default by distribution functions, defaults to Inf
-    distribution <- unlist(lapply(fs, FUN = function(x) { x[["distribution"]] }))
-    fun_inputs <- lapply(fs, FUN = function(x) { x[["fun_inputs"]] })
+    name_vec <- get_list_element(priors_list, "parameter", unlist = TRUE)
+    sd <- rep.int(0L, length(priors_list)) # empirically calculated in imabc
+    min <- get_list_element(priors_list, "min", unlist = TRUE) # if not set or given default by distribution functions, defaults to -Inf
+    max <- get_list_element(priors_list, "max", unlist = TRUE) # if not set or given default by distribution functions, defaults to Inf
+    distribution <- get_list_element(priors_list, "distribution", unlist = TRUE)
+    fun_inputs <- get_list_element(priors_list, "fun_inputs", unlist = FALSE)
 
     # Pull the names of the parameters. Check for uniqueness and add unique names where no names are provided.
-    prior_names <- .unique_names(things_list = fs, thing = "parameter")
-    names(f) <- prior_names
+    prior_names <- unique_names(return_priors, name_vec)
+    names(return_priors) <- prior_names
     names(min) <- prior_names
     names(max) <- prior_names
     names(sd) <- prior_names
@@ -28,11 +48,11 @@ define_priors <- function(..., previous_run_priors = NULL) {
     names(fun_inputs) <- prior_names
 
     # Store the vectors as attributes for the entire prior object
-    attributes(f)$mins <- min
-    attributes(f)$maxs <- max
-    attributes(f)$sds <- sd
-    attributes(f)$distributions <- distribution
-    attributes(f)$fun_inputs <- fun_inputs
+    attributes(return_priors)$mins <- min
+    attributes(return_priors)$maxs <- max
+    attributes(return_priors)$sds <- sd
+    attributes(return_priors)$distributions <- distribution
+    attributes(return_priors)$fun_inputs <- fun_inputs
   }
 
   if (!is.null(previous_run_priors)) {
@@ -43,7 +63,7 @@ define_priors <- function(..., previous_run_priors = NULL) {
     # Unique priors
     prior_ids <- unique(previous_run_priors$ID)
 
-    f <- list()
+    return_priors <- list()
     # For each parameter
     for (i1 in prior_ids) {
       # Find appropriate paramter
@@ -66,20 +86,58 @@ define_priors <- function(..., previous_run_priors = NULL) {
       prior_args <- c(prior_args, imabc_minmax)
 
       # Add priors to a list
-      f[[i1]] <- do.call(add_prior, arg = prior_args)
+      return_priors[[i1]] <- do.call(add_prior, arg = prior_args)
     }
     # Create a prior object
-    f <- do.call(define_priors, args = f)
+    return_priors <- do.call(define_priors, args = return_priors)
 
     # Update the standard deviation attribute
     sd <- as.numeric(previous_run_priors$VALUE[previous_run_priors$INFO == "empirical_sd"])
     names(sd) <- previous_run_priors$ID[previous_run_priors$INFO == "empirical_sd"]
-    attributes(f)$sds <- sd
+    attributes(return_priors)$sds <- sd
+    return_priors <- structure(return_priors, class = c("priors", "imabc"))
   }
 
-  if (length(fs) > 0 & !is.null(previous_run_priors)) {
+  if (length(priors_list) > 0 & !is.null(previous_run_priors)) {
     stop("Currently does not support adding new parameters to an old set of runs")
   }
 
-  return(f)
+  return(return_priors)
+}
+
+
+#' Title
+#'
+#' @param p
+#' @param digits
+#' @param detail
+#'
+#' @return
+#' @export
+#'
+#' @examples
+print.priors <- function(p, digits = getOption("digits"), detail = FALSE) {
+  n_parms <- length(p)
+  parm_names <- names(p)
+
+  cat(sprintf("There are %s defined parameters.\n", n_parms))
+  if (!detail) {
+    cat("Use print(..., detail = TRUE) to see the prior information defined for each parameter.\n")
+  } else {
+    p_text <- lapply(parm_names, FUN = function(x, p) {
+      dist_text <- sprintf("Distribution base name: %s", attr(p, "distributions")[x])
+      fun_text <- sprintf("User specified inputs: %s", attr(p, "fun_inputs")[x])
+      fun_text <- sub("(.*)(list\\(fun_inputs = c*\\(*)(.*)(\\))", "\\1\\3", fun_text, perl = T)
+      fun_text <- sub("\\)", "", fun_text)
+      range_text <- sprintf("Allowable range: %s - %s", attr(p, "mins")[x], attr(p, "maxs")[x])
+      sd_text <- sprintf("Empirical Standard Deviation: %s", format(attr(p, "sds")[x], digits = digits))
+
+      full_text <- paste(dist_text, fun_text, range_text, sd_text, sep = "\n")
+    }, p = p)
+    cat(
+      paste(sprintf("\nParameter %s has the following specifications:", parm_names), p_text, sep = "\n", collapse = "\n")
+    )
+  }
+
+  invisible(p)
 }

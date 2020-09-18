@@ -145,13 +145,18 @@ add_prior <- function(..., dist_base_name = NULL, density_fn = NULL, quantile_fn
     fun_inputs <- unlist(quantile_inputs)
   } # ! is.null(dist_base_name) & is.null(density_fn) & is.null(quantile_fn)
 
-  return(list(
-    parameter = parameter_name,
-    density_function = density_function,
-    quantile_function = quantile_function,
-    min = min,
-    max = max,
-    distribution = distribution,
-    fun_inputs = fun_inputs
-  ))
+  prior <- structure(
+    list(
+      parameter = parameter_name,
+      density_function = density_function,
+      quantile_function = quantile_function,
+      min = min,
+      max = max,
+      distribution = distribution,
+      fun_inputs = fun_inputs
+    ),
+    class = c("prior", "imabc")
+  )
+
+  return(prior)
 }

@@ -16,15 +16,18 @@ add_target <- function(target, starting_range, stopping_range, FUN = NULL, targe
     "FUN must be a function if provided" = is.null(FUN) || is.function(FUN)
   )
 
-  return(
+  target <- structure(
     list(
       target_name = target_name,
       target = target,
-      low_bound_start = starting_range[1],
-      up_bound_start = starting_range[2],
-      low_bound_stop = stopping_range[1],
-      up_bound_stop = stopping_range[2],
+      current_lower_bound = starting_range[1],
+      current_upper_bound = starting_range[2],
+      stopping_lower_bound = stopping_range[1],
+      stopping_upper_bound = stopping_range[2],
       FUN = FUN
-    )
+    ),
+    class = c("target")
   )
+
+  return(target)
 }
