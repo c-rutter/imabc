@@ -27,6 +27,7 @@ eval_targets <- function(sim_targets, target_list, criteria = c("start", "update
 
     return(fin_distance)
   }, dt = sim_targets)
+  tot_dist <- as.data.table(tot_dist)
 
   return(tot_dist)
 }
