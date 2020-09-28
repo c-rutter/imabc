@@ -1,8 +1,8 @@
-get_B_draws <- function(B, inflate, center, cov_matrix, priors, parm_names) {
+get_B_draws <- function(B, inflate, center, cov_matrix, priors) {
   # Simulate values following a multivariate normal
   x <- as.data.table(mvrnorm(n = trunc(inflate*B), mu = center, Sigma = cov_matrix))
-  x$in_range <- get_in_range(parms = x, priors = priors, parm_names = parm_names)
-  if (sum(x$in_range) > 0) {
+  x$in_range <- get_in_range(compare_list = priors, check_dt = x, out = "numeric")
+  if (any(x$in_range > 0)) {
     setorder(x, -in_range)
     x$in_range <- NULL
 

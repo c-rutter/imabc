@@ -114,7 +114,8 @@ imabc <- function(
   n_rows_init <- max(n_draw, N_centers*Center_n) + recalc_centers*N_centers
   n_in <- 0
   n_use <- 0
-  target_names <- names(targets)
+  # CM NOTE: Name? I think group_names, n_groups, distance_dt, good_distance_dt
+  target_names <- unique(attr(targets, "target_groups"))
   n_targets <- length(target_names)
   have_N_cov_points <- FALSE # For testing/checking everything runs ok
 
@@ -175,7 +176,7 @@ imabc <- function(
 
   # Targets Handling ----------------------------------------------------------------------------------------------------
   # Initialize inputs/results data frames
-  target_dist <- init_run_dt(n_rows_init, target_names, type = "distance", out_final = FALSE)
+  target_dist <- init_run_dt(n = n_rows_init, parms = target_names, type = "distance", out_final = FALSE)
   # CM NOTE: See continue_runs for good_parm_draws
   good_target_dist <- if (continue_runs) {
     # Need to add rows to make sure we have enough for storing
@@ -192,7 +193,7 @@ imabc <- function(
     init_run_dt(n_store, target_names, type = "distance", out_final = TRUE)
   }
   # These are sub-targets within each of the main targets
-  sim_parm_names <- attributes(targets)$target_ids
+  sim_parm_names <- attributes(targets)$target_names
   sim_parm <- init_run_dt(n_rows_init, sim_parm_names, type = "sim", out_final = FALSE)
   # CM NOTE: See continue_runs for good_parm_draws
   good_sim_parm <- if (continue_runs) {
@@ -214,10 +215,14 @@ imabc <- function(
   if (N_cov_points == 0) { N_cov_points <- 25*n_parms }
   # Print information
   if (verbose) {
-    bound_info <- lapply(targets[attr(targets, "update")], FUN = function(x) {
-      paste(sprintf("%s: %s - %s", x$names, x$lower_bounds_start, x$upper_bounds_start), collapse = "\n")
-    })
-    bound_info <- paste(sprintf("---- %s ----", names(bound_info)), bound_info, sep = "\n", collapse = "\n")
+    bound_info <- lapply(attr(targets, "target_names"), FUN = function(x, targ) {
+      tmp <- targ[x]
+      paste(sprintf("%s: %s - %s", x, tmp$current_lower_bounds, tmp$current_upper_bounds), collapse = "\n")
+    }, targ = targets)
+    bound_info <- lapply(unique(attr(targets, "target_groups")), FUN = function(x, groups, bound_info) {
+      paste(unlist(bound_info[x == groups]), collapse = "\n")
+    }, groups = attr(targets, "target_groups"), bound_info = bound_info)
+    bound_info <- paste(sprintf("---- %s ----", unique(attr(targets, "target_groups"))), bound_info, sep = "\n", collapse = "\n")
     cat("Current bound info:", bound_info, sep = "\n")
   }
 
@@ -232,8 +237,7 @@ imabc <- function(
     }
     n_in_i <- 0 # CM NOTE: Better names
     # What targets are left to update based on stopping bounds
-    update_targets <- attr(targets, "update")
-    update_targets <- names(update_targets)[update_targets]
+    update_targets <- unique(attr(targets, "update"))
 
     # Print information
     if (verbose) {
@@ -241,10 +245,16 @@ imabc <- function(
       iter_info <- sprintf("Starting at: %s", Sys.time())
       n_info <- sprintf("Current n_in = %s", n_in)
       if (length(update_targets) > 0) {
-        bound_info <- lapply(targets[attr(targets, "update")], FUN = function(x) {
-          paste(sprintf("%s: %s - %s", x$names, x$lower_bounds_start, x$upper_bounds_start), collapse = "\n")
-        })
-        bound_info <- paste(sprintf("---- %s ----", names(bound_info)), bound_info, sep = "\n", collapse = "\n")
+        # CM NOTE: Need to try tapply
+        bounds_to_print <- names(attr(targets, "update"))
+        bound_info <- lapply(bounds_to_print, FUN = function(x, targ) {
+          tmp <- targ[x]
+          paste(sprintf("%s: %s - %s", x, tmp$current_lower_bounds, tmp$current_upper_bounds), collapse = "\n")
+        }, targ = targets)
+        bound_info <- lapply(unique(attr(targets, "target_groups")), FUN = function(x, groups, bound_info) {
+          paste(unlist(bound_info[x == groups]), collapse = "\n")
+        }, groups = attr(targets, "target_groups"), bound_info = bound_info)
+        bound_info <- paste(sprintf("---- %s ----", unique(attr(targets, "target_groups"))), bound_info, sep = "\n", collapse = "\n")
         cat(header, iter_info, n_info, "Current bound info:", bound_info, sep = "\n")
       } else {
         cat(header, iter_info, "All tolerance intervals at target bounds", sep = "\n")
@@ -253,24 +263,12 @@ imabc <- function(
 
     # If not the first iteration on a continuing run
     if (!(continue_runs == TRUE & main_i1 == start_iter)) {
-      # Pull current bounds
-      lower_bounds <- unlist(lapply(targets, FUN = function(x) { x[["lower_bounds_start"]] }))
-      upper_bounds <- unlist(lapply(targets, FUN = function(x) { x[["upper_bounds_start"]] }))
-      names(lower_bounds) <- attr(targets, which = "target_ids")
-      names(upper_bounds) <- attr(targets, which = "target_ids")
-
       # Parms to check
       parms_to_run <- parm_draws[1:n_draw, c("seed", all_parm_names), with = FALSE]
       # User defined Distance Function applied on all simulated parms
-      # res <- foreach(i1 = 1:nrow(parms_to_run), .combine = combine_results) %dopar% {
-      #   inp <- unlist(parms_to_run[i1, ..all_parm_names])
-      #   sim_target <- target_fun(inp, lower_bounds = lower_bounds, upper_bounds = upper_bounds)
-      #
-      #   return(sim_target)
-      # }
       res <- run_handler(
-        parms_to_run = parms_to_run, target_fun = target_fun, custom_function = backend_fun,
-        lower_bounds = lower_bounds, upper_bounds = upper_bounds, all_parm_names = all_parm_names
+        parms_to_run = parms_to_run, target_fun = target_fun, all_parm_names = all_parm_names,
+        targets = targets, priors = priors, custom_function = backend_fun
       )
       # Ensure order of columns matches order of sim_parm if names exist
       if (all(names(res) %in% colnames(sim_parm))) {
@@ -377,17 +375,13 @@ imabc <- function(
       } # if (recalc.centers & main_i1 > start_iter)
 
       # save good draws, distances, and simulated parms
-      # CM NOTE: these seem like a round about way to add rows from parm_draws, etc. to the good.* versions
-      #   could probably write more efficiently and clearly with which/subset and rbind while also ignoring or doing
-      #   away with the draw variable
       # CM NOTE: What do we do if there are no n_in_i?
       if (n_in_i > 0) {
         if ((main_i1 == 1) & (n_in_i > n_store)) {
-          # keep the n_store best draws (largest alpha level & smallest distance)
-          # CM NOTE: Adding a sort on n_good to make sure the ones that are actually in bounds are considered first
+          # keep the n_store best draws (smallest distance and all targets number of targets in range)
           setorder(target_dist, -n_good, tot_dist, na.last = TRUE)
           add_draws <- target_dist$draw[1:n_store]
-          setorder(target_dist, draw, na.last = TRUE)  # likely an unnecessary sort
+          setorder(target_dist, draw, na.last = TRUE)
           good_target_dist <- target_dist[draw %in% add_draws, ]
           good_parm_draws <- parm_draws[draw %in% add_draws, ]
           good_sim_parm <- sim_parm[draw %in% add_draws, ]
@@ -420,7 +414,10 @@ imabc <- function(
 
         } # (main_i1 == 1) & (n_in_i > n_store)
 
-        # Recalculate distances
+        # Recalculate distances for only the target groups being updated
+        # CM NOTE: I believe "if length(update_targets) == 0" is redundent as total_distance should be for everything
+        #   already. Alternatively we can move this outside of !(continue_runs == TRUE & iter == start_iter) as suggested
+        #   in the next total_distance calc
         if (length(update_targets) == 0) {
           good_target_dist[add_row_range, ]$tot_dist <- total_distance(
             dt = good_target_dist[add_row_range, ],
@@ -448,6 +445,8 @@ imabc <- function(
       # 2*N.cov.points, reducing good points by half
       ###########################################################################
       # Sort targets based on overall distance of major targets still being updated
+      # CM NOTE: This is redundent if !(continue_runs == TRUE & iter == start_iter). Can move to an else statement or
+      #   move last total_distance to outside of that if statement
       good_target_dist$tot_dist <- total_distance(dt = good_target_dist, target_names = update_targets, scale = FALSE)
 
       # Ensure that we end up with at least N_cov_points
@@ -462,27 +461,29 @@ imabc <- function(
           get_draws <- good_target_dist[good_row_range, ][order(tot_dist, na.last = TRUE)][1:n_get]$draw
 
           # Get new bounds using n_get best draws
-          targets[update_targets] <- get_new_bounds(
-            targets_list = targets[update_targets],
+          targets <- get_new_bounds(
+            to_update = update_targets,
+            targets_list = targets,
             sims = good_sim_parm[draw %in% get_draws, ]
           )
 
         } else { # n_get < n_in
           # warning("No improvement")
           # return target bounds to original values
-          targets[update_targets] <- update_target_bounds(targets[update_targets], from = "new", to = "start")
+          targets <- update_target_bounds(targets, from = "new", to = "current")
 
         } # ! n_get < n_in
 
         # Find which targets have moved closer to the stopping bounds
-        improve <- unlist(lapply(targets[update_targets], FUN = function(x) {
-          any(x$lower_bounds_new != x$lower_bounds_start | x$upper_bounds_new != x$upper_bounds_start)
-        }))
-        if (any(improve) | n_get == n_in) {
+        improve <- any(
+          targets$new_lower_bounds != targets$current_lower_bounds |
+            targets$new_upper_bounds != targets$current_upper_bounds
+          )
+        if (improve | n_get == n_in) {
           # Update distances (values < 0 indicate out of tolerance bounds)
           good_target_dist[good_row_range, (update_targets) := eval_targets(
             sim_targets = good_sim_parm[good_row_range, ],
-            target_list = targets[update_targets],
+            target_list = targets[update_targets, groups_given = TRUE],
             criteria = "update"
           )]
 
@@ -500,7 +501,7 @@ imabc <- function(
       # If we tightened our bounds
       if (n_in_new >= N_cov_points & n_in_new < n_in) {
         # Update starting target bounds
-        targets[update_targets] <- update_target_bounds(targets[update_targets], from = "start", to = "new")
+        targets <- update_target_bounds(targets, from = "current", to = "new")
 
         # Update n_in
         keep_draws <- good_target_dist[n_good == n_targets, ]$draw
@@ -508,28 +509,6 @@ imabc <- function(
 
         # Determine which targets are at the most restrictive we want them to be
         attr(targets, "update") <- get_update_targets(targets)
-
-        # CM NOTE: Commented out in ABCloopFunction.R as well. Should remove if not going to use.
-        # if(N.in>N.cov.points &
-        #    (sum(target.specs$alpha<target.specs$alpha.target)>=1)){
-        #   # if more than N.cov.points that meet the updated alpha-criteria &
-        #   # we are still updating tolerance intervals for some targets, then
-        #   # keep only the closest N.cov.points among them, based on nearness
-        #   # to targets still being updated. needed b/c SEER data starts @ alpha=0
-        #
-        #   good.target.dist[,tot.dist := NA]
-        #   good.target.dist[draw %in% keep.draws,
-        #                    tot.dist :=
-        #                      get.updating.dist(x=good.target.dist[draw %in%
-        #                                                           keep.draws,],
-        #                                        update.names)]
-        #
-        #   setorder(good.target.dist,-n.good,-alpha,tot.dist,na.last=TRUE)
-        #   keep.draws = good.target.dist[1:N.cov.points,]$draw
-        #   setorder(good.target.dist,draw)
-        #   N.in=N.cov.points
-        #
-        # }
 
         # CM NOTE: I am really confident we can find a better way of doing this
         # Move the best draws to top of good_target_dist and remove the rest
@@ -553,10 +532,16 @@ imabc <- function(
         # Print information
         if (verbose) {
           n_info <- sprintf("New n_in = %s", n_in)
-          bound_info <- lapply(targets[attr(targets, "update")], FUN = function(x) {
-            paste(sprintf("%s: %s - %s", x$names, x$lower_bounds_start, x$upper_bounds_start), collapse = "\n")
-          })
-          bound_info <- paste(sprintf("---- %s ----", names(bound_info)), bound_info, sep = "\n", collapse = "\n")
+
+          bounds_to_print <- names(attr(targets, "update"))
+          bound_info <- lapply(bounds_to_print, FUN = function(x, targ) {
+            tmp <- targ[x]
+            paste(sprintf("%s: %s - %s", x, tmp$current_lower_bounds, tmp$current_upper_bounds), collapse = "\n")
+          }, targ = targets)
+          bound_info <- lapply(unique(attr(targets, "target_groups")), FUN = function(x, groups, bound_info) {
+            paste(unlist(bound_info[x == groups]), collapse = "\n")
+          }, groups = attr(targets, "target_groups"), bound_info = bound_info)
+          bound_info <- paste(sprintf("---- %s ----", unique(attr(targets, "target_groups"))), bound_info, sep = "\n", collapse = "\n")
           bound_info <- ifelse(bound_info == "", "All tolerance intervals at target bounds", bound_info)
           cat("Updated bounds:", n_info, bound_info, sep = "\n")
         }
@@ -564,17 +549,21 @@ imabc <- function(
         # Print information
         if (verbose) {
           n_info <- sprintf("New n_in = %s", n_in)
-          bound_info <- lapply(targets[attr(targets, "update")], FUN = function(x) {
-            paste(sprintf("%s: %s - %s", x$names, x$lower_bounds_start, x$upper_bounds_start), collapse = "\n")
-          })
-          bound_info <- paste(sprintf("---- %s ----", names(bound_info)), bound_info, sep = "\n", collapse = "\n")
+          bounds_to_print <- names(attr(targets, "update"))
+          bound_info <- lapply(bounds_to_print, FUN = function(x, targ) {
+            tmp <- targ[x]
+            paste(sprintf("%s: %s - %s", x, tmp$current_lower_bounds, tmp$current_upper_bounds), collapse = "\n")
+          }, targ = targets)
+          bound_info <- lapply(unique(attr(targets, "target_groups")), FUN = function(x, groups, bound_info) {
+            paste(unlist(bound_info[x == groups]), collapse = "\n")
+          }, groups = attr(targets, "target_groups"), bound_info = bound_info)
+          bound_info <- paste(sprintf("---- %s ----", unique(attr(targets, "target_groups"))), bound_info, sep = "\n", collapse = "\n")
           cat("Unable to update bounds:", n_info, bound_info, sep = "\n")
         }
       } # ! n_in_new >= N_cov_points & n_in_new < n_in
     } # (n_in >= 2*N_cov_points) & length(update_targets) > 0
 
-    # CM NOTE: Adding a condition that this can't be the first iteration. This is because mean_cov is not defined until
-    #   the first iteration is done. Need to fix code to have it initialized or read in and used
+    # Calculate Effective Sample Size if we have enough sample, met the target stopping ranges or on the last iteration
     if ((n_in >= N_post | length(update_targets) == 0 | (main_i1 >= end_iter & n_in > 0)) & main_i1 > 1) {
       # CM NOTE: Original if statement for comparison
       # (N.in>=N.post | !any(target.specs$update.alpha)) | (iter>=end.iter & N.in>0)
@@ -854,8 +843,9 @@ imabc <- function(
               inflate = sample_inflate,
               center = sample_mean_i1,
               cov_matrix = sample_cov,
-              priors = priors,
-              parm_names = all_parm_names
+              priors = priors#,
+              # CM NOTE: If we added in fixed parameter capabilities, this will be needed again
+              # parm_names = all_parm_names
             )
             if (is.null(x)) {
               # CM NOTE: Should this be an error?
@@ -876,9 +866,11 @@ imabc <- function(
           mean_cov_center_i1$center <- center_draw[center_i1]
           mean_cov_center_i1$parm <- 0:(length(all_parm_names)) # CM NOTE: calib.parm.names
           B_in <- sum(get_in_range(
-            parms = parm_draws[draw_rows, ],
-            priors = priors,
-            parm_names = all_parm_names
+            compare_list = priors,
+            check_dt = parm_draws[draw_rows, ],
+            out = "logical"
+            # CM NOTE: If we added in fixed parameter capabilities, this will be needed again
+            # parm_names = all_parm_names
           )) # CM NOTE: calib.parm.names
           mean_cov_center_i1$B.in <- B_in
           setcolorder(mean_cov_center_i1, c("iter", "step", "center", "B.in" , "parm", all_parm_names)) # CM NOTE: calib.parm.names

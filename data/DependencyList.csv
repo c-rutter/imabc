@@ -1,0 +1,18 @@
+original call,relation,package,license
+imabc,Imports,lhs,GPL-3
+imabc,Depends,data.table,MPL-2.0 | file LICENSE
+imabc,Depends,foreach,Apache License (== 2.0)
+lhs,Imports,Rcpp,GPL (>= 2)
+data.table,Imports,methods,Part of R 4.0.1
+foreach,Imports,codetools,GPL
+foreach,Imports,utils,Part of R 4.0.1
+foreach,Imports,iterators,Apache License (== 2.0)
+Rcpp,Imports,methods,Part of R 4.0.1
+Rcpp,Imports,utils,Part of R 4.0.1
+methods,Imports,utils,Part of R 4.0.1
+methods,Imports,stats,Part of R 4.0.1
+iterators,Depends,utils,Part of R 4.0.1
+stats,Imports,utils,Part of R 4.0.1
+stats,Imports,grDevices,Part of R 4.0.1
+stats,Imports,graphics,Part of R 4.0.1
+graphics,Imports,grDevices,Part of R 4.0.1

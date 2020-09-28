@@ -106,16 +106,7 @@ define_priors <- function(..., previous_run_priors = NULL) {
 }
 
 
-#' Title
-#'
-#' @param p
-#' @param digits
-#' @param detail
-#'
-#' @return
 #' @export
-#'
-#' @examples
 print.priors <- function(p, digits = getOption("digits"), detail = FALSE) {
   n_parms <- length(p)
   parm_names <- names(p)

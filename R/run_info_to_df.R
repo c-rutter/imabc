@@ -1,48 +1,87 @@
 .run_info_to_df <- function(targets, priors, iter, draw) {
   ##### Target Information #####
-  # Target IDs
-  target_ids <- attr(targets, which = "target_ids")
-  target_ids <- unlist(lapply(attr(targets, "target_groups"), FUN = function(x) {
-    c(rep(x, 2), rep(attr(targets[[x]], "target_ids"), times = 6))
-  }), use.names = FALSE)
-  # Target information
-  target_info <- c(
-    "name", "target", "lower_bound_current", "upper_bound_current", "lower_bound_stop", "upper_bound_stop"
+  # Pull values
+  target_values <- .list_vector_to_df(targets, "targets")
+  current_lower_bounds <- .list_vector_to_df(targets, "current_lower_bounds")
+  current_upper_bounds <- .list_vector_to_df(targets, "current_upper_bounds")
+  stopping_lower_bounds <- .list_vector_to_df(targets, "stopping_lower_bounds")
+  stopping_upper_bounds <- .list_vector_to_df(targets, "stopping_upper_bounds")
+  target_groups <- .list_vector_to_df(targets, "target_groups", TRUE)
+  target_groups$VALUE[!attr(targets, "grouped_targets")] <- NA
+  update <- .list_vector_to_df(targets, "update", TRUE)
+  update$VALUE <- TRUE
+  # Join into one data.frame
+  targ_df <- rbind(
+    target_groups, update, target_values,
+    current_lower_bounds, current_upper_bounds,
+    stopping_lower_bounds, stopping_upper_bounds
   )
-  target_info <- unlist(lapply(targets, FUN = function(x) {
-    c("update", "group", rep(target_info, each = length(x[["names"]])))
-  }))
-  # Target values
-  target_values <- unlist(lapply(attr(targets, "target_groups"), FUN = function(x) {
-    c(
-      attr(targets, "update")[x], x,
-      targets[[x]][c("names", "targets", "lower_bounds_start", "upper_bounds_start", "lower_bounds_stop", "upper_bounds_stop")]
-    )
-  }), use.names = FALSE)
+  # Order
+  targ_df$INFO <- factor(targ_df$INFO, levels = c(
+    "target_groups", "update", "targets",
+    "current_lower_bounds", "current_upper_bounds", "stopping_lower_bounds", "stopping_upper_bounds"
+    ))
+  targ_df <- targ_df[order(targ_df$ID, targ_df$INFO), ]
 
   ##### Prior Information #####
-  # Prior IDs
-  prior_ids <- names(priors)
-  # Prior information
-  prior_info <- c("imabc_min", "imabc_max", "empirical_sd", "distribution")
-  prior_info <- unlist(lapply(attr(priors, "fun_inputs"), FUN = function(x) {
-    c(prior_info, paste("fun", names(x), sep = "_"))
-  }))
-  # Prior values
-  prior_values <- unlist(lapply(names(priors), FUN = function(x) {
-    c(attr(priors, "mins")[x], attr(priors, "maxs")[x], attr(priors, "sds")[x], attr(priors, "distributions")[x],
-      attr(priors, "fun_inputs")[x])
-  }), use.names = FALSE)
-  # Number of rows
-  n_priors <- length(prior_ids)
-  n_prior_info <- unlist(lapply(attr(priors, "fun_inputs"), FUN = function(x) { length(x) })) + 4
-  n_prior_rows <- length(prior_info)
+  # Pull values
+  imabc_min <- .list_vector_to_df(priors, "mins", TRUE)
+  imabc_min$INFO <- paste("imabc", imabc_min$INFO, sep = "_")
+  imabc_max <- .list_vector_to_df(priors, "maxs", TRUE)
+  imabc_max$INFO <- paste("imabc", imabc_max$INFO, sep = "_")
+  empirical_sd <- .list_vector_to_df(priors, "sds", TRUE)
+  empirical_sd$INFO <- paste("imabc", empirical_sd$INFO, sep = "_")
+  distribution <- .list_vector_to_df(priors, "distribution", TRUE)
+  fun_in <- attr(priors, "fun_inputs")
+  fun_input <- do.call(rbind, lapply(seq_along(fun_in), FUN = function(x, fun_in, ids) {
+    if (is.null(names(fun_in[[x]]$fun_inputs))) {
+      data.frame(ID = ids[x], INFO = NA)
+    } else {
+      data.frame(ID = ids[x], INFO = paste("fun", names(fun_in[[x]]$fun_inputs), sep = "_"))
+    }
+  }, fun_in = fun_in, ids = names(fun_in)))
+  fun_values <- do.call(rbind, lapply(seq_along(fun_in), FUN = function(x, fun_in, ids) {
+    if (is.null(names(fun_in[[x]]$fun_inputs))) {
+      data.frame(ID = ids[x], VALUE = NA)
+    } else {
+      data.frame(ID = ids[x], VALUE = fun_in[[x]]$fun_inputs)
+    }
+  }, fun_in = fun_in, ids = names(fun_in)))
+  fun_inputs <- merge(fun_input, fun_values, by = "ID")
+  fun_inputs <- cbind(TYPE = "priors", fun_inputs)
+  fun_inputs <- fun_inputs[!is.na(fun_inputs$INFO), ]
+  # Join into one data.frame
+  prio_df <- rbind(
+    imabc_min, imabc_max, empirical_sd,
+    distribution, fun_inputs
+  )
+  # Order
+  main_items <- c("imabc_mins", "imabc_maxs", "imabc_sds", "distribution")
+  other_items <- setdiff(unique(prio_df$INFO), main_items)
+  prio_df$INFO <- factor(prio_df$INFO, levels = c(main_items, other_items))
+  prio_df <- prio_df[order(prio_df$ID, prio_df$INFO), ]
+
+  ##### Admin Information #####
+  admi_df <- data.frame(
+    TYPE = "Run",
+    ID = c("current_iteration", "last_draw"),
+    INFO = c("current_iteration", "last_draw"),
+    VALUE = c(iter, draw)
+  )
 
   # Final data
-  IMABC <- c(rep("Run", 2), rep("Target", length(target_ids)), rep("Prior", n_prior_rows))
-  ID <- c("current_iter", "last_draw", target_ids, rep(prior_ids, times = n_prior_info))
-  INFO <- c("current_iter", "last_draw", target_info, prior_info)
-  VALUE <- c(iter, draw, target_values, prior_values)
+  final_dta <- rbind(admi_df, targ_df, prio_df)
+  rownames(final_dta) <- NULL
 
-  return(data.frame(IMABC, ID, INFO, VALUE))
+  return(final_dta)
+}
+
+.list_vector_to_df <- function(list_vector, info, attribute = FALSE) {
+  na <- deparse(substitute(list_vector))
+  if (attribute) {
+    vec <- attr(list_vector, info)
+    data.frame(TYPE = na, ID = names(vec), INFO = info, VALUE = vec)
+  } else {
+    data.frame(TYPE = na, ID = names(list_vector[[info]]), INFO = info, VALUE = list_vector[[info]])
+  }
 }

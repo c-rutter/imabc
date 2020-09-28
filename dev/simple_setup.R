@@ -68,10 +68,11 @@ rm(list = ls(all = TRUE))
 gc()
 
 # Load required libraries
+# devtools::document()
 devtools::load_all()
+
 # Some of these will be loaded by library(imabc):
-library(MASS) # Must be loaded before tidyverse
-library(data.table)
+# library(data.table)
 # CM NOTE: My computer for some reason no longer has OpenMP support (even though it used to and OpenMP is installed.).
 #   Just need to figure out what is wrong. Calculations are a little slower but otherwise work all the same.
 # data.table 1.12.8 using 1 threads (see ?getDTthreads).  Latest news: r-datatable.com
@@ -81,10 +82,6 @@ library(data.table)
 #   https://github.com/Rdatatable/data.table/wiki/Installation. This warning message should not occur on Windows or
 #   Linux. If it does, please file a GitHub issue.
 # **********
-library(tidyverse)
-library(parallel)
-library(foreach)
-library(lhs)
 library(truncnorm)
 library(doParallel) # I don't think this is required by imabc specifically (it is only needed if using doParallel to manage
 #   the backend parallel process handling)
@@ -115,7 +112,7 @@ priors <- define_priors(
   ),
   add_prior(
     parameter_name = "x2",
-    dist_base_name = "truncnorm",
+    dist_base_name = "norm",# "truncnorm",
     mean = 0.75, sd = 0.05, a = x2_min, b = x2_max, # Inputs into *truncnorm
     min = x2_min, max = x2_max # Would otherwise default to -Inf/Inf
   ),
@@ -123,6 +120,7 @@ priors <- define_priors(
     dist_base_name = "norm"
   )
 )
+priors
 print(priors, detail = T)
 
 # If no name is provided, function assigns name based on group and target.
@@ -145,14 +143,14 @@ print(priors, detail = T)
 #   lower_bound, and upper_bound. Use build_target_function() to create the final target function.
 targets <- define_targets(
   group_targets(
-    group_name = "G1",
-    T1 = add_target(
+    # group_name = "T3",
+    add_target(
       target = 1.5,
       starting_range = c(1.0, 2.0),
       stopping_range = c(1.49, 1.51)#,
       # FUN = function(x1, x2) { x1 + x2 + rnorm(1, 0, 0.01) }
     ),
-    T2 = add_target(
+    add_target(
       target = 0,
       starting_range = c(-1.0, 1.0),
       stopping_range = c(-0.1, 0.1),
@@ -166,6 +164,7 @@ targets <- define_targets(
     # FUN = function(x, lower_bound) { max(lower_bound, x[1] * x[2] + rnorm(1, 0, 0.01)) }
   )
 )
+targets
 
 # df <- data.frame(
 #   group = c("G1", "G2", "G1"), name = c("T1", "T1", "T2"), target = c(1.5, 0.5, -1.5),
@@ -179,19 +178,45 @@ fn1 <- function(x1, x2) { x1 + x2 + rnorm(1, 0, 0.01) }
 fn2 <- function(x1, x2) { x1 * x2 + rnorm(1, 0, 0.01) }
 # CM NOTE: lower_bounds and upper_bounds must be inputs even if they are used. Need to adjust code so that they are
 #   optional inputs rather than required inputs
-fn <- function(x1, x2) {
+fn <- function(x1, x2, targets, priors) {
   res <- c()
-  res["G2_T1"] <- fn2(x1, x2)
+  res["T3"] <- fn2(x1, x2)
 
   # lower/upper bounds are now accessible in target_fun.
   # Either using the name of sim parm or the order they are created in define_targets
-  res["G1_T1"] <- fn1(x1, x2)
-  res["G1_T2"] <- rnorm(1, 0, 0.01)
+  res["T1"] <- fn1(x1, x2)
+  res["T2"] <- rnorm(1, 0, 0.01)
 
   return(res)
 }
 
 target_fun <- define_target_function(targets, priors, FUN = fn, use_seed = FALSE)
+target_fun(c(x1 = 0.75, x2 = 0.75), seed = 12345, targets = targets, priors = priors)
+
+
+# `+.imabc` <- function(x, y) {
+#   new_imabc <- structure(list(
+#     targets = targets,
+#     priors = priors,
+#     FUN = target_fun
+#   ), class = c("imabc", "targets", "priors", "target_fun"))
+#
+#   # What does each side have?
+#   x_has <- class(x)
+#   y_has <- class(y)
+#
+#
+#   if (!x_done & !y_done) {
+#     # Create new imabc object
+#   } else if (x_done & !y_done) {
+#     # Add y to x
+#   } else if (!x_done & y_done) {
+#     # Add x to y
+#   }
+#
+#   return("HERE")
+# }
+
 
 priors = priors
 targets = targets

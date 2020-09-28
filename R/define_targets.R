@@ -1,170 +1,105 @@
 define_targets <- function(..., previous_run_targets = NULL) {
   # Newly added targets
   new_targets <- list(...)
-
-# CM NOTE: Need to move new stuff into if (length(new_targets) > 0) {...} properly
-  new_targets <- list(
-    T1 = add_target(
-      target = -0.5,
-      starting_range = -rev(c(0.2, 0.9)),
-      stopping_range = -rev(c(0.49, 0.51)),
-      FUN = function(x, lower_bound) { max(lower_bound, x[1] * x[2] + rnorm(1, 0, 0.01)) }
-    ),
-    group_targets(
-      group_name = "G1",
-      T1 = add_target(
-        target = 1.5,
-        starting_range = c(1.0, 2.0),
-        stopping_range = c(1.49, 1.51)#,
-        # FUN = function(x1, x2) { x1 + x2 + rnorm(1, 0, 0.01) }
-      ),
-      add_target(
-        target_name = "T2",
-        target = 0,
-        starting_range = c(-1.0, 1.0),
-        stopping_range = c(-0.1, 0.1),
-        FUN = function(x1, x2) { -1*(x1 + x2 + rnorm(1, 0, 0.01)) }
-      ),
-      add_target(
-        target = 0-1,
-        starting_range = c(-1.0, 1.0)-1,
-        stopping_range = c(-0.1, 0.1)-1,
-        #   FUN = function(x1, x2) { -1*(x1 + x2 + rnorm(1, 0, 0.01)) }
-      )
-    ),
-    add_target(
-      target = 0.5,
-      starting_range = c(0.2, 0.9),
-      stopping_range = c(0.49, 0.51)#,
-      # FUN = function(x, lower_bound) { max(lower_bound, x[1] * x[2] + rnorm(1, 0, 0.01)) }
-    ),
-    group_targets(
-      p_p = add_target(
-        target = 1.5,
-        starting_range = c(1.0, 2.0),
-        stopping_range = c(1.49, 1.51)#,
-        # FUN = function(x1, x2) { x1 + x2 + rnorm(1, 0, 0.01) }
-      )
-    )
-  )
-
-  # Find grouped targets
-  is_grouped <- sapply(new_targets, function(x) inherits(x, "group"))
-  grouped_targets <- new_targets[is_grouped]
-  grouped_targets <- structure(grouped_targets, class = "groups")
-
-  # Need to get the number of targets in a group
-  n_targets <- rep.int(1, length(new_targets))
-  n_targets[is_grouped] <- sapply(grouped_targets, function(x) length(x) - 1)
-
-  # pull the names of groups if they exist
-  group_names <- get_list_element(new_targets, "group_name", unlist = TRUE)
-
-  # generate unique group names
-  group_names[is_grouped] <- unique_names(grouped_targets, group_names[is_grouped])
-  target_groups <- rep(group_names, times = n_targets)
-
-  # unlist grouped targets so each element of the list is a target
-  return_targets <- structure(list(), class = "targets")
-  i_loc <- 1
-  for (i1 in seq_along(new_targets)) {
-    if (inherits(new_targets[[i1]], "group")) {
-      to_add <- c(new_targets[[i1]])
-      to_add$group_name <- NULL
-      return_targets[i_loc:(i_loc + n_targets[i1] - 1)] <- to_add
-    } else {
-      t_name <- names(new_targets[i1])
-      to_add <- new_targets[[i1]]
-      to_add$target_name <- ifelse(
-        (is.na(to_add$target_name) || is.null(to_add$target_name)) && t_name != "", t_name, ifelse(
-          is.null(to_add$target_name), NA, to_add$target_name
-        ))
-      return_targets[[i_loc]] <- to_add
-    }
-    i_loc <- i_loc + n_targets[i1]
-  }
-
-  # Give targets their group attribute
-  attr(return_targets, "groups") <- target_groups
-
-  # pull target names if they exist
-  name_vec <- get_list_element(return_targets, "target_name", unlist = TRUE)
-
-  # generate unique target names
-  target_names <- unique_names(return_targets, name_vec)
-
-  # Pull all relevant information from targets list
-  targets <- get_list_element(return_targets, "target", unlist = TRUE)
-  lower_bounds_start <- get_list_element(return_targets, "current_lower_bound", unlist = TRUE)
-  upper_bounds_start <- get_list_element(return_targets, "current_upper_bound", unlist = TRUE)
-  lower_bounds_stop <- get_list_element(return_targets, "stopping_lower_bound", unlist = TRUE)
-  upper_bounds_stop <- get_list_element(return_targets, "stopping_upper_bound", unlist = TRUE)
-  FUNS <- get_list_element(return_targets, "FUN", unlist = TRUE)
-  names(targets) <- target_names
-  names(lower_bounds_start) <- target_names
-  names(upper_bounds_start) <- target_names
-  names(lower_bounds_stop) <- target_names
-  names(upper_bounds_stop) <- target_names
-  if (all(is.na(FUNS))) {
-    FUNS <- as.null()
-  } else {
-    PickOut <- which(!is.na(FUNS))
-    FUNS <- FUNS[PickOut]
-    names(FUNS) <- target_names[PickOut]
-  }
-
   if (length(new_targets) > 0) {
-    # Convert non-grouped targets to grouped targets for name control
-    to_group <- unlist(lapply(new_targets, FUN = function(x) { !"names" %in% names(x) }))
-    new_targets[to_group] <- lapply(new_targets[to_group], FUN = function(x) { group_targets(x) })
+    # Find grouped targets
+    is_grouped <- sapply(new_targets, function(x) inherits(x, "group"))
 
-    # Get target group names
-    new_names <- .unique_names(things_list = new_targets, thing = "target_group")
+    # Create artificial groups for individual targets
+    grouped_targets <- new_targets
+    grouped_targets[!is_grouped] <- lapply(new_targets[!is_grouped], function(x) {
+      x$group_name <- NA
+      attr(x, "class") <- c("target", "group", "imabc")
+      x
+    })
+    grouped_targets <- structure(grouped_targets, class = "groups")
 
-    # Add names to targets
-    new_targets <- lapply(seq_along(new_names), FUN = function(x, targs, name) {
-      targs[[x]]$target_group <- name[x]
-      attr(targs[[x]], which = "target_ids") <- paste(name[x], targs[[x]]$names, sep = "_")
-
-      targs[[x]]
-    }, targs = new_targets, name = new_names)
-    names(new_targets) <- new_names
-
-    # Initialize update information
-    update <- rep_len(TRUE, length.out = length(new_targets))
-    names(update) <- new_names
-
-    # Pull target functions from new_targets list
-    target_functions <- lapply(new_targets, FUN = function(x) { x[["FUNS"]] })
-    target_function_names <- lapply(new_targets, FUN = function(x) { names(x[["FUNS"]]) })
-    n_functions <- unlist(lapply(new_targets, FUN = function(x) { length(x[["FUNS"]]) }))
-    new_targets <- lapply(new_targets, FUN = function(x) { x[["FUNS"]] <- NULL; return(x) })
-    # Check to see if target functions were supplied
-    PickOut <- !unlist(lapply(target_functions, is.null))
-    if (all(!PickOut)) {
-      # No target functions provided
-      target_functions <- as.null()
-    } else {
-      # Target functions were provided
-      new_fun_names <- paste(rep(names(target_functions), times = n_functions), unlist(target_function_names), sep = "_")
-      target_functions <- unlist(target_functions)
-      names(target_functions) <- new_fun_names
+    # Need to get the number of targets in a group
+    n_targets <- rep.int(1, length(new_targets))
+    if (sum(is_grouped) > 0) {
+      n_targets[is_grouped] <- sapply(grouped_targets[is_grouped], function(x) length(x) - 1)
     }
 
-    # Store appropriate attributes
-    sub_targets <- unlist(lapply(new_targets, FUN = function(x) { x[["names"]] }))
-    n_sub_targs <- unlist(lapply(new_targets, FUN = function(x) { length(x[["names"]]) }))
-    target_ids <- paste(rep(new_names, times = n_sub_targs), sub_targets, sep = "_")
+    # pull the names of groups if they exist
+    group_names <- get_list_element(new_targets, "group_name", unlist = TRUE)
 
+    # generate unique group names
+    group_names <- unique_names(grouped_targets, group_names)
+    target_groups <- rep(group_names, times = n_targets)
+    is_grouped <- rep(is_grouped, times = n_targets)
+
+    # unlist grouped targets so each element of the list is a target
+    added_targets <- structure(list(), class = "targets")
+    i_loc <- 1
+    for (i1 in seq_along(new_targets)) {
+      if (inherits(new_targets[[i1]], "group")) {
+        to_add <- c(new_targets[[i1]])
+        to_add$group_name <- NULL
+        added_targets[i_loc:(i_loc + n_targets[i1] - 1)] <- to_add
+      } else {
+        t_name <- names(new_targets[i1])
+        to_add <- new_targets[[i1]]
+        to_add$target_name <- ifelse(
+          (is.na(to_add$target_name) || is.null(to_add$target_name)) && t_name != "", t_name, ifelse(
+            is.null(to_add$target_name), NA, to_add$target_name
+          ))
+        added_targets[[i_loc]] <- to_add
+      }
+      i_loc <- i_loc + n_targets[i1]
+    }
+
+    # Give targets their group attribute
+    attr(added_targets, "groups") <- target_groups
+    attr(added_targets, "grouped") <- is_grouped
+
+    # pull target names if they exist
+    name_vec <- get_list_element(added_targets, "target_name", unlist = TRUE)
+
+    # generate unique target names
+    target_names <- unique_names(added_targets, name_vec)
+
+    # Update target groups for individual targets
+    target_groups[!is_grouped] <- target_names[!is_grouped]
+
+    # Pull all relevant information from targets list
+    targets <- get_list_element(added_targets, "target", unlist = TRUE)
+    current_lower_bounds <- get_list_element(added_targets, "current_lower_bound", unlist = TRUE)
+    current_upper_bounds <- get_list_element(added_targets, "current_upper_bound", unlist = TRUE)
+    stopping_lower_bounds <- get_list_element(added_targets, "stopping_lower_bound", unlist = TRUE)
+    stopping_upper_bounds <- get_list_element(added_targets, "stopping_upper_bound", unlist = TRUE)
+    FUNS <- get_list_element(added_targets, "FUN", unlist = TRUE)
+    names(targets) <- target_names
+    names(is_grouped) <- target_names
+    names(target_groups) <- target_names
+    names(current_lower_bounds) <- target_names
+    names(current_upper_bounds) <- target_names
+    names(stopping_lower_bounds) <- target_names
+    names(stopping_upper_bounds) <- target_names
+    if (all(is.na(FUNS))) {
+      FUNS <- as.null()
+    } else {
+      PickOut <- which(!is.na(FUNS))
+      FUNS <- FUNS[PickOut]
+      names(FUNS) <- target_names[PickOut]
+    }
 
     # Initialize update information
-    update <- rep_len(TRUE, length.out = length(new_targets))
-    names(update) <- new_names
+    update <- target_groups
 
-    attributes(new_targets)$update <- update
-    attributes(new_targets)$target_groups <- new_names
-    attributes(new_targets)$target_ids <- target_ids
-    attributes(new_targets)$target_functions <- target_functions
+    # Rebuild Final targets list
+    added_targets <- structure(list(
+      targets = targets,
+      current_lower_bounds = current_lower_bounds,
+      current_upper_bounds = current_upper_bounds,
+      stopping_lower_bounds = stopping_lower_bounds,
+      stopping_upper_bounds = stopping_upper_bounds,
+      target_functions = FUNS
+    ), class = c("grouped"[any(is_grouped)], "targets", "imabc"))
+
+    attributes(added_targets)$update <- update
+    attributes(added_targets)$grouped_targets <- is_grouped
+    attributes(added_targets)$target_groups <- target_groups
+    attributes(added_targets)$target_names <- target_names
   } # length(new_targets) > 0
 
   # If reading from a previous set of results
@@ -233,7 +168,7 @@ define_targets <- function(..., previous_run_targets = NULL) {
   if (length(new_targets) == 0 & length(old_targets) == 0) { # No targets added
     stop("Need to add at least one target.")
   } else if (length(new_targets) != 0 & length(old_targets) == 0) { # Only new targets added
-    all_targets <- new_targets
+    all_targets <- added_targets
   } else if (length(new_targets) == 0 & length(old_targets) != 0) { # Only old targets added
     all_targets <- old_targets
   } else {
@@ -344,3 +279,105 @@ define_targets <- function(..., previous_run_targets = NULL) {
 
   return(all_targets)
 }
+
+#' @export
+`[.targets` <- function(t, x, groups_given = FALSE) {
+  old_class <- class(t)
+
+  if (groups_given) {
+    if (is.logical(x)) {
+      keep <- rep(x, times = table(attributes(t)$target_groups))
+    } else {
+      keep <- attributes(t)$target_groups %in% x
+    }
+  } else {
+    if (is.logical(x)) {
+      keep <- x
+    } else {
+      keep <- attributes(t)$target_names %in% x
+    }
+  }
+
+  # Add subset of target info to a new target lsit
+  subset_targets <- structure(list(
+    targets = t$targets[keep],
+    current_lower_bounds = t$current_lower_bounds[keep],
+    current_upper_bounds = t$current_upper_bounds[keep],
+    stopping_lower_bounds = t$stopping_lower_bounds[keep],
+    stopping_upper_bounds = t$stopping_upper_bounds[keep],
+    target_functions = t$target_functions[keep]
+  ), class = old_class)
+  # If new lower bounds exist add them in
+  if (any(c("new_lower_bounds", "new_upper_bounds") %in% names(t))) {
+    subset_targets$new_lower_bounds <- t$new_lower_bounds[keep]
+    subset_targets$new_upper_bounds <- t$new_upper_bounds[keep]
+  }
+
+  # Subset attributes
+  grouped_targets <- attributes(t)$grouped_targets[keep]
+  target_groups <- attributes(t)$target_groups[keep]
+  target_names <- attributes(t)$target_names[keep]
+  update <- intersect(attributes(t)$update, target_names)
+  # Add them to new target list
+  attributes(subset_targets)$update <- update
+  attributes(subset_targets)$grouped_targets <- grouped_targets
+  attributes(subset_targets)$target_groups <- target_groups
+  attributes(subset_targets)$target_names <- target_names
+
+  return(subset_targets)
+}
+
+#' @export
+print.grouped <- function(t, digits = getOption("digits")) {
+  random_string <- "ufkwnbiusheb"
+  group_ids <- attr(t, "target_groups")
+  group_ids[!attr(t, "grouped_target")] <- paste0(random_string, which(!attr(t, "grouped_target")))
+
+  disp <- t(data.frame(
+    t$current_lower_bounds,
+    t$stopping_lower_bounds,
+    t$targets,
+    t$stopping_upper_bounds,
+    t$current_upper_bounds
+  ))
+  disp <- data.frame(
+    cols = c("Current Lower Bounds", "Lower Stopping Bounds", "Target", "Upper Stopping Bounds", "Current Upper Bounds"),
+    disp
+  )
+
+  cols <- split(attr(t, "target_names"), group_ids)
+  for (i1 in names(cols)) {
+    if (!grepl(random_string, i1)) {
+      cat(sprintf("Target Group: %s\n", i1))
+    } else {
+      cat("Single Target\n")
+    }
+
+    tmp <- disp[, c("cols", cols[[i1]])]
+    colnames(tmp)[1] <- ""
+    print(tmp, row.names = FALSE)
+    cat("\n")
+  }
+
+  invisible(t)
+}
+
+#' @export
+print.targets <- function(t, digits = getOption("digits")) {
+  disp <- t(data.frame(
+    t$current_lower_bounds,
+    t$stopping_lower_bounds,
+    t$targets,
+    t$stopping_upper_bounds,
+    t$current_upper_bounds
+  ))
+  disp <- data.frame(
+    cols = c("Current Lower Bounds", "Lower Stopping Bounds", "Target", "Upper Stopping Bounds", "Current Upper Bounds"),
+    disp
+  )
+  colnames(disp)[1] <- ""
+  print(disp, row.names = FALSE)
+
+  invisible(t)
+}
+
