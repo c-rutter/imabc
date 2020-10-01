@@ -105,63 +105,60 @@ define_targets <- function(..., previous_run_targets = NULL) {
   # If reading from a previous set of results
   old_targets <- list()
   if (!is.null(previous_run_targets)) {
-    stop("old_targets define_targets")
     # Pull Target Specific Information
-    previous_run_targets <- previous_run_targets[previous_run_targets$IMABC == "Target", ]
-    previous_run_targets$IMABC <- NULL
+    previous_run_targets <- previous_run_targets[previous_run_targets$TYPE == "targets", ]
+    previous_run_targets$TYPE <- NULL
 
-    # Get target group attributes
-    groups <- previous_run_targets[previous_run_targets$INFO %in% c("group", "update"), ]
-    update <- as.logical(groups$VALUE[groups$INFO == "update"])
-    names(update) <- groups$ID[groups$INFO == "update"]
-    target_groups <- names(update)
+    # Get target IDS
+    target_ids <- unique(previous_run_targets$ID)
+    n_targets <- length(target_ids)
 
-    # Target information
-    sub_targets <- previous_run_targets[!previous_run_targets$INFO %in% c("group", "update"), ]
+    # Initialize target info
+    targets <- structure(numeric(n_targets), names = target_ids)
+    current_lower_bounds <- structure(numeric(n_targets), names = target_ids)
+    current_upper_bounds <- structure(numeric(n_targets), names = target_ids)
+    stopping_lower_bounds <- structure(numeric(n_targets), names = target_ids)
+    stopping_upper_bounds <- structure(numeric(n_targets), names = target_ids)
+    grouped_targets <- structure(logical(n_targets), names = target_ids)
+    target_groups <- structure(character(n_targets), names = target_ids)
+    update <- structure(character(n_targets), names = target_ids)
 
-    # For each target group
-    for (i1 in target_groups) {
-      # Find appropriate subtargets
-      idx <- grep(paste0("^", i1, "_"), sub_targets$ID)
-      tmp <- sub_targets[idx, ]
-
-      # Target IDs
-      target_ids <- unique(tmp$ID)
-      # Target names
-      target_names <- tmp$VALUE[tmp$INFO == "name"]
-      # Targets
-      target_values <- as.numeric(tmp$VALUE[tmp$INFO == "target"])
-      names(target_values) <- target_names
-      # Start values
-      lower_start <- as.numeric(tmp$VALUE[tmp$INFO == "lower_bound_current"])
-      names(lower_start) <- target_names
-      upper_start <- as.numeric(tmp$VALUE[tmp$INFO == "upper_bound_current"])
-      names(upper_start) <- target_names
-      # Stop values
-      lower_stop <- as.numeric(tmp$VALUE[tmp$INFO == "lower_bound_stop"])
-      names(lower_stop) <- target_names
-      upper_stop <- as.numeric(tmp$VALUE[tmp$INFO == "upper_bound_stop"])
-      names(upper_stop) <- target_names
-
-      old_tmp <- list(
-        target_group = i1,
-        names = target_names,
-        targets = target_values,
-        lower_bounds_start = lower_start,
-        upper_bounds_start = upper_start,
-        lower_bounds_stop = lower_stop,
-        upper_bounds_stop = upper_stop
-      )
-      attr(old_tmp, "target_ids") <- target_ids
-
-      # Add target group to old targets list
-      old_targets[[i1]] <- old_tmp
+    for (i1 in target_ids) {
+      targets[i1] <- as.numeric(previous_run_targets$VALUE[previous_run_targets$INFO == "targets" & previous_run_targets$ID == i1])
+      current_lower_bounds[i1] <- as.numeric(previous_run_targets$VALUE[previous_run_targets$INFO == "current_lower_bounds" & previous_run_targets$ID == i1])
+      current_upper_bounds[i1] <- as.numeric(previous_run_targets$VALUE[previous_run_targets$INFO == "current_upper_bounds" & previous_run_targets$ID == i1])
+      stopping_lower_bounds[i1] <- as.numeric(previous_run_targets$VALUE[previous_run_targets$INFO == "stopping_lower_bounds" & previous_run_targets$ID == i1])
+      stopping_upper_bounds[i1] <- as.numeric(previous_run_targets$VALUE[previous_run_targets$INFO == "stopping_upper_bounds" & previous_run_targets$ID == i1])
+      # Target groups
+      if (!is.na(previous_run_targets$VALUE[previous_run_targets$INFO == "target_groups" & previous_run_targets$ID == i1])) {
+        target_groups[i1] <- previous_run_targets$VALUE[previous_run_targets$INFO == "target_groups" & previous_run_targets$ID == i1]
+        grouped_targets[i1] <- TRUE
+      } else {
+        target_groups[i1] <- i1
+        grouped_targets[i1] <- FALSE
+      }
+      # Update group
+      if (as.logical(previous_run_targets$VALUE[previous_run_targets$INFO == "update" & previous_run_targets$ID == i1])) {
+        update[i1] <- target_groups[i1]
+      } else {
+        update[i1] <- NULL
+      }
     }
 
-    # Assign target group attributes
-    attr(old_targets, "update") <- update
-    attr(old_targets, "target_groups") <- target_groups
-    attr(old_targets, "target_ids") <- unique(sub_targets$ID)
+    # Rebuild Final targets list
+    old_targets <- structure(list(
+      targets = targets,
+      current_lower_bounds = current_lower_bounds,
+      current_upper_bounds = current_upper_bounds,
+      stopping_lower_bounds = stopping_lower_bounds,
+      stopping_upper_bounds = stopping_upper_bounds,
+      target_functions = NULL
+    ), class = c("grouped"[any(grouped_targets)], "targets", "imabc"))
+
+    attributes(old_targets)$update <- update
+    attributes(old_targets)$grouped_targets <- grouped_targets
+    attributes(old_targets)$target_groups <- target_groups
+    attributes(old_targets)$target_names <- target_ids
   } # !is.null(previous_run_targets)
 
   # Handle all cases

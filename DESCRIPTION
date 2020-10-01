@@ -8,7 +8,7 @@ Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
 License: What license is it under?
 Depends: 
-    R (>= 3.2.0), MASS, data.table, foreach, parallel
+    R (>= 3.2.0), MASS, data.table, foreach, parallel, lhs
 Imports:
     lhs
 Encoding: UTF-8

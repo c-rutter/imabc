@@ -103,7 +103,7 @@ imabc <- function(
   # Initializations needed for new runs
   start_iter <- ifelse(
     continue_runs,
-    as.numeric(previous_results$prev_run_meta$VALUE[previous_results$prev_run_meta$INFO == "current_iter"]) + 1, 1
+    as.numeric(previous_results$prev_run_meta$VALUE[previous_results$prev_run_meta$INFO == "current_iteration"]) + 1, 1
   )
   end_iter <- (start_iter - 1) + max_iter
   total_draws <- ifelse(
@@ -288,12 +288,7 @@ imabc <- function(
       n_in_i <- sum(target_dist$n_good[target_dist$step <= N_centers] == n_targets, na.rm = TRUE)
 
       # Stop if there are no close points (and so cannot continue)
-      # CM NOTE: Should this be a warning, a stop, or just a print?
-      if (n_in + n_in_i == 0) {
-        # Print information
-        if (verbose) { cat("No valid parameters to work from.", "\n") }
-        break
-      }
+      stopifnot("No valid parameters to work from." = n_in + n_in_i > 0)
 
       # replace re-simulated targets for center draws in good.* matrices
       # and recalculate p-value and distance
@@ -565,22 +560,8 @@ imabc <- function(
 
     # Calculate Effective Sample Size if we have enough sample, met the target stopping ranges or on the last iteration
     if ((n_in >= N_post | length(update_targets) == 0 | (main_i1 >= end_iter & n_in > 0)) & main_i1 > 1) {
-      # CM NOTE: Original if statement for comparison
-      # (N.in>=N.post | !any(target.specs$update.alpha)) | (iter>=end.iter & N.in>0)
       good_parm_draws$sample_wt <- 0
       in_draws <- good_target_dist[!is.na(draw), ]$draw
-      # CM NOTE: Not worked on yet
-      # CM NOTE: New method of handling the mixture file. Need to incorporate when old data is being used
-      # if (continue_runs == TRUE & main_i1 == start_iter & start_iter > 1) {
-      #   stop("continue_runs == TRUE & main_i1 == start_iter & start_iter > 1")
-      #   # if continuing runs, at the first iter use only previous mixture distns
-      #   m.file=paste0(prevruns.dir,"/",outfile.sampling)
-      # } else if (continue_runs == TRUE & start_iter == 1) {
-      #   stop("continue_runs == TRUE & start_iter == 1")
-      #   m.file=paste0(output.directory,"/",outfile.sampling)
-      # } else {
-      #   m.file=paste0(c(prevruns.dir,output.directory),"/",outfile.sampling)
-      # }
       if (continue_runs == TRUE & main_i1 == start_iter) {
         mean_cov <- data.table(previous_results$mean_cov)
       }
@@ -615,6 +596,8 @@ imabc <- function(
         target_info <- sprintf("(Target was %s)", N_post)
         cat(n_info, ess_info, target_info, sep = "\n")
       }
+
+      # Have met the appropriate sample size. Stop looking and return final results
       break
     }
 
@@ -684,7 +667,6 @@ imabc <- function(
 
       # simulate new draws
       #--------------------------------------------------------------------------
-
       # set any fixed parameter values (specified in parm.priors)
       # CM NOTE: Not worked on yet
       # if (length(fixed.parm.names) > 0) {
@@ -769,11 +751,6 @@ imabc <- function(
         if (n_in <= N_cov_points) {
           var_data <- good_parm_draws[1:n_use, all_parm_names, with = FALSE] # CM NOTE: calib.parm.names
           sample_cov <- parm_covariance(var_data)
-          # CM NOTE: Use to just be sample_cov == -1. sample_cov is usually a matrix though so unless this condition is
-          #   met that will give a warning. adding all() will work when sample_cov is -1 and won't give a warning when it
-          #   is a matrix
-          # CM NOTE: Should this be an error?
-          if (all(sample_cov == -1)) { return() }
           if (any(diag(sample_cov) == 0)) {
             # this occurs when adding a new parameter: it is set to default for all prior draws
             is_zero <- diag(sample_cov) == 0
@@ -787,7 +764,6 @@ imabc <- function(
         new_rows <- c()
         for (center_i1 in 1:num_centers) {
           sample_mean_i1 <- unlist(sample_mean[center_i1, all_parm_names]) # CM NOTE: calib.parm.names
-          draw_rows <- ((center_i1 - 1)*Center_n + 1):(center_i1*Center_n)
 
           if (n_in >= N_cov_points) {
             # use different var-cov matrices for each center
@@ -808,9 +784,6 @@ imabc <- function(
             var_data <- good_parm_draws[1:n_use, all_parm_names, with = FALSE] # calib.parm.names
             # Find sample covariance
             sample_cov <- parm_covariance(var_data)
-            # CM NOTE: Should this be an error, what should we print out?
-            # CM NOTE: This could also be all(sample_cov == -1)
-            if (length(sample_cov) == 1 && sample_cov == -1) { return() }
             if (any(diag(sample_cov) == 0)) {
               # this occurs when adding a new parameter: it is set to default for all prior draws
               is_zero <- (diag(sample_cov) == 0)
@@ -848,11 +821,12 @@ imabc <- function(
               # parm_names = all_parm_names
             )
             if (is.null(x)) {
-              # CM NOTE: Should this be an error?
-              print(paste("iteration=", main_i1, "center=", center_i1))
-              # return()
-              break
+              warning(sprintf("No valid parameters were simulated for center = %s during iteration %s", center_i1, main_i1))
+              # Move to the next center
+              next
             }
+            # Get rows to update for a given center
+            draw_rows <- ((center_i1 - 1)*Center_n + 1):(center_i1*Center_n)
             parm_draws[draw_rows, (all_parm_names) := x] # calib.parm.names
 
           } # ! abs(sum(sample_cov) - sum(diag(sample_cov))) < 1e-10
@@ -882,10 +856,19 @@ imabc <- function(
             new_rows <- 1:nrow(mean_cov_center_i1)
             mean_cov <- mean_cov_center_i1
           }
-          if (B_in == 0) {
-            warning(sprintf("B_in = %s for iter = %s and center = %s", B_in, main_i1 + 1, center_i1))
-          }
         } # center_i1 in 1:num_centers
+
+        # See how many new valid parameters have been generated
+        B_in <- sum(get_in_range(
+          compare_list = priors,
+          check_dt = parm_draws,
+          out = "logical"
+        ))
+        if (B_in == 0) {
+          warning(sprintf("Unable to generate new parameters for any center at iteration %s. Ending run.", main_i1))
+          break
+        }
+
         # Store results
         save_results(
           mean_cov[new_rows, c("iter", "step", "center", "B.in", "parm", all_parm_names), with = FALSE], meancov_outfile,
@@ -951,10 +934,15 @@ imabc <- function(
     duration_info <- sprintf("Calculation took %s %s", round(calc_time, 2), attr(calc_time, "units"))
     seed_info <- sprintf("seed value is: %s", paste0(.Random.seed, collapse = ", "))
     n_info <- sprintf("number of in range draws was %s", n_in)
-    bound_info <- lapply(targets, FUN = function(x) {
-      paste(sprintf("%s: %s - %s", x$names, x$lower_bounds_start, x$upper_bounds_start), collapse = "\n")
-    })
-    bound_info <- paste(sprintf("---- %s ----", names(bound_info)), bound_info, sep = "\n", collapse = "\n")
+
+    bound_info <- lapply(attr(targets, "target_names"), FUN = function(x, targ) {
+      tmp <- targ[x]
+      paste(sprintf("%s: %s - %s", x, tmp$current_lower_bounds, tmp$current_upper_bounds), collapse = "\n")
+    }, targ = targets)
+    bound_info <- lapply(unique(attr(targets, "target_groups")), FUN = function(x, groups, bound_info) {
+      paste(unlist(bound_info[x == groups]), collapse = "\n")
+    }, groups = attr(targets, "target_groups"), bound_info = bound_info)
+    bound_info <- paste(sprintf("---- %s ----", unique(attr(targets, "target_groups"))), bound_info, sep = "\n", collapse = "\n")
     cat(header, time_info, duration_info, seed_info, n_info, "Final bounds info:", bound_info, sep = "\n")
   }
 

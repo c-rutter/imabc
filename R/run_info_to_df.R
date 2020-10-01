@@ -42,13 +42,12 @@
   }, fun_in = fun_in, ids = names(fun_in)))
   fun_values <- do.call(rbind, lapply(seq_along(fun_in), FUN = function(x, fun_in, ids) {
     if (is.null(names(fun_in[[x]]$fun_inputs))) {
-      data.frame(ID = ids[x], VALUE = NA)
+      data.frame(VALUE = NA)
     } else {
-      data.frame(ID = ids[x], VALUE = fun_in[[x]]$fun_inputs)
+      data.frame(VALUE = fun_in[[x]]$fun_inputs)
     }
   }, fun_in = fun_in, ids = names(fun_in)))
-  fun_inputs <- merge(fun_input, fun_values, by = "ID")
-  fun_inputs <- cbind(TYPE = "priors", fun_inputs)
+  fun_inputs <- cbind(TYPE = "priors", fun_input, fun_values)
   fun_inputs <- fun_inputs[!is.na(fun_inputs$INFO), ]
   # Join into one data.frame
   prio_df <- rbind(
@@ -58,6 +57,7 @@
   # Order
   main_items <- c("imabc_mins", "imabc_maxs", "imabc_sds", "distribution")
   other_items <- setdiff(unique(prio_df$INFO), main_items)
+  prio_df$ID <- factor(prio_df$ID, levels = names(priors))
   prio_df$INFO <- factor(prio_df$INFO, levels = c(main_items, other_items))
   prio_df <- prio_df[order(prio_df$ID, prio_df$INFO), ]
 

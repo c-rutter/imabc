@@ -1,3 +1,15 @@
+#' Title
+#'
+#' @param target
+#' @param starting_range
+#' @param stopping_range
+#' @param FUN
+#' @param target_name
+#'
+#' @return
+#' @export
+#'
+#' @examples
 add_target <- function(target, starting_range, stopping_range, FUN = NULL, target_name = NULL) {
   # Check inputs are appropriate ----------------------------------------------------------------------------------------
   stopifnot(

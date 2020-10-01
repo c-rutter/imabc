@@ -57,8 +57,8 @@ define_priors <- function(..., previous_run_priors = NULL) {
 
   if (!is.null(previous_run_priors)) {
     # Pull Prior Specific Information
-    previous_run_priors <- previous_run_priors[previous_run_priors$IMABC == "Prior", ]
-    previous_run_priors$IMABC <- NULL
+    previous_run_priors <- previous_run_priors[previous_run_priors$TYPE == "priors", ]
+    previous_run_priors$TYPE <- NULL
 
     # Unique priors
     prior_ids <- unique(previous_run_priors$ID)
@@ -76,7 +76,7 @@ define_priors <- function(..., previous_run_priors = NULL) {
       prior_args <- c(list(dist_base_name = prior_tmp$VALUE[prior_tmp$INFO == "distribution"], parameter_name = i1), fun_in)
 
       # Get Min/Max values from IMABC if not defined by function inputs
-      minmax <- setdiff(c("min", "max"), names(fun_in))
+      minmax <- setdiff(c("mins", "maxs"), names(fun_in))
       if (length(minmax) > 0) {
         imabc_minmax <- as.list(as.numeric(prior_tmp$VALUE[prior_tmp$INFO %in% paste0("imabc_", minmax)]))
         names(imabc_minmax) <- minmax
@@ -92,8 +92,8 @@ define_priors <- function(..., previous_run_priors = NULL) {
     return_priors <- do.call(define_priors, args = return_priors)
 
     # Update the standard deviation attribute
-    sd <- as.numeric(previous_run_priors$VALUE[previous_run_priors$INFO == "empirical_sd"])
-    names(sd) <- previous_run_priors$ID[previous_run_priors$INFO == "empirical_sd"]
+    sd <- as.numeric(previous_run_priors$VALUE[previous_run_priors$INFO == "imabc_sds"])
+    names(sd) <- previous_run_priors$ID[previous_run_priors$INFO == "imabc_sds"]
     attributes(return_priors)$sds <- sd
     return_priors <- structure(return_priors, class = c("priors", "imabc"))
   }
