@@ -1,3 +1,4 @@
+#' @export
 get_mean_cov <- function(iter, mu, sd, center, B_in, parm_names) {
   # Convert mu to a matrix if it is currently a vector
   if (is.vector(mu)) {

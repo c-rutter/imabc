@@ -1,3 +1,4 @@
+#' @export
 parm_covariance <- function(df) {
   # Calculate the covariance matrix of calibrated parameters.............
   if (anyNA(df)) {

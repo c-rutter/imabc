@@ -1,3 +1,4 @@
+#' @export
 define_target_function <- function(targets, priors, FUN = NULL, use_seed = TRUE) {
   # Prepare inputs
   target_funs <- targets$target_functions

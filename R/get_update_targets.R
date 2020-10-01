@@ -1,3 +1,4 @@
+#' @export
 get_update_targets <- function(targets) {
 
   done <- targets$current_lower_bounds == targets$current_upper_bounds &

@@ -1,7 +1,9 @@
+#' @export
 unique_names <- function(x, name_vec) {
   UseMethod("unique_names")
 }
 
+#' @export
 unique_names.priors <- function(x, name_vec) {
   if (inherits(x, "imabc")) {
     expected_fmt <- "V%s"
@@ -17,6 +19,7 @@ unique_names.priors <- function(x, name_vec) {
   return(names)
 }
 
+#' @export
 unique_names.targets <- function(x, name_vec) {
   expected_fmt <- "T%s"
   gsub_pattern <- "(^T)([0-9]+)"
@@ -37,6 +40,7 @@ unique_names.targets <- function(x, name_vec) {
   return(names)
 }
 
+#' @export
 unique_names.groups <- function(x, name_vec) {
   expected_fmt <- "G%s"
   gsub_pattern <- "(^G)([0-9]+)"
@@ -46,6 +50,7 @@ unique_names.groups <- function(x, name_vec) {
   return(names)
 }
 
+#' @export
 .build_names <- function(things_list, provided_names, fmt, pattern) {
   current_names <- names(things_list)
   if (is.null(current_names)) {

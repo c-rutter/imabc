@@ -1,3 +1,4 @@
+#' @export
 dMvn <- function(X, mu, Sigma) {
   # reference: http://gallery.rcpp.org/articles/dmvnorm_arma/
   k <- ncol(X)

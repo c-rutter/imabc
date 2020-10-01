@@ -1,3 +1,4 @@
+#' @export
 .run_info_to_df <- function(targets, priors, iter, draw) {
   ##### Target Information #####
   # Pull values
@@ -76,6 +77,7 @@
   return(final_dta)
 }
 
+#' @export
 .list_vector_to_df <- function(list_vector, info, attribute = FALSE) {
   na <- deparse(substitute(list_vector))
   if (attribute) {

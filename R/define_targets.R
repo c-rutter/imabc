@@ -1,3 +1,4 @@
+#' @export
 define_targets <- function(..., previous_run_targets = NULL) {
   # Newly added targets
   new_targets <- list(...)

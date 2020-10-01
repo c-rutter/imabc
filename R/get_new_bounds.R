@@ -1,3 +1,4 @@
+#' @export
 get_new_bounds <- function(to_update, targets_list, sims) {
   # Get target names from target groups to update
   targ_names <- names(attributes(targets_list)$target_groups)[attributes(targets_list)$target_groups %in% to_update]

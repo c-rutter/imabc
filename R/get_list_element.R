@@ -1,3 +1,4 @@
+#' @export
 get_list_element <- function(x, name = NULL, unlist = FALSE, keep_length = TRUE) {
 
   if (is.null(name)) { # No name is provided to search for

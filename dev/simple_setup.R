@@ -167,9 +167,10 @@ targets <- define_targets(
 targets
 
 # df <- data.frame(
-#   group = c("G1", "G2", "G1"), name = c("T1", "T1", "T2"), target = c(1.5, 0.5, -1.5),
-#   lower_bounds_start = c(1, 0.2, -2), upper_bounds_start = c(2, 0.9, -1),
-#   lower_bounds_stop = c(1.49, 0.49, -1.51), upper_bounds_stop = c(1.51, 0.51, -1.49)
+#   target_groups = c("G1", "G1", NA), target_names = c("T1", "T2", "T3"), targets = c(1.5, 0.5, -1.5),
+#   current_lower_bounds = c(1, 0.2, -2), current_upper_bounds = c(2, 0.9, -1),
+#   stopping_lower_bounds = c(1.49, 0.49, -1.51), stopping_upper_bounds = c(1.51, 0.51, -1.49),
+#   update = c(TRUE, TRUE, FALSE)
 # )
 # ex <- as.targets(df)
 
@@ -228,7 +229,7 @@ latinHypercube = TRUE
 N_centers = 2
 Center_n = 50
 N_post = 90
-max_iter = 100
+max_iter = 10
 N_cov_points = 50
 sample_inflate = 1.5
 recalc_centers = TRUE
@@ -257,7 +258,7 @@ results <- imabc(
   backend_fun = backend_fun,
   verbose = TRUE,
   output_directory = output_directory,
-  output_tag = "test1"
+  output_tag = "test2"
 )
 
 # # Test continue runs
@@ -272,13 +273,31 @@ results <- imabc(
 #   good_target_dist = read.csv(paste(output_directory, "Good_SimulatedDistances_test1.csv", sep = "/")),
 #   mean_cov = read.csv(paste(output_directory, "MeanCovariance_test1.csv", sep = "/"))
 # )
-last_run <- read_previous_results(output_directory)
+last_run <- read_previous_results(path = output_directory, tag = "test2")
+
+priors = last_run$new_priors # from last calculation (includes empirical SD from beginning of first run)
+targets = last_run$new_targets # from the end of the last calculation
+target_fun = target_fun # same as before
+previous_results = last_run$previous_results # NEW
+N_start = N_start
+seed = 12345
+latinHypercube = TRUE
+N_centers = N_centers
+Center_n = Center_n
+N_post = N_post
+max_iter = max_iter
+N_cov_points = 0
+sample_inflate = 1.5
+recalc_centers = TRUE
+verbose = TRUE
+output_directory = output_directory
+output_tag = "test3"
 
 new_results <- imabc(
   priors = last_run$new_priors, # from last calculation (includes empirical SD from beginning of first run)
   targets = last_run$new_targets, # from the end of the last calculation
   target_fun = target_fun, # same as before
-  previous_results = previous_results, # NEW
+  previous_results = last_run$previous_results, # NEW
   N_start = N_start,
   seed = 12345,
   latinHypercube = TRUE,
@@ -291,7 +310,7 @@ new_results <- imabc(
   recalc_centers = TRUE,
   verbose = TRUE,
   output_directory = output_directory,
-  output_tag = "test2"
+  output_tag = "test3"
 )
 
 

@@ -1,3 +1,4 @@
+#' @export
 get_distance <- function(dt, target_list, dist = getOption("imabc.target_eval_distance")) {
   distance <- sapply(attr(target_list, which = "target_names"), FUN = function(x, dt, target_list, dist_opt) {
     sim <- dt[[x]]

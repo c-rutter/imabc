@@ -1,3 +1,4 @@
+#' @export
 get_mix_dist <- function(parm_names, mixture_file) {
 
   if (is.character(mixture_file)) {

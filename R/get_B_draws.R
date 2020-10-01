@@ -1,3 +1,4 @@
+#' @export
 get_B_draws <- function(B, inflate, center, cov_matrix, priors) {
   # Simulate values following a multivariate normal
   x <- as.data.table(mvrnorm(n = trunc(inflate*B), mu = center, Sigma = cov_matrix))

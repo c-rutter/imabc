@@ -1,3 +1,4 @@
+#' @export
 group_targets <- function(..., group_name = NULL) {
   # Convert individual targets to grouped targets class
   return_targets <- structure(list(...), class = c("target", "group", "imabc"))

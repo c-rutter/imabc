@@ -5,6 +5,7 @@
 #' @param type
 #'
 #' @return
+#' @export
 init_run_df <- function(n, parms, type) { # same as init.draws
   if (type == "draw") {
     df <- data.frame(

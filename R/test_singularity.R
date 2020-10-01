@@ -1,3 +1,4 @@
+#' @export
 test_singularity = function(x, tol) {
   singular <- FALSE
   e_value <- eigen(x, tol)$values

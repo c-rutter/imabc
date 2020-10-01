@@ -1,3 +1,4 @@
+#' @export
 run_handler <- function(parms_to_run, all_parm_names, target_fun, custom_function = NULL, ...) {
   other_inputs <- list(...)
 

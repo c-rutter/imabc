@@ -1,3 +1,4 @@
+#' @export
 update_target_bounds <- function(targets_list, from = c("current", "new"), to = c("new", "current")) {
   from <- match.arg(from, c("current", "new"))
   to <- match.arg(to, c("current", "new"))

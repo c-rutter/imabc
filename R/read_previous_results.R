@@ -1,3 +1,4 @@
+#' @export
 read_previous_results <- function(path, tag = NULL) {
   # Get files in path
   files_to_read <- list.files(path)

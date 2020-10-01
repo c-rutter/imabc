@@ -1,3 +1,4 @@
+#' @export
 get_weight <- function(parms, parm_names, priors, mixture_file, n) {
 
   # CM NOTE: Should it be possible for the parms to be outside of the min/max of the prior info?

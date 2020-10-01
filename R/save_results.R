@@ -1,3 +1,4 @@
+#' @export
 save_results <- function(..., out_dir, append) {
   dots <- list(...)
 

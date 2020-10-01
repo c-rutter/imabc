@@ -1,3 +1,4 @@
+#' @export
 save_targets <- function(targets_list, filename, out_dir) {
   dta <- do.call(rbind, lapply(names(targets_list), FUN = function(x, targ) {
     dta <- do.call(cbind, targ[[x]])

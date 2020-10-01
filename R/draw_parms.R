@@ -1,3 +1,4 @@
+#' @export
 draw_parms <- function(n_add, mu, sigma, priors_list, targets_list) {
   # independently draw parameters values, with the exception of beta2, sampled conditional on beta2
   # parm.priors columns are: parm,norm.dist,a,b,c,d
