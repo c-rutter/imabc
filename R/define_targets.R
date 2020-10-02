@@ -26,6 +26,7 @@ define_targets <- function(..., previous_run_targets = NULL) {
 
     # generate unique group names
     group_names <- unique_names(grouped_targets, group_names)
+    group_names[!is_grouped] <- NA
     target_groups <- rep(group_names, times = n_targets)
     is_grouped <- rep(is_grouped, times = n_targets)
 
