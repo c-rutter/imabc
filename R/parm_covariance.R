@@ -10,7 +10,7 @@ parm_covariance <- function(df) {
     # check that sample.cov is PSD. Use a diagonal matrix if near singularity
     warning("Singular covariance matrix, Using diagonal matrix")
     parm_var <- diag(sample_cov) # extracts diagonal to a vector
-    sample_cov <- diag(parm_var) # vector on diagnoal and 0 everywhere else
+    sample_cov <- diag(parm_var) # vector on diagonal and 0 everywhere else
   }
 
   return(sample_cov)

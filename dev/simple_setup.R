@@ -68,7 +68,7 @@ rm(list = ls(all = TRUE))
 gc()
 
 # Load required libraries
-# devtools::document()
+devtools::document()
 devtools::load_all()
 
 # Some of these will be loaded by library(imabc):
@@ -112,7 +112,7 @@ priors <- define_priors(
   ),
   add_prior(
     parameter_name = "x2",
-    dist_base_name = "norm",# "truncnorm",
+    dist_base_name = "truncnorm",# "truncnorm",
     mean = 0.75, sd = 0.05, a = x2_min, b = x2_max, # Inputs into *truncnorm
     min = x2_min, max = x2_max # Would otherwise default to -Inf/Inf
   ),
@@ -122,6 +122,28 @@ priors <- define_priors(
 )
 priors
 print(priors, detail = T)
+
+# df <- data.frame(
+#   parameter_name = c("x1", "x2", "x3"),
+#   dist_base_name = c("unif", NA, NA),
+#   density_fn = c(NA, "dtruncnorm", NA),
+#   quantile_fn = c(NA, NA, "qnorm"),
+#   mean = c(NA, 0.75, NA),
+#   sd = c(NA, 0.05, NA),
+#   min = c(x1_min, x2_min, NA),
+#   max = c(x1_max, x2_max, NA),
+#   a = c(NA, x2_min, NA),
+#   b = c(NA, x2_max, NA)
+# )
+# ex <- as.priors(
+#   df,
+#   name_var = "parameter_name",
+#   dist_var = "dist_base_name",
+#   density_var = "density_fn",
+#   quantile_var = "quantile_fn"
+# )
+# print(ex, detail = T)
+
 
 # If no name is provided, function assigns name based on group and target.
 #   Groups are of the format G[0-9]+
@@ -166,19 +188,23 @@ targets <- define_targets(
 )
 targets
 
+# as.targets example
 # df <- data.frame(
-#   target_groups = c("G1", "G1", NA), target_names = c("T1", "T2", "T3"), targets = c(1.5, 0.5, -1.5),
-#   current_lower_bounds = c(1, 0.2, -2), current_upper_bounds = c(2, 0.9, -1),
-#   stopping_lower_bounds = c(1.49, 0.49, -1.51), stopping_upper_bounds = c(1.51, 0.51, -1.49),
-#   update = c(TRUE, TRUE, FALSE)
+#   target_groups = c("G1", "G1", NA, NA, "G2", "G2", "G2", NA),
+#   target_names = c("T1", "T3", "T2", "t4", "T5", "q", "baby", "Hey"),
+#   targets = c(1.5, 0.5, -1.5, 1:4, 0),
+#   current_lower_bounds = c(1, 0.2, -2, -11:-14, -2),
+#   current_upper_bounds = c(2, 0.9, -1, 11:14, 2),
+#   stopping_lower_bounds = c(1.49, 0.49, -1.51, -1:-4, -1),
+#   stopping_upper_bounds = c(1.51, 0.51, -1.49, 2:5, 1),
+#   update = c(TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE)
 # )
 # ex <- as.targets(df)
+
 
 # Target functions
 fn1 <- function(x1, x2) { x1 + x2 + rnorm(1, 0, 0.01) }
 fn2 <- function(x1, x2) { x1 * x2 + rnorm(1, 0, 0.01) }
-# CM NOTE: lower_bounds and upper_bounds must be inputs even if they are used. Need to adjust code so that they are
-#   optional inputs rather than required inputs
 fn <- function(x1, x2, targets, priors) {
   res <- c()
   res["T3"] <- fn2(x1, x2)
@@ -193,30 +219,6 @@ fn <- function(x1, x2, targets, priors) {
 
 target_fun <- define_target_function(targets, priors, FUN = fn, use_seed = FALSE)
 target_fun(c(x1 = 0.75, x2 = 0.75), seed = 12345, targets = targets, priors = priors)
-
-
-# `+.imabc` <- function(x, y) {
-#   new_imabc <- structure(list(
-#     targets = targets,
-#     priors = priors,
-#     FUN = target_fun
-#   ), class = c("imabc", "targets", "priors", "target_fun"))
-#
-#   # What does each side have?
-#   x_has <- class(x)
-#   y_has <- class(y)
-#
-#
-#   if (!x_done & !y_done) {
-#     # Create new imabc object
-#   } else if (x_done & !y_done) {
-#     # Add y to x
-#   } else if (!x_done & y_done) {
-#     # Add x to y
-#   }
-#
-#   return("HERE")
-# }
 
 
 priors = priors

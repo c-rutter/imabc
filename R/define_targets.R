@@ -345,6 +345,9 @@ print.grouped <- function(t, digits = getOption("digits")) {
   )
 
   cols <- split(attr(t, "target_names"), group_ids)
+  # Fix order
+  cols <- cols[match(unique(group_ids), names(cols))]
+
   for (i1 in names(cols)) {
     if (!grepl(random_string, i1)) {
       cat(sprintf("Target Group: %s\n", i1))

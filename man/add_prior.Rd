@@ -5,28 +5,63 @@
 \title{Add Prior Distribution Information}
 \usage{
 add_prior(
-  ...,
   dist_base_name = NULL,
   density_fn = NULL,
   quantile_fn = NULL,
-  parameter_name = NULL
+  parameter_name = NULL,
+  ...
 )
 }
 \arguments{
-\item{...}{Parameters read by prior generating function}
+\item{dist_base_name}{character(1) Optional. The base name of the RNG function set for the prior distribution.}
 
-\item{quantile_fn}{}
+\item{density_fn}{character(1) Optional. The name of the RNG density function for the prior distribution.}
+
+\item{quantile_fn}{character(1) Optional. The name of the RNG quantile function for the prior distribution.}
+
+\item{parameter_name}{character(1) Optional. The name of the parameter.}
+
+\item{...}{Optional. Named inputs to be passed to the RNG functions}
 }
 \value{
-
+A prior imabc object that can be passed to define_priors.
 }
 \description{
-Add Prior Distribution Information
+Defines the prior distribution for a parameter as well as the range a parameter must stay within as the calibration proceeds.
 }
 \details{
-If the user doesn't provide any RNG functions, imabc will create a parameter that doesn't vary (in the future).
-If the user only provides one of the required RNG functions, add_prior will search for the most logical name of the other
-function. I.e. if a density function is provided (such as dunif), add_prior will look for the quantile function (qunif)
-If the user selects both functions independently or create their own functions it is on them to make sure they work
-appropriately.
+\subsection{Distribution Specifications:}{
+
+If the user does not provide any RNG functions specifications, they must provide a single value in order to
+create a fixed parameter. This is not the most efficient method for using a fixed parameter in a model. However, in
+the future, the user will be able to use previous results to recalibrate a model using updated parameter specifications
+(one requirement may be that the parameter must have been specified in a previous run.)
+
+If the user only provides one of the RNG functions specifications, add_prior will search for the most logical names
+for the other functions. I.e. if dist_base_name is provided (e.g. unif), add_prior will assume that the user wishes
+to use paste0("d", dist_base_name) for the density function and paste0("q", dist_base_name) for the quantile function.
+add_prior will make the corresponding guesses if the user provides density_fn or quantile_fn. If density_fn or
+quantile_fn are provided, add_prior will assume those functions are preferred over any calculated function names.
+}
+
+\subsection{... Specifications:}{
+
+add_prior will attempt to pass any extra arguments to the RNG functions. These must be named to not create errors. If
+a value's name cannot be matched to an RNG function input, it will be ignored.
+
+min/max are important values to imabc and will always be defined for each parameter. They are used to evaluate whether
+any simulated parameters are valid. The user can specify values for them if they want. If the user does not specify
+them add_prior will look at the RNG function and if the RNG has default values for min/max it will use them, otherwise
+it will use -Inf/Inf respectively. \strong{Warning}: This behavior depends on the RNG functions using min and max as the input
+names for the min and max values. If the RNG functions use an alternate name for these concepts add_prior will treat
+them as separate values. An example of this can be found in the truncnorm package which uses a and b for the min and
+max respectively. For those functions the user would need to specify inputs for a, b, min, and max in order to get a
+consistent result
+}
+}
+\examples{
+add_prior(dist_base_name = "norm")
+add_prior(dist_base_name = "unif", min = 1, max = 2)
+add_prior(density_fn = "dnorm", mean = 50, sd = 10)
+add_prior(quantile_fn = "qnorm", min = 0, max = 1)
 }
