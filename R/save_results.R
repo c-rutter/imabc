@@ -28,6 +28,7 @@ save_results <- function(..., out_dir, append) {
         new_names[i2] <- ifelse(all(class(dots[[i1]][[i2]]) == "character"), "name", "dt")
       }
       names(dots[[i1]]) <- new_names
+      dots[[i1]]$dt <- as.data.frame(dots[[i1]]$dt)
     } # length(old_names) == 0 || any(old_names == "")
   }
 
