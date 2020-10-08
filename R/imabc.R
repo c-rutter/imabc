@@ -705,9 +705,9 @@ imabc <- function(
         # Store results (for mean_cov)
         x <- parm_draws[1:n_draw, c("iter", "step"), with = FALSE]
         x$in_range <- get_in_range(
-          parms = parm_draws[1:n_draw, all_parm_names, with = FALSE],
-          priors = priors,
-          parm_names = all_parm_names
+          compare_list = priors,
+          check_dt = parm_draws[1:n_draw, all_parm_names, with = FALSE],
+          out = "logical"
         ) # CM NOTE: calib.parm.names
         setkey(x, iter, step)
         B_in <- x[step <= N_centers, list(B.in = sum(in_range, na.rm = TRUE)), by = .(iter, step)]
@@ -857,6 +857,7 @@ imabc <- function(
             mean_cov <- mean_cov_center_i1
           }
         } # center_i1 in 1:num_centers
+        # CM NOTE: Need to reorder parm_draws (so NAs are at bottom) and reset draw numbers if B_in < n_draw
 
         # See how many new valid parameters have been generated
         B_in <- sum(get_in_range(
@@ -959,6 +960,7 @@ imabc <- function(
     good_sim_parm = good_sim_parm,
     good_target_dist = good_target_dist,
     mean_cov = mean_cov,
+    priors = priors,
     targets = targets
   ))
 }
