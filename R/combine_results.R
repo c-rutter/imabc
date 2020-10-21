@@ -1,4 +1,3 @@
-#' @export
 combine_results <- function(list1, list2) {
   # If results is a list of lists then you can use the commented code to join the sublists into a list of data.frames
   # # Returned sub-elements

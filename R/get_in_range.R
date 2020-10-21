@@ -1,9 +1,7 @@
-#' @export
 get_in_range <- function(compare_list, check_dt, criteria = NULL, out = "logical") {
   UseMethod("get_in_range")
 }
 
-#' @export
 get_in_range.targets <- function(compare_list, check_dt, criteria, out = "logical") {
   # Determine which
   check <- sapply(attr(compare_list, which = "target_names"), FUN = function(x, dt, compare_list) {
@@ -29,7 +27,6 @@ get_in_range.targets <- function(compare_list, check_dt, criteria, out = "logica
   return(check)
 }
 
-#' @export
 get_in_range.priors <- function(compare_list, check_dt, out = "logical") {
 
   # All parms must be in range based on their prior information

@@ -126,7 +126,7 @@ priors <- define_priors(
 ### targets
 Just like the prior distribution information the user has the following functions for helping them specify the target values and structure of the targets.
 
-add_target(): This lets the user define a target. Each target must be a list of the following values: target, starting_range, stopping_range. starting_range[1] < stopping_range[1] < target < stopping_range[2] < starting_range[2] must be satisfied by these values. Optionally the user can give the target a name using target_name and a target function using FUN. See below for details.
+add_target(): This lets the user define a target. Each target must be a list of the following values: target, starting_range, stopping_range. starting_range[1] <= stopping_range[1] <= target <= stopping_range[2] <= starting_range[2] must be satisfied by these values. Optionally the user can give the target a name using target_name and a target function using FUN. See below for details.
 
 group_targets(): This lets the user group a set of targets that are to be calibrated together. As the calibration improves its estimation of the best parameter space, accepcted target values will be restricted to tighter ranges (up until the range is identical to the stopping_range). In a group of targets, the ranges are tightened together according to the improvement of the least improved target (e.g. if you have two targets in a group and a set of parameters generate values all within the stopping range of one target but whose values could only improve the acceptable range of the second target by 10%, then both targets will have their acceptable ranges reduced by 10%). Optionally the user can give the target group a name using group_name.
 

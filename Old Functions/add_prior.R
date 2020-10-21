@@ -40,7 +40,6 @@
 #'
 #' @examples
 #' add_prior(dist_base_name = "norm")
-#' add_prior(dist_base_name = "unif", min = 1, max = 2)
 #' add_prior(density_fn = "dnorm", mean = 50, sd = 10)
 #' add_prior(quantile_fn = "qnorm", min = 0, max = 1)
 add_prior <- function(dist_base_name = NULL, density_fn = NULL, quantile_fn = NULL, parameter_name = NULL, ...) {

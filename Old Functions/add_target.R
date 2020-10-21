@@ -12,7 +12,7 @@
 #' ## Target values:
 #' When specifying values the following condition must always hold true:
 #' ```
-#' starting_range[1] < stopping_range[1] < target < stopping_range[2] < starting_range[2]
+#' starting_range[1] <= stopping_range[1] <= target <= stopping_range[2] <= starting_range[2]
 #' ```
 #' As imabc simulates parameters, it will test them using the target function(s) against the starting range. Parameters whose
 #' values fall within the starting range will be kept through to the next iteration and will be used to generate new parameters
@@ -54,13 +54,13 @@ add_target <- function(target, starting_range, stopping_range, target_name = NUL
     "stopping_range must be numeric" = is.numeric(stopping_range),
     "starting_range must be vector of length 2" = length(starting_range) == 2,
     "stopping_range must be vector of length 2" = length(stopping_range) == 2,
-    "starting_range must be of the form c(min, max) and must satisfy min < max." = starting_range[1] < starting_range[2],
-    "stopping_range must be of the form c(min, max) and must satisfy min < max." = stopping_range[1] < stopping_range[2],
+    "starting_range must be of the form c(min, max) and must satisfy min < max." = starting_range[1] <= starting_range[2],
+    "stopping_range must be of the form c(min, max) and must satisfy min < max." = stopping_range[1] <= stopping_range[2],
     "starting_range should contain stopping_range" = {
       starting_range[1] <= stopping_range[1] &
       starting_range[2] >= stopping_range[2]
     },
-    "stopping_range should contain target" = in_range(target, stopping_range[1], stopping_range[2]),
+    "stopping_range should contain target" = stopping_range[1] <= target & target <= stopping_range[2],
     "FUN must be a function if provided" = is.null(FUN) || is.function(FUN)
   )
 

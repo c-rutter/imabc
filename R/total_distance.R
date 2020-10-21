@@ -1,4 +1,3 @@
-#' @export
 total_distance <- function(dt, target_names, scale = FALSE, mu = NULL, sd = NULL) {
 
   # CM NOTE: scale = TRUE is used for targets

@@ -1,4 +1,3 @@
-#' @export
 .run_info_to_df <- function(targets, priors, iter, draw) {
   ##### Target Information #####
   # Pull values

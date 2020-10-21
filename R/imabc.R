@@ -34,13 +34,13 @@ imabc <- function(
   max_iter = 1000,
   N_cov_points = 0,
   sample_inflate = 1,
-  recalc_centers = TRUE,
+  recalc_centers = TRUE, # Remove as option
   backend_fun = NULL,
   output_directory = NULL,
   output_tag = "timestamp",
   verbose = TRUE
 ) {
-  # Checks --------------------------------------------------------------------------------------------------------------
+  # Checks -------------------------------------------------------------------------------------------------------------
   # CM NOTE: Need to think about good checks (also good put some in add_* and define_* functions)
   testing <- F
   stopifnot(!testing)
@@ -369,8 +369,7 @@ imabc <- function(
         n_in <- sum(good_target_dist$n_good == n_targets, na.rm = TRUE)
       } # if (recalc.centers & main_i1 > start_iter)
 
-      # save good draws, distances, and simulated parms
-      # CM NOTE: What do we do if there are no n_in_i?
+      # Save good draws, distances, and simulated parms
       if (n_in_i > 0) {
         if ((main_i1 == 1) & (n_in_i > n_store)) {
           # keep the n_store best draws (smallest distance and all targets number of targets in range)
@@ -463,7 +462,6 @@ imabc <- function(
           )
 
         } else { # n_get < n_in
-          # warning("No improvement")
           # return target bounds to original values
           targets <- update_target_bounds(targets, from = "new", to = "current")
 
@@ -648,19 +646,23 @@ imabc <- function(
       n_draw <- num_centers*Center_n + recalc_centers*num_centers
       new_steps <- rep(1:num_centers, each = Center_n)
       if (recalc_centers) { new_steps <- c(new_steps, rep.int((N_centers + 1), num_centers)) }
-      new_draws <- (total_draws + 1):(total_draws + n_draw)
+
+      # new_draws <- (total_draws + 1):(total_draws + n_draw)
+
 
       # Reset calculation information
       parm_draws$iter <- target_dist$iter <- sim_parm$iter <- main_i1 + 1
       parm_draws$draw <- target_dist$draw <- sim_parm$draw <- NA_integer_
       parm_draws$step <- target_dist$step <- sim_parm$step <- NA_integer_
-      parm_draws$draw[1:n_draw] <- target_dist$draw[1:n_draw] <- sim_parm$draw[1:n_draw] <- new_draws
+
+      # parm_draws$draw[1:n_draw] <- target_dist$draw[1:n_draw] <- sim_parm$draw[1:n_draw] <- new_draws
+
       parm_draws$step[1:n_draw] <- target_dist$step[1:n_draw] <- sim_parm$step[1:n_draw] <- as.integer(new_steps)
       parm_draws[, c(all_parm_names, "scaled_dist", "sample_wt") := NA_real_]
       parm_draws$seed <- ""
-      seed_stream_start <- .Random.seed
-      parm_draws$seed[1:n_draw] <- seed_stream(seed_stream_start, n_draw)
-      # parm_draws[1:n.draw, seed := seed_stream(seed_stream_start, n_draw)]
+
+      # parm_draws$seed[1:n_draw] <- seed_stream(seed_stream_start, n_draw)
+
       sim_parm[, (sim_parm_names) := NA_real_]
       target_dist[, c(target_names, "tot_dist") := NA_real_]
       target_dist$n_good <- 0L
@@ -748,22 +750,24 @@ imabc <- function(
 
         # CM NOTE: I am pretty sure this doesn't matter because we recalculate this in the for loop below
         # Given place in code this is really n_in == N_cov_points
-        if (n_in <= N_cov_points) {
-          var_data <- good_parm_draws[1:n_use, all_parm_names, with = FALSE] # CM NOTE: calib.parm.names
-          sample_cov <- parm_covariance(var_data)
-          if (any(diag(sample_cov) == 0)) {
-            # this occurs when adding a new parameter: it is set to default for all prior draws
-            is_zero <- diag(sample_cov) == 0
-            sd_next <- 0.5*attr(priors, "sds")
-            sd_next[!is_zero] <- 0
-            diag(sample_cov) <- diag(sample_cov) + sd_next^2
-          }
+        # if (n_in <= N_cov_points) {
+        #   var_data <- good_parm_draws[1:n_use, all_parm_names, with = FALSE] # CM NOTE: calib.parm.names
+        #   sample_cov <- parm_covariance(var_data)
+        #   if (any(diag(sample_cov) == 0)) {
+        #     # this occurs when adding a new parameter: it is set to default for all prior draws
+        #     is_zero <- diag(sample_cov) == 0
+        #     sd_next <- 0.5*attr(priors, "sds")
+        #     sd_next[!is_zero] <- 0
+        #     diag(sample_cov) <- diag(sample_cov) + sd_next^2
+        #   }
+        # } # n_in <= N_cov_points
 
-        } # n_in <= N_cov_points
         # For tracking which rows need to be written out
         new_rows <- c()
         for (center_i1 in 1:num_centers) {
           sample_mean_i1 <- unlist(sample_mean[center_i1, all_parm_names]) # CM NOTE: calib.parm.names
+          # Determine rows to be filled for a given center
+          draw_rows <- ((center_i1 - 1)*Center_n + 1):(center_i1*Center_n)
 
           if (n_in >= N_cov_points) {
             # use different var-cov matrices for each center
@@ -799,10 +803,12 @@ imabc <- function(
 
           # simulate Center_n random draws of calibrated parameters
           if (abs(sum(sample_cov) - sum(diag(sample_cov))) < 1e-10) {
-            warning("abs(sum(sample_cov) - sum(diag(sample_cov))) < 1e-10: This part of code hasn't been tested")
-            # CM NOTE: Not worked on yet
+            # CM NOTE: Done above
+            # # Determine rows to be filled for a given center
+            # draw_rows <- ((center_i1 - 1)*Center_n + 1):(center_i1*Center_n)
+
             # Perform random draws
-            parm_draws[1:(num_centers*Center_n), (all_parm_names) := draw_parms(
+            parm_draws[draw_rows, (all_parm_names) := draw_parms(
               n_add = Center_n,
               mu = as.matrix(t(sample_mean_i1)),
               sigma = as.matrix(t(diag(sample_cov))),
@@ -825,8 +831,9 @@ imabc <- function(
               # Move to the next center
               next
             }
-            # Get rows to update for a given center
-            draw_rows <- ((center_i1 - 1)*Center_n + 1):(center_i1*Center_n)
+            # CM NOTE: Done above
+            # # Get rows to update for a given center
+            # draw_rows <- ((center_i1 - 1)*Center_n + 1):(center_i1*Center_n)
             parm_draws[draw_rows, (all_parm_names) := x] # calib.parm.names
 
           } # ! abs(sum(sample_cov) - sum(diag(sample_cov))) < 1e-10
@@ -857,18 +864,33 @@ imabc <- function(
             mean_cov <- mean_cov_center_i1
           }
         } # center_i1 in 1:num_centers
-        # CM NOTE: Need to reorder parm_draws (so NAs are at bottom) and reset draw numbers if B_in < n_draw
 
         # See how many new valid parameters have been generated
-        B_in <- sum(get_in_range(
+        keep_rows <- get_in_range(
           compare_list = priors,
           check_dt = parm_draws,
           out = "logical"
-        ))
-        if (B_in == 0) {
+        )
+        if (sum(keep_rows) == 0) {
           warning(sprintf("Unable to generate new parameters for any center at iteration %s. Ending run.", main_i1))
           break
         }
+
+        # Remove any invalid rows from the draw, keeping center rows which haven't been filled yet
+        if (recalc_centers) { keep_rows <- keep_rows | parm_draws$step %in% (N_centers + 1) }
+        # Reset step column to NA for non-valid rows
+        parm_draws$step[!keep_rows] <- target_dist$step[!keep_rows] <- sim_parm$step[!keep_rows] <- NA
+        # Set new draw numbers
+        n_draw <- sum(keep_rows)
+        new_draws <- (total_draws + 1):(total_draws + n_draw)
+        parm_draws$draw[keep_rows] <- target_dist$draw[keep_rows] <- sim_parm$draw[keep_rows] <- new_draws
+        # Set draw seed
+        seed_stream_start <- .Random.seed
+        parm_draws$seed[keep_rows] <- seed_stream(seed_stream_start, n_draw)
+        # reorder data.tables so NAs are on bottom
+        setorder(parm_draws, iter, step, na.last = TRUE)
+        setorder(target_dist, iter, step, na.last = TRUE)
+        setorder(sim_parm, iter, step, na.last = TRUE)
 
         # Store results
         save_results(
@@ -890,6 +912,7 @@ imabc <- function(
         setorder(good_sim_parm, draw, na.last = TRUE)
         setorder(good_target_dist, draw, na.last = TRUE)
       } # ! n_in < N_cov_points
+      # CM NOTE: Not sure this makes sense, why would we set the append to false after we do an iteration?
       if (continue_runs == TRUE & main_i1 == start_iter) { f_append <- FALSE }
     } # if (main_i1 < end_iter)
 

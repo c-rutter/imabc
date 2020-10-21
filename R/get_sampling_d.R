@@ -1,4 +1,3 @@
-#' @export
 get_sampling_d <- function(parms, parm_names, mixture_file) {
   mean_cov <- get_mix_dist(parm_names, mixture_file)
 

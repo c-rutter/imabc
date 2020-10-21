@@ -1,4 +1,3 @@
-#' @export
 eval_targets <- function(sim_targets, target_list, criteria = c("start", "update", "stop")) {
   # selected criteria point
   criteria <- match.arg(criteria, c("start", "update", "stop"))

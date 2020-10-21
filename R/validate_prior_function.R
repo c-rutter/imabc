@@ -1,4 +1,3 @@
-#' @export
 .validate_prior_function <- function(x) {
   # Check that function provided exists
   fn_name <- eval(x)

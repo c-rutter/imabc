@@ -1,4 +1,3 @@
-#' @export
 get_log_prior_d <- function(parms, parm_names, priors) {
   log_prior_d <- Reduce(`+`, lapply(parm_names, FUN = function(x, dt, priors) {
     # Uniform adds no distance

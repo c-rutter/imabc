@@ -11,6 +11,8 @@ parm_covariance <- function(df) {
     warning("Singular covariance matrix, Using diagonal matrix")
     parm_var <- diag(sample_cov) # extracts diagonal to a vector
     sample_cov <- diag(parm_var) # vector on diagonal and 0 everywhere else
+    rownames(sample_cov) <- names(df)
+    colnames(sample_cov) <- names(df)
   }
 
   return(sample_cov)

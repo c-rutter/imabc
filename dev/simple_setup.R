@@ -68,7 +68,7 @@ rm(list = ls(all = TRUE))
 gc()
 
 # Load required libraries
-devtools::document()
+# devtools::document()
 devtools::load_all()
 
 # Some of these will be loaded by library(imabc):
@@ -103,8 +103,8 @@ library(doParallel) # I don't think this is required by imabc specifically (it i
 # Fixed parameters has not been implemented yet
 x1_min <- 0.1
 x1_max <- 0.9
-x2_min <- 0.7
-x2_max <- 0.8
+x2_min <- 0.1
+x2_max <- 1.0
 priors <- define_priors(
   x1 = add_prior(
     dist_base_name = "unif",
@@ -112,37 +112,33 @@ priors <- define_priors(
   ),
   add_prior(
     parameter_name = "x2",
-    dist_base_name = "truncnorm",# "truncnorm",
-    mean = 0.75, sd = 0.05, a = x2_min, b = x2_max, # Inputs into *truncnorm
+    density_fn = "dtruncnorm",
+    mean = 0.25, sd = 0.05, a = x2_min, b = x2_max,
     min = x2_min, max = x2_max # Would otherwise default to -Inf/Inf
-  ),
-  add_prior(
-    dist_base_name = "norm"
   )
 )
-priors
-print(priors, detail = T)
+print(priors)
 
-# df <- data.frame(
-#   parameter_name = c("x1", "x2", "x3"),
-#   dist_base_name = c("unif", NA, NA),
-#   density_fn = c(NA, "dtruncnorm", NA),
-#   quantile_fn = c(NA, NA, "qnorm"),
-#   mean = c(NA, 0.75, NA),
-#   sd = c(NA, 0.05, NA),
-#   min = c(x1_min, x2_min, NA),
-#   max = c(x1_max, x2_max, NA),
-#   a = c(NA, x2_min, NA),
-#   b = c(NA, x2_max, NA)
-# )
-# ex <- as.priors(
-#   df,
-#   name_var = "parameter_name",
-#   dist_var = "dist_base_name",
-#   density_var = "density_fn",
-#   quantile_var = "quantile_fn"
-# )
-# print(ex, detail = T)
+df <- data.frame(
+  parameter_name = c("x1", "x2", NA),
+  dist_base_name = c("unif", NA, NA),
+  density_fn = c(NA, "dtruncnorm", NA),
+  quantile_fn = c(NA, NA, NA),
+  mean = c(NA, 0.75, 0.5),
+  sd = c(NA, 0.05, NA),
+  min = c(x1_min, x2_min, NA),
+  max = c(x1_max, x2_max, NA),
+  a = c(NA, x2_min, NA),
+  b = c(NA, x2_max, NA)
+)
+ex <- as.priors(
+  df,
+  parameter_name = "parameter_name",
+  dist_base_name = "dist_base_name",
+  density_fn = "density_fn",
+  quantile_fn = "quantile_fn"
+)
+ex
 
 
 # If no name is provided, function assigns name based on group and target.
@@ -220,7 +216,6 @@ fn <- function(x1, x2, targets, priors) {
 target_fun <- define_target_function(targets, priors, FUN = fn, use_seed = FALSE)
 target_fun(c(x1 = 0.75, x2 = 0.75), seed = 12345, targets = targets, priors = priors)
 
-
 priors = priors
 targets = targets
 target_fun = target_fun
@@ -231,38 +226,59 @@ latinHypercube = TRUE
 N_centers = 2
 Center_n = 50
 N_post = 90
-max_iter = 10
+max_iter = 1000
 N_cov_points = 50
 sample_inflate = 1.5
 recalc_centers = TRUE
 backend_fun = NULL
-verbose = TRUE
+verbose = T
 output_directory = "dev/outputs/out"
-output_tag = "timestamp"
+output_tag = "test"
 
 # Setup parallel handling
-registerDoParallel(cores = detectCores() - 1) # cluster auto-closed with foreach
+# registerDoParallel(cores = detectCores() - 1) # cluster auto-closed with foreach
 
 results <- imabc(
   priors = priors,
   targets = targets,
   target_fun = target_fun,
   N_start = N_start,
-  seed = 12345,
-  latinHypercube = TRUE,
+  seed = seed,
+  latinHypercube = latinHypercube,
   N_centers = N_centers,
   Center_n = Center_n,
   N_post = N_post,
   max_iter = max_iter,
-  N_cov_points = 0,
-  sample_inflate = 1.5,
-  recalc_centers = TRUE,
+  N_cov_points = N_cov_points,
+  sample_inflate = sample_inflate,
+  recalc_centers = recalc_centers,
   backend_fun = backend_fun,
-  verbose = TRUE,
+  verbose = verbose,
   output_directory = output_directory,
-  output_tag = "test2"
+  output_tag = output_tag
 )
 
+inputs_list <- list(
+  priors = priors,
+  targets = targets,
+  target_fun = target_fun,
+  previous_results = previous_results,
+  N_start = N_start,
+  seed = seed,
+  latinHypercube = latinHypercube,
+  N_centers = N_centers,
+  Center_n = Center_n,
+  N_post = N_post,
+  max_iter = max_iter,
+  N_cov_points = N_cov_points,
+  sample_inflate = sample_inflate,
+  recalc_centers = recalc_centers,
+  backend_fun = backend_fun,
+  verbose = verbose,
+  output_directory = output_directory,
+  output_tag = output_tag
+)
+do.call(imabc, inputs_list)
 # # Test continue runs
 # prev_run_meta <- read.csv(paste(output_directory, "RunMetadata_test1.csv", sep = "/"))
 # new_targets <- define_targets(previous_run_targets = prev_run_meta)
