@@ -208,13 +208,9 @@ target_fun <- define_target_function(targets, priors, FUN = fn, use_seed = FALSE
 ```
 
 ## To do
-* Determine where we should place warnings vs errors vs simple prints
-* Clean code and better name conventions
-* Document code better/more
 * Allow for continuing runs
   * target modification
   * parameter modification
-* Allow for fixed vs calibrated parameters - This can be avoided if desired by having all fixed parameter values just be properly defined within the target_fun by the user.
 * testing
   * small noise
   * large noise (visually inspect which points are good vs bad)

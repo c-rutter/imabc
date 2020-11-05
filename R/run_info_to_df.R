@@ -9,7 +9,7 @@
   target_groups <- .list_vector_to_df(targets, "target_groups", TRUE)
   target_groups$VALUE[!attr(targets, "grouped_targets")] <- NA
   update <- .list_vector_to_df(targets, "update", TRUE)
-  update$VALUE <- TRUE
+  if (!is.null(update)) { update$VALUE <- TRUE }
   # Join into one data.frame
   targ_df <- rbind(
     target_groups, update, target_values,
@@ -17,10 +17,18 @@
     stopping_lower_bounds, stopping_upper_bounds
   )
   # Order
-  targ_df$INFO <- factor(targ_df$INFO, levels = c(
-    "target_groups", "update", "targets",
-    "current_lower_bounds", "current_upper_bounds", "stopping_lower_bounds", "stopping_upper_bounds"
-    ))
+  if (!is.null(update)) {
+    row_names <- c(
+      "target_groups", "update", "targets",
+      "current_lower_bounds", "current_upper_bounds", "stopping_lower_bounds", "stopping_upper_bounds"
+    )
+  } else {
+    row_names <- c(
+      "target_groups", "targets",
+      "current_lower_bounds", "current_upper_bounds", "stopping_lower_bounds", "stopping_upper_bounds"
+    )
+  }
+  targ_df$INFO <- factor(targ_df$INFO, levels = row_names)
   targ_df <- targ_df[order(targ_df$ID, targ_df$INFO), ]
 
   ##### Prior Information #####
@@ -81,8 +89,16 @@
   na <- deparse(substitute(list_vector))
   if (attribute) {
     vec <- attr(list_vector, info)
-    data.frame(TYPE = na, ID = names(vec), INFO = info, VALUE = vec)
+    if (length(vec) > 0) {
+      return(data.frame(TYPE = na, ID = names(vec), INFO = info, VALUE = vec))
+    } else {
+      return(NULL)
+    }
   } else {
-    data.frame(TYPE = na, ID = names(list_vector[[info]]), INFO = info, VALUE = list_vector[[info]])
+    if (length(list_vector[[info]]) > 0) {
+      return(data.frame(TYPE = na, ID = names(list_vector[[info]]), INFO = info, VALUE = list_vector[[info]]))
+    } else {
+      return(NULL)
+    }
   }
 }

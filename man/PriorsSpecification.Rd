@@ -17,13 +17,7 @@ add_prior(
 
 define_priors(..., previous_run_priors = NULL)
 
-as.priors(
-  df,
-  dist_base_name = NULL,
-  density_fn = NULL,
-  quantile_fn = NULL,
-  parameter_name = NULL
-)
+as.priors(df, ...)
 }
 \arguments{
 \item{...}{Optional. In add_prior: Named inputs to be passed to the RNG functions. In define_priors: The results of
@@ -56,9 +50,7 @@ Helper functions that can be used to create an imabc priors object used by imabc
 \section{Distribution Specifications}{
 
 If the user does not provide any RNG functions specifications, they must provide a single value in order to
-create a fixed parameter. This is not the most efficient method for using a fixed parameter in a model. However, in
-the future, the user will be able to use previous results to recalibrate a model using updated parameter specifications
-(one requirement may be that the parameter must have been specified in a previous run).
+create a fixed parameter. This is not the most efficient method for using a fixed parameter in a model.
 
 If the user only provides one of the RNG functions specifications, these functions will search for the most logical
 names for the other functions. I.e. if dist_base_name is provided (e.g. unif), these will assume that the user wishes
@@ -69,8 +61,9 @@ quantile_fn are provided, they will assume those functions are preferred over an
 
 \section{RNG Input Specifications}{
 
-These functions will attempt to pass any extra arguments to the RNG functions. These must be named to not create errors.
-If a value's name cannot be matched to an RNG function input, it will be ignored.
+These functions will attempt to pass any extra arguments to the RNG functions. These arguments must be named to match
+the expected inputs not to create errors. If a value's name cannot be matched to an RNG function input, it will be
+ignored.
 
 min/max are important values to imabc and will always be defined for each parameter. They are used to evaluate whether
 any simulated parameters are valid. The user can specify values for them if they want. If the user does not specify
@@ -91,11 +84,17 @@ a unique name will be generated automatically.
 }
 
 \examples{
-x1 <- add_prior(dist_base_name = "norm")
-x2 <- add_prior(density_fn = "dnorm", mean = 50, sd = 10)
-x3 <- add_prior(quantile_fn = "qnorm", min = 0, max = 1)
+add_prior(dist_base_name = "norm")
+add_prior(density_fn = "dnorm", mean = 50, sd = 10)
+add_prior(quantile_fn = "qnorm", min = 0, max = 1)
 
-define_priors(x1, x2, x3)
+x1, x2, and x3 reflect three parameters in the mdoel.
+x1 <- add_prior(dist_base_name = "norm")
+define_priors(
+  x1 = x1,
+  x2 = add_prior(density_fn = "dnorm", mean = 50, sd = 10),
+  add_prior(parameter_name = "x3", quantile_fn = "qnorm", min = 0, max = 1)
+)
 
 df <- data.frame(
   parameter_name = c("x1", "x2", "x3"), dist_base_name = c("unif", NA, NA), density_fn = c(NA, "dtruncnorm", NA),

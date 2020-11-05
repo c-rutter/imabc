@@ -20,7 +20,8 @@
 #' @md
 #'
 #' @section Target Groups:
-#' When targets are related to the same parameter it may be necessary to group the targets together. When targets are grouped
+#' A grouped target refers to a set of scalar targets that were gathered as part of the same study or otherwise refer to
+#' a series of outcomes, such as outcomes reported by age, by sex, or over time (a time series). When targets are grouped
 #' imabc will constrict the range of valid target values relative to the least improved target within the group of targets.
 #' This lets the range of simulated parameters stay wide enough to continue improving all the targets.
 #' @md
@@ -67,7 +68,6 @@ NULL
 #' @examples
 #' add_target(target = 0.5, starting_range = c(0.2, 0.9), stopping_range = c(0.48, 0.51))
 #' add_target(
-#'   target_name = "target_1",
 #'   target = 1.5, starting_range = c(1.0, 2.0), stopping_range = c(1.49, 1.51),
 #'   FUN = function(x1, x2) { x1 + x2 + rnorm(1, 0, 0.01) }
 #' )
@@ -111,6 +111,15 @@ add_target <- function(target, starting_range, stopping_range, target_name = NUL
 #'
 #' @param group_name Optional character(1). The name for the grouping of targets.
 #'
+#' @examples
+#' group_targets(
+#'   targ1 = add_target(target = 0.5, starting_range = c(0.2, 0.9), stopping_range = c(0.48, 0.51)),
+#'   add_target(
+#'     target_name = "targ2",
+#'     target = 1.5, starting_range = c(1.0, 2.0), stopping_range = c(1.49, 1.51),
+#'     FUN = function(x1, x2) { x1 + x2 + rnorm(1, 0, 0.01) }
+#'   )
+#' )
 #' @export
 group_targets <- function(..., group_name = NULL) {
   # Convert individual targets to grouped targets class
@@ -134,10 +143,22 @@ group_targets <- function(..., group_name = NULL) {
 
 #' @rdname TargetsSpecifications
 #'
-#' @param previous_run_targets Optional data.frame. The target data.frame saved from a previous run of imabc.
+#' @param target_df Optional data.frame. The target data.frame saved from a previous run of imabc.
+#'
+#' @examples
+#' define_targets(
+#'   group1 = group_targets(
+#'     targ1 = add_target(target = 0.5, starting_range = c(0.2, 0.9), stopping_range = c(0.48, 0.51)),
+#'     add_target(
+#'       target_name = "targ2",
+#'       target = 1.5, starting_range = c(1.0, 2.0), stopping_range = c(1.49, 1.51)
+#'     )
+#'   ),
+#'   targ3 = add_target(target = 1, starting_range = c(0.2, 1.9), stopping_range = c(0.9, 1.1))
+#' )
 #'
 #' @export
-define_targets <- function(..., previous_run_targets = NULL) {
+define_targets <- function(..., target_df = NULL) {
   # Newly added targets
   new_targets <- list(...)
   if (length(new_targets) > 0) {
@@ -243,63 +264,12 @@ define_targets <- function(..., previous_run_targets = NULL) {
   } # length(new_targets) > 0
 
   # If reading from a previous set of results
-  old_targets <- list()
-  if (!is.null(previous_run_targets)) {
-    # Pull Target Specific Information
-    previous_run_targets <- previous_run_targets[previous_run_targets$TYPE == "targets", ]
-    previous_run_targets$TYPE <- NULL
-
-    # Get target IDS
-    target_ids <- unique(previous_run_targets$ID)
-    n_targets <- length(target_ids)
-
-    # Initialize target info
-    targets <- structure(numeric(n_targets), names = target_ids)
-    current_lower_bounds <- structure(numeric(n_targets), names = target_ids)
-    current_upper_bounds <- structure(numeric(n_targets), names = target_ids)
-    stopping_lower_bounds <- structure(numeric(n_targets), names = target_ids)
-    stopping_upper_bounds <- structure(numeric(n_targets), names = target_ids)
-    grouped_targets <- structure(logical(n_targets), names = target_ids)
-    target_groups <- structure(character(n_targets), names = target_ids)
-    update <- structure(character(n_targets), names = target_ids)
-
-    for (i1 in target_ids) {
-      targets[i1] <- as.numeric(previous_run_targets$VALUE[previous_run_targets$INFO == "targets" & previous_run_targets$ID == i1])
-      current_lower_bounds[i1] <- as.numeric(previous_run_targets$VALUE[previous_run_targets$INFO == "current_lower_bounds" & previous_run_targets$ID == i1])
-      current_upper_bounds[i1] <- as.numeric(previous_run_targets$VALUE[previous_run_targets$INFO == "current_upper_bounds" & previous_run_targets$ID == i1])
-      stopping_lower_bounds[i1] <- as.numeric(previous_run_targets$VALUE[previous_run_targets$INFO == "stopping_lower_bounds" & previous_run_targets$ID == i1])
-      stopping_upper_bounds[i1] <- as.numeric(previous_run_targets$VALUE[previous_run_targets$INFO == "stopping_upper_bounds" & previous_run_targets$ID == i1])
-      # Target groups
-      if (!is.na(previous_run_targets$VALUE[previous_run_targets$INFO == "target_groups" & previous_run_targets$ID == i1])) {
-        target_groups[i1] <- previous_run_targets$VALUE[previous_run_targets$INFO == "target_groups" & previous_run_targets$ID == i1]
-        grouped_targets[i1] <- TRUE
-      } else {
-        target_groups[i1] <- i1
-        grouped_targets[i1] <- FALSE
-      }
-      # Update group
-      if (as.logical(previous_run_targets$VALUE[previous_run_targets$INFO == "update" & previous_run_targets$ID == i1])) {
-        update[i1] <- target_groups[i1]
-      } else {
-        update[i1] <- NULL
-      }
-    }
-
-    # Rebuild Final targets list
-    old_targets <- structure(list(
-      targets = targets,
-      current_lower_bounds = current_lower_bounds,
-      current_upper_bounds = current_upper_bounds,
-      stopping_lower_bounds = stopping_lower_bounds,
-      stopping_upper_bounds = stopping_upper_bounds,
-      target_functions = NULL
-    ), class = c("grouped"[any(grouped_targets)], "targets", "imabc"))
-
-    attributes(old_targets)$update <- update
-    attributes(old_targets)$grouped_targets <- grouped_targets
-    attributes(old_targets)$target_groups <- target_groups
-    attributes(old_targets)$target_names <- target_ids
-  } # !is.null(previous_run_targets)
+  if (!is.null(target_df)) {
+    # Convert targets added via df to a targets object
+    old_targets <- as.targets(target_df)
+  } else {
+    old_targets <- list()
+  }
 
   # Handle all cases
   if (length(new_targets) == 0 & length(old_targets) == 0) { # No targets added
@@ -433,24 +403,71 @@ define_targets <- function(..., previous_run_targets = NULL) {
 #' @param stopping_upper_bounds_var character(1). The name of the column that represents the final upper bound of the target
 #' range.
 #'
+#' @examples
+#' df <- data.frame(
+#'   target_groups = c("G1", "G1", NA),
+#'   target_names = c("T1", "T3", "T2"),
+#'   targets = c(1.5, 0.5, -1.5),
+#'   current_lower_bounds = c(1, 0.2, -2),
+#'   current_upper_bounds = c(2, 0.9, -1),
+#'   stopping_lower_bounds = c(1.49, 0.49, -1.51),
+#'   stopping_upper_bounds = c(1.51, 0.51, -1.49)
+#' )
+#' as.targets(df)
+#'
 #' @export
-as.targets <- function(
-  df,
-  groups_var = "target_groups", names_var = "target_names", targets_var = "targets",
-  current_lower_bounds_var = "current_lower_bounds", current_upper_bounds_var = "current_upper_bounds",
-  stopping_lower_bounds_var = "stopping_lower_bounds", stopping_upper_bounds_var = "stopping_upper_bounds") {
+as.targets <- function(df, ...) {
+  # Columns: parameter_name = NULL, dist_base_name = NULL, density_fn = NULL, quantile_fn = NULL
+  col_names_alt <- do.call(c, list(...))
+  col_names_dta <- colnames(df)
 
-  # Check column names are length one and found in data.frame
+  # Check that all require columns are included or named
+  required_columns <- c(
+    "target_names", "targets",
+    "current_lower_bounds", "current_upper_bounds",
+    "stopping_lower_bounds", "stopping_upper_bounds"
+  )
+  if (any(!required_columns %in% c(col_names_dta, names(col_names_alt)))) {
+    miss <- required_columns[!required_columns %in% c(col_names_dta, names(col_names_alt))]
+    stop(paste(
+      sprintf("Missing the following columns: %s. ", paste(miss, collapse = ", ")),
+      "Either add them to the data.frame or point as.targets to the appropriate column like so:\n",
+      sprintf('as.targets(df, %s = "alternate name")', miss[1]), sep = ""
+    ))
+  }
+  # Warn the user if no target groups are provided
+  groups_var <- "target_groups"
+  if (!groups_var %in% c(col_names_dta, names(col_names_alt))) {
+    warning(paste(
+      "No column for target_groups was found. If this was not intentional, either add a column to the data.frame or point ",
+      "as.targets to the appropriate column like so:\n",
+      'as.targets(df, target_groups = "alternate name")', sep = ""
+    ))
+  }
 
+  # If any alternate names are provided, rename the columns appropriately
+  if (length(col_names_alt) > 0) {
+    change_name_idx <- match(col_names_alt, col_names_dta)
+    not_found_cols <- is.na(change_name_idx)
+    if (any(not_found_cols)) {
+      warning(sprintf("Ignoring unknown column name: %s\n", names(col_names_alt)[not_found_cols]))
+      change_name_idx <- change_name_idx[!not_found_cols]
+      col_names_alt <- col_names_alt[!not_found_cols]
+    }
+    col_names_dta[change_name_idx] <- names(col_names_alt)
+  }
+
+  # Make sure the names we can control match the expected name for add_prior()
+  colnames(df) <- col_names_dta
 
   # Add targets
   indi_targs <- lapply(1:nrow(df), FUN = function(i1, dta) {
     # add target information
     add_target(
-      target_name = dta[[names_var]][i1],
-      target = dta[[targets_var]][i1],
-      starting_range = c(dta[[current_lower_bounds_var]][i1], dta[[current_upper_bounds_var]][i1]),
-      stopping_range = c(dta[[stopping_lower_bounds_var]][i1], dta[[stopping_upper_bounds_var]][i1])
+      target_name = dta[["target_names"]][i1],
+      target = dta[["targets"]][i1],
+      starting_range = c(dta[["current_lower_bounds"]][i1], dta[["current_upper_bounds"]][i1]),
+      stopping_range = c(dta[["stopping_lower_bounds"]][i1], dta[["stopping_upper_bounds"]][i1])
     )
   }, dta = df)
 
@@ -481,7 +498,41 @@ as.targets <- function(
   # Define all targets
   final_targ_list <- do.call(define_targets, group_targs)
 
+  # Determine which still need to be calibrated
+  attr(final_targ_list, "update") <- get_update_targets(final_targ_list)
+
   return(final_targ_list)
+}
+
+#' @export
+as.data.frame.targets <- function(targets_list) {
+  # Get all values
+  target_names <- attr(targets_list, "target_names")
+  targets <- targets_list$targets
+  current_lower_bounds <- targets_list$current_lower_bounds
+  current_upper_bounds <- targets_list$current_upper_bounds
+  stopping_lower_bounds <- targets_list$stopping_lower_bounds
+  stopping_upper_bounds <- targets_list$stopping_upper_bounds
+
+  # Handle grouped vs non-grouped
+  if (any(attr(targets_list, "grouped_targets"))) {
+    target_groups <- attr(targets_list, "target_groups")
+    target_groups[!attr(targets_list, "grouped_targets")] <- NA
+
+    out_df <- data.frame(
+      target_names, target_groups, targets,
+      current_lower_bounds, current_upper_bounds,
+      stopping_lower_bounds, stopping_upper_bounds
+    )
+  } else {
+    out_df <- data.frame(
+      target_names, targets,
+      current_lower_bounds, current_upper_bounds,
+      stopping_lower_bounds, stopping_upper_bounds
+    )
+  }
+
+  return(out_df)
 }
 
 #' @export

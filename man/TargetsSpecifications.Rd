@@ -18,18 +18,9 @@ add_target(
 
 group_targets(..., group_name = NULL)
 
-define_targets(..., previous_run_targets = NULL)
+define_targets(..., target_df = NULL)
 
-as.targets(
-  df,
-  groups_var = "target_groups",
-  names_var = "target_names",
-  targets_var = "targets",
-  current_lower_bounds_var = "current_lower_bounds",
-  current_upper_bounds_var = "current_upper_bounds",
-  stopping_lower_bounds_var = "stopping_lower_bounds",
-  stopping_upper_bounds_var = "stopping_upper_bounds"
-)
+as.targets(df, ...)
 }
 \arguments{
 \item{target}{numeric(1). The value a target function is aiming for.}
@@ -49,7 +40,7 @@ of targets.}
 
 \item{group_name}{Optional character(1). The name for the grouping of targets.}
 
-\item{previous_run_targets}{Optional data.frame. The target data.frame saved from a previous run of imabc.}
+\item{target_df}{Optional data.frame. The target data.frame saved from a previous run of imabc.}
 
 \item{df}{data.frame. Each row is a target and the columns represent the different pieces of information relevant to
 the targets.}
@@ -92,7 +83,8 @@ the valid range of target values.
 
 \section{Target Groups}{
 
-When targets are related to the same parameter it may be necessary to group the targets together. When targets are grouped
+A grouped target refers to a set of scalar targets that were gathered as part of the same study or otherwise refer to
+a series of outcomes, such as outcomes reported by age, by sex, or over time (a time series). When targets are grouped
 imabc will constrict the range of valid target values relative to the least improved target within the group of targets.
 This lets the range of simulated parameters stay wide enough to continue improving all the targets.
 }
@@ -127,9 +119,38 @@ exist within those objects. See define_target_function for more details and othe
 \examples{
 add_target(target = 0.5, starting_range = c(0.2, 0.9), stopping_range = c(0.48, 0.51))
 add_target(
-  target_name = "target_1",
   target = 1.5, starting_range = c(1.0, 2.0), stopping_range = c(1.49, 1.51),
   FUN = function(x1, x2) { x1 + x2 + rnorm(1, 0, 0.01) }
 )
+
+group_targets(
+  targ1 = add_target(target = 0.5, starting_range = c(0.2, 0.9), stopping_range = c(0.48, 0.51)),
+  add_target(
+    target_name = "targ2",
+    target = 1.5, starting_range = c(1.0, 2.0), stopping_range = c(1.49, 1.51),
+    FUN = function(x1, x2) { x1 + x2 + rnorm(1, 0, 0.01) }
+  )
+)
+define_targets(
+  group1 = group_targets(
+    targ1 = add_target(target = 0.5, starting_range = c(0.2, 0.9), stopping_range = c(0.48, 0.51)),
+    add_target(
+      target_name = "targ2",
+      target = 1.5, starting_range = c(1.0, 2.0), stopping_range = c(1.49, 1.51)
+    )
+  ),
+  targ3 = add_target(target = 1, starting_range = c(0.2, 1.9), stopping_range = c(0.9, 1.1))
+)
+
+df <- data.frame(
+  target_groups = c("G1", "G1", NA),
+  target_names = c("T1", "T3", "T2"),
+  targets = c(1.5, 0.5, -1.5),
+  current_lower_bounds = c(1, 0.2, -2),
+  current_upper_bounds = c(2, 0.9, -1),
+  stopping_lower_bounds = c(1.49, 0.49, -1.51),
+  stopping_upper_bounds = c(1.51, 0.51, -1.49)
+)
+as.targets(df)
 
 }

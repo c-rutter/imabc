@@ -56,10 +56,10 @@ get_new_bounds <- function(to_update, targets_list, sims) {
 
   # Extra check to make sure bounds do not go beyond the stopping point
   targets_list$new_lower_bounds[targ_names] <- ifelse(
-    targets_list$new_lower_bounds[targ_names] > stoppin[1, ], stoppin[1, ], targets_list$new_lower_bounds[targ_names]
+    targets_list$new_lower_bounds[targ_names] >= stoppin[1, ], stoppin[1, ], targets_list$new_lower_bounds[targ_names]
   )
   targets_list$new_upper_bounds[targ_names] <- ifelse(
-    targets_list$new_upper_bounds[targ_names] < stoppin[2, ], stoppin[2, ], targets_list$new_upper_bounds[targ_names]
+    targets_list$new_upper_bounds[targ_names] <= stoppin[2, ], stoppin[2, ], targets_list$new_upper_bounds[targ_names]
   )
 
   return(targets_list)

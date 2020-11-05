@@ -10,7 +10,7 @@ imabc(
   target_fun,
   previous_results = NULL,
   N_start = 1,
-  seed = 12345,
+  seed = NULL,
   latinHypercube = TRUE,
   N_centers = 1,
   Center_n = 50,
@@ -18,11 +18,11 @@ imabc(
   max_iter = 1000,
   N_cov_points = 0,
   sample_inflate = 1,
-  recalc_centers = TRUE,
   backend_fun = NULL,
   output_directory = NULL,
   output_tag = "timestamp",
-  verbose = TRUE
+  verbose = TRUE,
+  validate_run = FALSE
 )
 }
 \arguments{

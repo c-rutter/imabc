@@ -8,9 +8,7 @@
 #'
 #' @section Distribution Specifications:
 #' If the user does not provide any RNG functions specifications, they must provide a single value in order to
-#' create a fixed parameter. This is not the most efficient method for using a fixed parameter in a model. However, in
-#' the future, the user will be able to use previous results to recalibrate a model using updated parameter specifications
-#' (one requirement may be that the parameter must have been specified in a previous run).
+#' create a fixed parameter. This is not the most efficient method for using a fixed parameter in a model.
 #'
 #' If the user only provides one of the RNG functions specifications, these functions will search for the most logical
 #' names for the other functions. I.e. if dist_base_name is provided (e.g. unif), these will assume that the user wishes
@@ -20,8 +18,9 @@
 #' @md
 #'
 #' @section RNG Input Specifications:
-#' These functions will attempt to pass any extra arguments to the RNG functions. These must be named to not create errors.
-#' If a value's name cannot be matched to an RNG function input, it will be ignored.
+#' These functions will attempt to pass any extra arguments to the RNG functions. These arguments must be named to match
+#' the expected inputs not to create errors. If a value's name cannot be matched to an RNG function input, it will be
+#' ignored.
 #'
 #' min/max are important values to imabc and will always be defined for each parameter. They are used to evaluate whether
 #' any simulated parameters are valid. The user can specify values for them if they want. If the user does not specify
@@ -55,9 +54,9 @@ NULL
 #' as.priors).
 #'
 #' @examples
-#' x1 <- add_prior(dist_base_name = "norm")
-#' x2 <- add_prior(density_fn = "dnorm", mean = 50, sd = 10)
-#' x3 <- add_prior(quantile_fn = "qnorm", min = 0, max = 1)
+#' add_prior(dist_base_name = "norm")
+#' add_prior(density_fn = "dnorm", mean = 50, sd = 10)
+#' add_prior(quantile_fn = "qnorm", min = 0, max = 1)
 #'
 #' @export
 add_prior <- function(..., dist_base_name = NULL, density_fn = NULL, quantile_fn = NULL, parameter_name = NULL) {
@@ -214,7 +213,13 @@ add_prior <- function(..., dist_base_name = NULL, density_fn = NULL, quantile_fn
 #' imabc run.
 #'
 #' @examples
-#' define_priors(x1, x2, x3)
+#' x1, x2, and x3 reflect three parameters in the mdoel.
+#' x1 <- add_prior(dist_base_name = "norm")
+#' define_priors(
+#'   x1 = x1,
+#'   x2 = add_prior(density_fn = "dnorm", mean = 50, sd = 10),
+#'   add_prior(parameter_name = "x3", quantile_fn = "qnorm", min = 0, max = 1)
+#' )
 #'
 #' @export
 define_priors <- function(..., previous_run_priors = NULL) {
@@ -301,10 +306,19 @@ define_priors <- function(..., previous_run_priors = NULL) {
       } else {
         imabc_minmax <- as.null()
       }
+
+      # Handle fixed parameters
+      if (prior_args$dist_base_name == "fixed") {
+        prior_args$dist_base_name <- NULL
+        prior_args <- c(prior_args, imabc_minmax$maxs)
+        imabc_minmax <- NULL
+      }
       prior_args <- c(prior_args, imabc_minmax)
 
       # Add priors to a list
       return_priors[[i1]] <- do.call(add_prior, arg = prior_args)
+
+      as.priors(previous_run_priors)
     }
     # Create a prior object
     return_priors <- do.call(define_priors, args = return_priors)
@@ -337,43 +351,51 @@ define_priors <- function(..., previous_run_priors = NULL) {
 #' as.priors(df, name_var = "parameter_name", dist_var = "dist_base_name", density_var = "density_fn", quantile_var = "quantile_fn")
 #'
 #' @export
-as.priors <- function(df, dist_base_name = NULL, density_fn = NULL, quantile_fn = NULL, parameter_name = NULL) {
-  # Make sure at least one of dist_base_name, density_fn, or quantile_fn are found
-  cols <- colnames(df)
-  provided_names <- c(dist_base_name, density_fn, quantile_fn)
-  if (!any(c(!is.null(provided_names)))) {
+as.priors <- function(df, ...) {
+  # Columns: parameter_name = NULL, dist_base_name = NULL, density_fn = NULL, quantile_fn = NULL
+  col_names_alt <- do.call(c, list(...))
+  col_names_dta <- colnames(df)
+
+  # Check that at least one distribution function name column exists
+  if (!any(c("dist_base_name", "density_fn", "quantile_fn") %in% c(col_names_dta, names(col_names_alt)))) {
     stop(paste(
-      "Must specify the name of a column that represents one of the following:", "distribution base name (dist_base_name),",
-      "the density function (density_fn),", "or", "the quantile function (quantile_fn)."
-    ))
-  }
-  if (!any(provided_names %in% cols)) {
-    ins <- c("dist_base_name", "density_fn", "quantile_fn")[which(!c(is.null(dist_base_name), is.null(density_fn), is.null(quantile_fn)))]
-    "%s = %s. Column %s not found in the df"
-    stop(sprintf(
-      "%s = %s. Column %s not found in the data.frame; ", ins, provided_names, provided_names
+      "Function name column(s) not found in data. Add at least one column named dist_base_name, density_fn, or quantile_fn. ",
+      "You can also point as.priors to the appropriate column like so:\n",
+      'as.priors(df, dist_base_name = "alternate name")\n',
+      "See ?add_prior to understand what each column should represent.", sep = ""
     ))
   }
 
+  # If any alternate names are provided, rename the columns appropriately
+  if (length(col_names_alt) > 0) {
+    change_name_idx <- match(col_names_alt, col_names_dta)
+    not_found_cols <- is.na(change_name_idx)
+    if (any(not_found_cols)) {
+      warning(sprintf("Ignoring unknown column name: %s\n", names(col_names_alt)[not_found_cols]))
+      change_name_idx <- change_name_idx[!not_found_cols]
+      col_names_alt <- col_names_alt[!not_found_cols]
+    }
+    col_names_dta[change_name_idx] <- names(col_names_alt)
+  }
+
   # Make sure the names we can control match the expected name for add_prior()
-  if (!is.null(parameter_name)) {
-    cols[cols == parameter_name] <- "parameter_name"
-  }
-  if (!is.null(dist_base_name)) {
-    cols[cols == dist_base_name] <- "dist_base_name"
-  }
-  if (!is.null(density_fn)) {
-    cols[cols == density_fn] <- "density_fn"
-  }
-  if (!is.null(quantile_fn)) {
-    cols[cols == quantile_fn] <- "quantile_fn"
-  }
-  colnames(df) <- cols
+  colnames(df) <- col_names_dta
 
   # For each parameter, create a prior object
   prio_list <- lapply(1:nrow(df), FUN = function(i1, dta) {
     tmp <- dta[i1, , drop = TRUE]
     tmp <- tmp[!is.na(tmp)]
+
+    # Make sure fixed distributions are coverted to single scalar value
+    if (any(tmp[c("dist_base_name", "density_fn", "quantile_fn")] == "fixed")) {
+      # Remove distribution objects
+      tmp[c("dist_base_name", "density_fn", "quantile_fn")] <- NULL
+
+      # Join parameter_name if it exits with first non-NA value you find
+      new_tmp <- tmp[names(tmp) == "parameter_name"]
+      new_tmp <- c(new_tmp, tmp[names(tmp) != "parameter_name"][[1]])
+      tmp <- new_tmp
+    }
 
     do.call(add_prior, tmp)
   }, dta = df)
@@ -381,7 +403,82 @@ as.priors <- function(df, dist_base_name = NULL, density_fn = NULL, quantile_fn 
   # Take all prior objects and add them into a final imabc priors object
   final_prio_list <- do.call(define_priors, prio_list)
 
+  # Add empirical sds if they exist
+
+
   return(final_prio_list)
+}
+
+#' @export
+as.data.frame.priors <- function(priors_list) {
+  # Put non-function specific inputs into data.frame
+  parameter_name <- names(priors_list)
+  dist_base_name <- attr(priors_list, "distributions")
+  min <- attr(priors_list, "mins")
+  max <- attr(priors_list, "maxs")
+  empirical_sd <- attr(priors_list, "sds")
+  out_df <- data.frame(parameter_name, dist_base_name, min, max, empirical_sd)
+  # Remove empirical SD if it hasn't been calculated yet
+  if (all(out_df$empirical_sd == 0)) { out_df$empirical_sd <- NULL }
+
+  # Turn function specific inputs into a data.frame
+  fn_inputs <- lapply(attr(priors_list, "fun_inputs"), FUN = function(x) {
+    fn_in <- names(x$fun_inputs)
+    df_out <- NA
+    if (!is.null(fn_in)) {
+      df_out <- as.data.frame(t(x$fun_inputs))
+      df_out$min <- NULL
+      df_out$max <- NULL
+
+      if (ncol(df_out) == 0) {
+        df_out <- NA
+      }
+    }
+
+    return(df_out)
+  })
+  fn_inputs <- do.call(rbind, fn_inputs)
+  fn_inputs <- cbind(rownames(fn_inputs), fn_inputs)
+  rownames(fn_inputs) <- NULL
+  colnames(fn_inputs)[1] <- "parameter_name"
+
+  # Merge non-function specific inputs with function specific inputs
+  out_df <- merge(out_df, fn_inputs, by = "parameter_name", sort = FALSE)
+
+  return(out_df)
+}
+
+#' @export
+`[.priors` <- function(p, x) {
+  old_class <- class(p)
+
+  # Handle if subset is a list of names or T/F
+  if (is.logical(x)) {
+    keep <- x
+  } else {
+    keep <- names(p) %in% x
+  }
+
+  # Add subset of target info to a new target lsit
+  subset_priors <- structure(
+    unclass(p)[keep],
+    class = old_class
+  )
+
+  # Subset attributes
+  mins <- attributes(p)$mins[keep]
+  maxs <- attributes(p)$maxs[keep]
+  sds <- attributes(p)$sds[keep]
+  distributions <- attributes(p)$distributions[keep]
+  fun_inputs <- attributes(p)$fun_inputs[keep]
+  # Add them to new target list
+  attributes(subset_priors)$mins <- mins
+  attributes(subset_priors)$maxs <- maxs
+  attributes(subset_priors)$sds <- sds
+  attributes(subset_priors)$distributions <- distributions
+  attributes(subset_priors)$fun_inputs <- fun_inputs
+
+  return(subset_priors)
 }
 
 #' @export
