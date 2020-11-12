@@ -1,9 +1,5 @@
-draw_parms <- function(n_add, mu, sigma, priors_list, targets_list) {
-  # independently draw parameters values, with the exception of beta2, sampled conditional on beta2
-  # parm.priors columns are: parm,norm.dist,a,b,c,d
-  # parm: parameter name,
-  # a,b: hyper-parameters corresponding to N(a,b) or U(a,b)
-  # c,d: the prior range, [c,d] for U(a,b) we expect a=c and b=d
+draw_parms <- function(n_add, mu, sigma, priors_list) {
+  # Samples parameters from a truncated normal under the assumption of independence
 
   # Make sure mu is a matrix
   if (is.vector(mu)) {
@@ -37,6 +33,7 @@ draw_parms <- function(n_add, mu, sigma, priors_list, targets_list) {
         sd = sigma[center_id, x] # Standard Deviation of each center
       )
     } else {
+      # Fixed parameters
       rep(mu[center_id, x], n)
     }
   }, n = n_add, mu = mu, sigma = sigma, lower = lower_bounds, upper = upper_bounds), by = center_id]

@@ -143,7 +143,7 @@ group_targets <- function(..., group_name = NULL) {
 
 #' @rdname TargetsSpecifications
 #'
-#' @param target_df Optional data.frame. The target data.frame saved from a previous run of imabc.
+#' @param target_df Optional data.frame. Targets stored as a data.frame or from the results object of a previous run.
 #'
 #' @examples
 #' define_targets(
@@ -263,7 +263,7 @@ define_targets <- function(..., target_df = NULL) {
     attributes(added_targets)$target_names <- target_names
   } # length(new_targets) > 0
 
-  # If reading from a previous set of results
+  # If reading from a data.frame or previous imabc run set of results
   if (!is.null(target_df)) {
     # Convert targets added via df to a targets object
     old_targets <- as.targets(target_df)

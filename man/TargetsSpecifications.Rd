@@ -40,7 +40,7 @@ of targets.}
 
 \item{group_name}{Optional character(1). The name for the grouping of targets.}
 
-\item{target_df}{Optional data.frame. The target data.frame saved from a previous run of imabc.}
+\item{target_df}{Optional data.frame. Targets stored as a data.frame or from the results object of a previous run.}
 
 \item{df}{data.frame. Each row is a target and the columns represent the different pieces of information relevant to
 the targets.}

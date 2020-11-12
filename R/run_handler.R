@@ -1,7 +1,8 @@
-#' @export
 run_handler <- function(parms_to_run, all_parm_names, target_fun, custom_function = NULL, ...) {
+  # Extra inputs, currently includes targets and priors object
   other_inputs <- list(...)
 
+  # If no custom backend function is provided run the basic method using whatever parallel backend is provided
   if (is.null(custom_function)) {
     res <- foreach(i1 = 1:nrow(parms_to_run), .combine = combine_results) %dopar% {
       inp <- unlist(parms_to_run[i1, all_parm_names, with = FALSE])

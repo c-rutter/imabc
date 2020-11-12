@@ -1,5 +1,7 @@
 dMvn <- function(X, mu, Sigma) {
-  # reference: http://gallery.rcpp.org/articles/dmvnorm_arma/
+  # Multivariate Normal density function
+  # Function pulled from: http://gallery.rcpp.org/articles/dmvnorm_arma/
+  # "The bayesm package pure R implementation which is much faster than mvtnorm:::dmvnorm()"
   k <- ncol(X)
   rooti <- backsolve(chol(Sigma), diag(k))
   quads <- colSums((crossprod(rooti, (t(X) - mu)))^2)

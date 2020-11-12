@@ -68,7 +68,7 @@ rm(list = ls(all = TRUE))
 gc()
 
 # Load required libraries
-# devtools::document()
+devtools::document()
 devtools::load_all()
 
 # Some of these will be loaded by library(imabc):
@@ -101,10 +101,10 @@ library(doParallel) # I don't think this is required by imabc specifically (it i
 # The prior distribution information is returned in the same order they are input and can be called without their names
 #   using their index (e.g. priors[[1]]$density_function)
 # Fixed parameters has not been implemented yet
-x1_min <- 0.1
-x1_max <- 0.9
-x2_min <- 0.1
-x2_max <- 1.0
+x1_min <- 0.4
+x1_max <- 0.8
+x2_min <- 0.4
+x2_max <- 0.9
 priors <- define_priors(
   x1 = add_prior(
     dist_base_name = "unif",
@@ -113,33 +113,29 @@ priors <- define_priors(
   add_prior(
     parameter_name = "x2",
     density_fn = "dtruncnorm",
-    mean = 0.25, sd = 0.05, a = x2_min, b = x2_max,
+    mean = 0.5, sd = 0.05, a = x2_min, b = x2_max,
     min = x2_min, max = x2_max # Would otherwise default to -Inf/Inf
-  )
+  ),
+  fly = add_prior(0.5)
 )
 print(priors)
 
-df <- data.frame(
-  parameter_name = c("x1", "x2", NA),
-  dist_base_name = c("unif", NA, NA),
-  density_fn = c(NA, "dtruncnorm", NA),
-  quantile_fn = c(NA, NA, NA),
-  mean = c(NA, 0.75, 0.5),
-  sd = c(NA, 0.05, NA),
-  min = c(x1_min, x2_min, NA),
-  max = c(x1_max, x2_max, NA),
-  a = c(NA, x2_min, NA),
-  b = c(NA, x2_max, NA)
-)
-ex <- as.priors(
-  df,
-  parameter_name = "parameter_name",
-  dist_base_name = "dist_base_name",
-  density_fn = "density_fn",
-  quantile_fn = "quantile_fn"
-)
-ex
-
+# df <- data.frame(
+#   parameter_name = c("x1", "x2", NA),
+#   dist_base_name = c("unif", NA, "fixed"),
+#   density_fn = c(NA, "dtruncnorm", NA),
+#   mean = c(NA, 0.75, 0.5),
+#   sd = c(NA, 0.05, NA),
+#   min = c(x1_min, x2_min, NA),
+#   max = c(x1_max, x2_max, NA),
+#   a = c(NA, x2_min, NA),
+#   b = c(NA, x2_max, NA)
+# )
+# ex <- as.priors(df)
+# ex
+#
+# prior_df <- as.data.frame(priors)
+# as.priors(prior_df)
 
 # If no name is provided, function assigns name based on group and target.
 #   Groups are of the format G[0-9]+
@@ -166,55 +162,63 @@ targets <- define_targets(
       target = 1.5,
       starting_range = c(1.0, 2.0),
       stopping_range = c(1.49, 1.51)#,
-      # FUN = function(x1, x2) { x1 + x2 + rnorm(1, 0, 0.01) }
+      # FUN = function(x1, x2) { x1 + x2 + sample(c(-1, 1), 1)*rnorm(1, 0, 0.1) }
     ),
     add_target(
-      target = 0,
-      starting_range = c(-1.0, 1.0),
-      stopping_range = c(-0.1, 0.1),
-    #   FUN = function(x1, x2) { -1*(x1 + x2 + rnorm(1, 0, 0.01)) }
+      target = 0.5,
+      starting_range = c(0.2, 0.9),
+      stopping_range = c(0.49, 0.51)#,
+      # FUN = function(x, targets) {
+      #   a <- targets$current_lower_bounds*2
+      #   x[1] * x[2] + sample(c(-1, 1), 1)*rnorm(1, 0, 0.1)
+      # }
     )
   ),
   add_target(
-    target = 0.5,
-    starting_range = c(0.2, 0.9),
-    stopping_range = c(0.49, 0.51)#,
-    # FUN = function(x, lower_bound) { max(lower_bound, x[1] * x[2] + rnorm(1, 0, 0.01)) }
+    target = 0,
+    starting_range = c(-1.0, 1.0),
+    stopping_range = c(-0.1, 0.1)#,
+    # FUN = function(x1, x2, priors) {
+    #   priors$x1$density_function(1)
+    #   sample(c(-1, 1), 1)*rnorm(1, 0, 0.1)
+    # }
   )
 )
 targets
-
-# as.targets example
+# # as.targets example
 # df <- data.frame(
-#   target_groups = c("G1", "G1", NA, NA, "G2", "G2", "G2", NA),
-#   target_names = c("T1", "T3", "T2", "t4", "T5", "q", "baby", "Hey"),
-#   targets = c(1.5, 0.5, -1.5, 1:4, 0),
-#   current_lower_bounds = c(1, 0.2, -2, -11:-14, -2),
-#   current_upper_bounds = c(2, 0.9, -1, 11:14, 2),
-#   stopping_lower_bounds = c(1.49, 0.49, -1.51, -1:-4, -1),
-#   stopping_upper_bounds = c(1.51, 0.51, -1.49, 2:5, 1),
-#   update = c(TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE)
+#   target_groups = c("G1", "G1", NA),
+#   target_names = c("T1", "T3", "T2"),
+#   targets = c(1.5, 0.5, -1.5),
+#   current_lower_bounds = c(1, 0.2, -2),
+#   current_upper_bounds = c(2, 0.9, -1),
+#   stopping_lower_bounds = c(1.49, 0.49, -1.51),
+#   stopping_upper_bounds = c(1.51, 0.51, -1.49)
 # )
-# ex <- as.targets(df)
-
+# as.targets(df)
+# unclass(as.targets(df))
+#
+# df <- as.data.frame(targets)
+# targets_list <- targets
 
 # Target functions
-fn1 <- function(x1, x2) { x1 + x2 + rnorm(1, 0, 0.01) }
-fn2 <- function(x1, x2) { x1 * x2 + rnorm(1, 0, 0.01) }
-fn <- function(x1, x2, targets, priors) {
+fn1 <- function(x1, x2) { x1 + x2 + sample(c(-1, 1), 1)*rnorm(1, 0, 0.1) }
+fn2 <- function(x1, x2) { x1 * x2 + sample(c(-1, 1), 1)*rnorm(1, 0, 0.1) }
+fn <- function(x1, x2) {
   res <- c()
-  res["T3"] <- fn2(x1, x2)
-
-  # lower/upper bounds are now accessible in target_fun.
-  # Either using the name of sim parm or the order they are created in define_targets
+  res["T2"] <- fn2(x1, x2)
   res["T1"] <- fn1(x1, x2)
-  res["T2"] <- rnorm(1, 0, 0.01)
+
+  # res["T2"] <- fn2(x[1], x[2])
+  # res["T1"] <- fn1(x[1], x[2])
+
+  res["T3"] <- rnorm(1, 0, 0.1)
 
   return(res)
 }
 
-target_fun <- define_target_function(targets, priors, FUN = fn, use_seed = FALSE)
-target_fun(c(x1 = 0.75, x2 = 0.75), seed = 12345, targets = targets, priors = priors)
+target_fun <- define_target_function(targets, priors, FUN = fn, use_seed = F)
+target_fun(c(x1 = 0.75, x2 = 0.75), targets = targets, priors = priors)
 
 priors = priors
 targets = targets
@@ -223,10 +227,10 @@ previous_results = NULL
 N_start = 1000
 seed = 12345
 latinHypercube = TRUE
-N_centers = 2
+N_centers = 10
 Center_n = 50
 N_post = 90
-max_iter = 1000
+max_iter = 10
 N_cov_points = 50
 sample_inflate = 1.5
 recalc_centers = TRUE
@@ -234,6 +238,7 @@ backend_fun = NULL
 verbose = T
 output_directory = "dev/outputs/out"
 output_tag = "test"
+validate_run = FALSE
 
 # Setup parallel handling
 # registerDoParallel(cores = detectCores() - 1) # cluster auto-closed with foreach
@@ -251,34 +256,34 @@ results <- imabc(
   max_iter = max_iter,
   N_cov_points = N_cov_points,
   sample_inflate = sample_inflate,
-  recalc_centers = recalc_centers,
   backend_fun = backend_fun,
   verbose = verbose,
   output_directory = output_directory,
-  output_tag = output_tag
+  output_tag = output_tag,
+  validate_run = validate_run
 )
 
-inputs_list <- list(
-  priors = priors,
-  targets = targets,
-  target_fun = target_fun,
-  previous_results = previous_results,
-  N_start = N_start,
-  seed = seed,
-  latinHypercube = latinHypercube,
-  N_centers = N_centers,
-  Center_n = Center_n,
-  N_post = N_post,
-  max_iter = max_iter,
-  N_cov_points = N_cov_points,
-  sample_inflate = sample_inflate,
-  recalc_centers = recalc_centers,
-  backend_fun = backend_fun,
-  verbose = verbose,
-  output_directory = output_directory,
-  output_tag = output_tag
-)
-do.call(imabc, inputs_list)
+# inputs_list <- list(
+#   priors = priors,
+#   targets = targets,
+#   target_fun = target_fun,
+#   previous_results = previous_results,
+#   N_start = N_start,
+#   seed = seed,
+#   latinHypercube = latinHypercube,
+#   N_centers = N_centers,
+#   Center_n = Center_n,
+#   N_post = N_post,
+#   max_iter = max_iter,
+#   N_cov_points = N_cov_points,
+#   sample_inflate = sample_inflate,
+#   recalc_centers = recalc_centers,
+#   backend_fun = backend_fun,
+#   verbose = verbose,
+#   output_directory = output_directory,
+#   output_tag = output_tag
+# )
+# do.call(imabc, inputs_list)
 # # Test continue runs
 # prev_run_meta <- read.csv(paste(output_directory, "RunMetadata_test1.csv", sep = "/"))
 # new_targets <- define_targets(previous_run_targets = prev_run_meta)
@@ -291,14 +296,14 @@ do.call(imabc, inputs_list)
 #   good_target_dist = read.csv(paste(output_directory, "Good_SimulatedDistances_test1.csv", sep = "/")),
 #   mean_cov = read.csv(paste(output_directory, "MeanCovariance_test1.csv", sep = "/"))
 # )
-last_run <- read_previous_results(path = output_directory, tag = "test2")
+last_run <- read_previous_results(path = output_directory, tag = "test")
 
 priors = last_run$new_priors # from last calculation (includes empirical SD from beginning of first run)
 targets = last_run$new_targets # from the end of the last calculation
 target_fun = target_fun # same as before
 previous_results = last_run$previous_results # NEW
 N_start = N_start
-seed = 12345
+seed = 12346
 latinHypercube = TRUE
 N_centers = N_centers
 Center_n = Center_n
@@ -306,10 +311,10 @@ N_post = N_post
 max_iter = max_iter
 N_cov_points = 0
 sample_inflate = 1.5
-recalc_centers = TRUE
 verbose = TRUE
 output_directory = output_directory
-output_tag = "test3"
+output_tag = "test2"
+validate_run = FALSE
 
 new_results <- imabc(
   priors = last_run$new_priors, # from last calculation (includes empirical SD from beginning of first run)
@@ -325,17 +330,48 @@ new_results <- imabc(
   max_iter = max_iter,
   N_cov_points = 0,
   sample_inflate = 1.5,
-  recalc_centers = TRUE,
   verbose = TRUE,
   output_directory = output_directory,
-  output_tag = "test3"
+  output_tag = output_tag,
+  validate_run = validate_run
 )
 
 
 #########################################################################################################################
 # NEW TO DO #############################################################################################################
 # Test define_priors() when using previous_run_priors
+dt.priors <- data.frame(param_name = NA, param_min = NA, param_max = NA)
+dt.priors[1, ] <- c("infected.count", 60, 380)
+dt.priors[2, ] <- c("susceptible.to.exposed.probability", 0.01, 0.08)
+dt.priors[3, ] <- c("seasonality.multiplier", 0, 0.3)
+dt.priors[4, ] <- c("shielding.scaling", 0.4, 1.0)
+dt.priors[5, ] <- c("isolate.infectivity.household", 0.2, 0.7)
+dt.priors[6, ] <- c("isolate.infectivity.nursinghome", 0.1, 0.7)
+dt.priors[7, ] <- c("d10", 300, 700)
+dt.priors[8, ] <- c("stay.at.home.probability", 0.1, 0.8)
+dt.priors[9, ] <- c("stoe.behavioral.adjustment.probability", 0.01, 0.3)
+dt.priors <- data.table(dt.priors)
 
+# and create the priors list to pass into imabc with:
+
+create.indiv.prior <- function(priors.row){
+  add_prior(
+    parameter_name = priors.row[,param_name],
+    dist_base_name = "unif",
+    min = priors.row[,param_min],
+    max = priors.row[,param_max]
+  )
+}
+
+create.priors <- function(dt.priors){
+  # dt.priors <- fread(priors.path)
+  priors.list <- foreach(i = 1:nrow(dt.priors)) %dopar% {
+    create.indiv.prior(dt.priors[i])
+  }
+  do.call(define_priors,priors.list)
+}
+
+as.data.frame(create.priors(dt.priors))
 #########################################################################################################################
 #########################################################################################################################
 #########################################################################################################################

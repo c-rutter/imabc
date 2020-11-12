@@ -3,21 +3,18 @@ unique_names <- function(x, name_vec) {
 }
 
 unique_names.priors <- function(x, name_vec) {
-  if (inherits(x, "imabc")) {
-    expected_fmt <- "V%s"
-    gsub_pattern <- "(^V)([0-9]+)"
+  # Parameter Name formats
+  expected_fmt <- "V%s"
+  gsub_pattern <- "(^V)([0-9]+)"
 
-    names <- .build_names(things_list = x, provided_names = name_vec, fmt = expected_fmt, pattern = gsub_pattern)
-  } else {
-    warning("unique_names expects an imabc object.")
-
-    return(x)
-  }
+  # Build names
+  names <- .build_names(things_list = x, provided_names = name_vec, fmt = expected_fmt, pattern = gsub_pattern)
 
   return(names)
 }
 
 unique_names.targets <- function(x, name_vec) {
+  # Target Name formats
   expected_fmt <- "T%s"
   gsub_pattern <- "(^T)([0-9]+)"
 
@@ -25,10 +22,15 @@ unique_names.targets <- function(x, name_vec) {
   group_names <- attr(x, "groups")
   group_targs <- attr(x, "grouped")
   if (!is.null(group_names) && any(group_targs)) {
+    # Handle group names
     name_vec <- ifelse(
       !is.na(group_names) & !is.na(name_vec) & (duplicated(name_vec, fromLast = TRUE) | duplicated(name_vec, fromLast = FALSE)),
-      paste(name_vec, group_names, sep = "_"), name_vec)
+      paste(name_vec, group_names, sep = "_"), # Grouped targets
+      name_vec # Non-grouped targets
+    )
   }
+
+  # Build names
   names <- .build_names(things_list = x, provided_names = name_vec, fmt = expected_fmt, pattern = gsub_pattern)
 
   # Don't allow target and group names to have the same value
@@ -38,15 +40,16 @@ unique_names.targets <- function(x, name_vec) {
 }
 
 unique_names.groups <- function(x, name_vec) {
+  # Group Name formats
   expected_fmt <- "G%s"
   gsub_pattern <- "(^G)([0-9]+)"
 
+  # Build names
   names <- .build_names(things_list = x, provided_names = name_vec, fmt = expected_fmt, pattern = gsub_pattern)
 
   return(names)
 }
 
-#' @export
 .build_names <- function(things_list, provided_names, fmt, pattern) {
   current_names <- names(things_list)
   if (is.null(current_names)) {
@@ -62,14 +65,10 @@ unique_names.groups <- function(x, name_vec) {
     no_names <- names(things_list) == "" & is.na(provided_names)
     one_name <- !multi_names & !no_names
 
-    # One name specified using input name
-    # Already taken care of by way current_names is initialized
-
     # One name specified using list element
     current_names[one_name & current_names == ""] <- provided_names[one_name & current_names == ""]
 
-    # Names specified using both naming methods
-    # Use name specified within function
+    # Names specified using both naming methods - use name specified within function
     current_names[multi_names] <- provided_names[multi_names]
   }
 

@@ -1,5 +1,5 @@
 get_list_element <- function(x, name = NULL, unlist = FALSE, keep_length = TRUE) {
-
+  # Pull element(s) of a list
   if (is.null(name)) { # No name is provided to search for
     vec <- x
 
@@ -18,6 +18,7 @@ get_list_element <- function(x, name = NULL, unlist = FALSE, keep_length = TRUE)
 
   }
 
+  # Convert list to vector
   if (unlist) {
     nas <- names(vec)
     vec <- unlist(vec)

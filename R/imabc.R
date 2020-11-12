@@ -1,9 +1,14 @@
-#' imabc
+#' @title Incremental Mixture Approximate Bayesian Computation (IMABC)
 #'
-#' @param priors list. A list with all the information required by define_priors and add_priors
-#' @param targets list. A list of the main targets and their subtargets
-#' @param target_fun function. A function that takes in parameters and returns the predicted subtarget values
-#' @param previous_results list. optional.
+#' @description Calibrates a set of parameters following the IMABC method.
+#'
+#' @param priors A priors object created using define_priors. This contains information regarding the parameters that
+#' are being calibrated
+#' @param targets A targets object created using define_targets. This contains information regarding the target values
+#' which will be used to evaluate simulated parameters.
+#' @param target_fun A function, that will tranform parameters into target values. To ensure that the function takes in
+#' the correct values and returns the results correctly it is strongly advised to use define_target_function() for this.
+#' @param previous_results Optional list of results from a previous
 #' @param N_start
 #' @param seed
 #' @param latinHypercube Only needed if previous_results not included
@@ -48,7 +53,7 @@ imabc <- function(
   append_to_outfile <- FALSE
   start_iter <- ifelse(
     continue_runs,
-    as.numeric(previous_results$prev_run_meta$VALUE[previous_results$prev_run_meta$INFO == "current_iteration"]) + 1,
+    as.numeric(previous_results$prev_run_meta$value[previous_results$prev_run_meta$info == "current_iteration"]) + 1,
     1
   )
   end_iter <- (start_iter - 1) + max_iter
@@ -56,7 +61,7 @@ imabc <- function(
   # Data size specifics
   total_draws <- ifelse(
     continue_runs,
-    as.numeric(previous_results$prev_run_meta$VALUE[previous_results$prev_run_meta$INFO == "last_draw"]),
+    as.numeric(previous_results$prev_run_meta$value[previous_results$prev_run_meta$info == "last_draw"]),
     0
   )
   n_draw <- ifelse(continue_runs, N_centers*Center_n, N_start)
@@ -76,8 +81,8 @@ imabc <- function(
 
   # File names for saving
   output_tag <- ifelse(output_tag == "timestamp", format(run_timestamp, write_time_fmt), output_tag)
-  targlist_df_outfile <- ifelse(is.null(output_tag), "CurrentTarget_list.csv", sprintf("CurrentTarget_list_%s.csv", output_tag))
-  priolist_df_outfile <- ifelse(is.null(output_tag), "CurrentPriors_list.csv", sprintf("CurrentPriors_list_%s.csv", output_tag))
+  targlist_df_outfile <- ifelse(is.null(output_tag), "CurrentTargets.csv", sprintf("CurrentTargets_%s.csv", output_tag))
+  priolist_df_outfile <- ifelse(is.null(output_tag), "CurrentPriors.csv", sprintf("CurrentPriors_%s.csv", output_tag))
   parm_df_outfile <- ifelse(is.null(output_tag), "Good_SimulatedParameters.csv", sprintf("Good_SimulatedParameters_%s.csv", output_tag))
   simtarg_df_outfile <- ifelse(is.null(output_tag), "Good_SimulatedTargets.csv", sprintf("Good_SimulatedTargets_%s.csv", output_tag))
   targdist_df_outfile <- ifelse(is.null(output_tag), "Good_SimulatedDistances.csv", sprintf("Good_SimulatedDistances_%s.csv", output_tag))
@@ -106,6 +111,7 @@ imabc <- function(
 
   # Initialize current iteration distance data.table
   iter_target_dist <- init_iter_dt(n = n_rows_init, cols = target_distance_names, type = "targ_dists")
+  iter_target_dist[draw > n_draw, draw := NA]
 
   # Initialize good distance data.table or add rows to previous good results
   good_target_dist <- init_good_dt(
@@ -119,6 +125,7 @@ imabc <- function(
 
   # Initialize current iteration simulated target data.table
   iter_sim_target <- init_iter_dt(n = n_rows_init, cols = sim_target_names, type = "sim_targs")
+  iter_sim_target[draw > n_draw, draw := NA]
 
   # Initialize good distance data.table or add rows to previous good results
   good_sim_target <- init_good_dt(
@@ -135,6 +142,7 @@ imabc <- function(
 
   # Initialize current iteration simulated parameters data.table
   iter_parm_draws <- init_iter_dt(n = n_rows_init, cols = all_parm_names, type = "parm_draws")
+  iter_parm_draws[draw > n_draw, draw := NA]
 
   # Initialize good distance data.table or add rows to previous good results
   good_parm_draws <- init_good_dt(
@@ -237,6 +245,7 @@ imabc <- function(
       iter_target_dist$n_good[1:n_draw] <- rowSums(iter_target_dist[1:n_draw, (target_distance_names), with = FALSE] >= 0, na.rm = TRUE)
       iter_valid_n <- sum(iter_target_dist$n_good[iter_target_dist$step <= N_centers] == n_target_distances, na.rm = TRUE)
 
+      # If user wants to explore results of all simulated parameters
       if (validate_run) {
         if (!exists("all_iter_parm_draws") | !exists("all_iter_parm_draws") | !exists("all_iter_parm_draws")) {
           all_iter_parm_draws <- iter_parm_draws[!is.na(iter_parm_draws$draw), ]
@@ -247,12 +256,14 @@ imabc <- function(
           all_iter_sim_target <- rbind(all_iter_sim_target, iter_sim_target[!is.na(iter_sim_target$draw), ])
           all_iter_target_dist <- rbind(all_iter_target_dist, iter_target_dist[!is.na(iter_target_dist$draw), ])
         }
-        save_results(
-          list(iter_parm_draws[!is.na(iter_parm_draws$draw), ], gsub("Good_", "", parm_df_outfile)),
-          list(iter_sim_target[!is.na(iter_sim_target$draw), ], gsub("Good_", "", simtarg_df_outfile)),
-          list(iter_target_dist[!is.na(iter_target_dist$draw), ], gsub("Good_", "", targdist_df_outfile)),
-          out_dir = output_directory, append = append_to_outfile
-        )
+        if (!is.null(output_directory)) {
+          save_results(
+            list(iter_parm_draws[!is.na(iter_parm_draws$draw), ], gsub("Good_", "", parm_df_outfile)),
+            list(iter_sim_target[!is.na(iter_sim_target$draw), ], gsub("Good_", "", simtarg_df_outfile)),
+            list(iter_target_dist[!is.na(iter_target_dist$draw), ], gsub("Good_", "", targdist_df_outfile)),
+            out_dir = output_directory, append = append_to_outfile
+          )
+        }
       }
 
       # Update centers in good_* which have been re-simulated since last iteration
@@ -568,8 +579,7 @@ imabc <- function(
 
       # Calculate number of draws and new steps
       n_draw <- num_centers*Center_n + num_centers
-      new_steps <- rep(1:num_centers, each = Center_n)
-      new_steps <- c(new_steps, rep.int((N_centers + 1), num_centers))
+      new_steps <- c(rep(1:num_centers, each = Center_n), rep.int((N_centers + 1), num_centers))
 
       # Reset iteration level info
       iter_parm_draws$iter <- iter_sim_target$iter <- iter_target_dist$iter <- main_loop_iter + 1
@@ -595,8 +605,7 @@ imabc <- function(
           n_add = Center_n,
           mu = center_next[, all_parm_names],
           sigma = sd_next,
-          priors_list = priors,
-          targets_list = targets
+          priors_list = priors
         )]
 
         # Set draw numbers
@@ -622,26 +631,20 @@ imabc <- function(
         )
         setkey(x, iter, step)
         B_in <- x[step <= N_centers, list(B.in = sum(in_range, na.rm = TRUE)), by = .(iter, step)]
+        new_mean_cov <- get_mean_cov(
+          iter = main_loop_iter + 1,
+          mu = center_next[, calibr_parm_names],
+          sd = sd_next[, calibr_parm_names],
+          center = center_draw,
+          B = B_in,
+          parm_names = calibr_parm_names
+        )
+        # If mean_cov has already been created, add new values in. Otherwise create mean_cov with values
         if (exists("mean_cov")) {
-          new_mean_cov <- get_mean_cov(
-            iter = main_loop_iter + 1,
-            mu = center_next[, calibr_parm_names],
-            sd = sd_next[, calibr_parm_names],
-            center = center_draw,
-            B = B_in,
-            parm_names = calibr_parm_names
-          )
           new_rows <- (nrow(mean_cov) + 1):(nrow(mean_cov) + nrow(new_mean_cov))
           mean_cov <- rbind(mean_cov, new_mean_cov)
         } else {
-          mean_cov <- get_mean_cov(
-            iter = main_loop_iter + 1,
-            mu = center_next[, calibr_parm_names],
-            sd = sd_next[, calibr_parm_names],
-            center = center_draw,
-            B = B_in,
-            parm_names = calibr_parm_names
-          )
+          mean_cov <- new_mean_cov
           new_rows <- 1:nrow(mean_cov)
         }
         # Store results
@@ -689,7 +692,6 @@ imabc <- function(
             sd_next[!is_zero] <- 0
             diag(sample_cov) <- diag(sample_cov) + (sd_next^2)
           }
-          # } # current_good_n >= N_cov_points
 
           # Simulate Center_n random draws of calibrated parameters
           if (abs(sum(sample_cov) - sum(diag(sample_cov))) < 1e-10) {
@@ -698,8 +700,7 @@ imabc <- function(
               n_add = Center_n,
               mu = as.matrix(t(sample_mean_i1)),
               sigma = as.matrix(t(diag(sample_cov))),
-              priors_list = priors[calibr_parm_names],
-              targets_list = targets
+              priors_list = priors[calibr_parm_names]
             )
 
           } else { # abs(sum(sample_cov) - sum(diag(sample_cov))) < 1e-10
@@ -867,6 +868,7 @@ imabc <- function(
     cat(header, time_info, duration_info, seed_info, n_info, "Final bounds info:", bound_info, sep = "\n")
   }
 
+  # If user wants all intermediate results saved
   if (validate_run) {
     out_list <- list(
       all_iter_parm_draws = all_iter_parm_draws,

@@ -1,14 +1,15 @@
 init_iter_dt <- function(n_row, cols, type = c("parm_draws", "targ_dists", "sim_targs")) {
+  # Type to return
   type <- match.arg(type)
 
-  # Same for all types
+  # Initialize columns that are the same for all types of results
   dt <- data.table(
     iter = 1L,
     draw = 1:n_row,
     step = 0L
   )
 
-  # Type specific columns
+  # Initialize columns that are type specific
   if (type == "parm_draws") {
     dt[, seed := NA_character_]
     dt[, (cols) := NA_real_]

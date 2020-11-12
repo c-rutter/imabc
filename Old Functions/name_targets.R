@@ -1,4 +1,3 @@
-#' @export
 name_targets <- function(target_list, grouping = TRUE) {
   # grouping == TRUE means the function is being used in group_targets()
   # grouping == FALSE means the function is being used in define_targets()

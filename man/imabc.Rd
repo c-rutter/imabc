@@ -2,7 +2,7 @@
 % Please edit documentation in R/imabc.R
 \name{imabc}
 \alias{imabc}
-\title{imabc}
+\title{Incremental Mixture Approximate Bayesian Computation (IMABC)}
 \usage{
 imabc(
   priors,
@@ -26,13 +26,16 @@ imabc(
 )
 }
 \arguments{
-\item{priors}{list. A list with all the information required by define_priors and add_priors}
+\item{priors}{A priors object created using define_priors. This contains information regarding the parameters that
+are being calibrated}
 
-\item{targets}{list. A list of the main targets and their subtargets}
+\item{targets}{A targets object created using define_targets. This contains information regarding the target values
+which will be used to evaluate simulated parameters.}
 
-\item{target_fun}{function. A function that takes in parameters and returns the predicted subtarget values}
+\item{target_fun}{A function, that will tranform parameters into target values. To ensure that the function takes in
+the correct values and returns the results correctly it is strongly advised to use define_target_function() for this.}
 
-\item{previous_results}{list. optional.}
+\item{previous_results}{Optional list of results from a previous}
 
 \item{latinHypercube}{Only needed if previous_results not included}
 
@@ -42,5 +45,5 @@ imabc(
 
 }
 \description{
-imabc
+Calibrates a set of parameters following the IMABC method.
 }

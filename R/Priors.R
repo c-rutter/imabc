@@ -209,8 +209,7 @@ add_prior <- function(..., dist_base_name = NULL, density_fn = NULL, quantile_fn
 
 #' @rdname PriorsSpecification
 #'
-#' @param previous_run_priors Optional data.frame. The data.frame read into R from the Metadata file saved from a previous
-#' imabc run.
+#' @param prior_df Optional data.frame. Priors stored as a data.frame or from the results object of a previous run.
 #'
 #' @examples
 #' x1, x2, and x3 reflect three parameters in the mdoel.
@@ -222,8 +221,11 @@ add_prior <- function(..., dist_base_name = NULL, density_fn = NULL, quantile_fn
 #' )
 #'
 #' @export
-define_priors <- function(..., previous_run_priors = NULL) {
+define_priors <- function(..., prior_df = NULL) {
   priors_list <- list(...)
+  if (length(priors_list) > 0 & !is.null(prior_df)) {
+    stop("Currently does not support adding new parameters to an old set of runs")
+  }
 
   # When new priors are defined
   if (length(priors_list) > 0) {
@@ -278,60 +280,9 @@ define_priors <- function(..., previous_run_priors = NULL) {
     attributes(return_priors)$fun_inputs <- fun_inputs
   }
 
-  if (!is.null(previous_run_priors)) {
-    # Pull Prior Specific Information
-    previous_run_priors <- previous_run_priors[previous_run_priors$TYPE == "priors", ]
-    previous_run_priors$TYPE <- NULL
-
-    # Unique priors
-    prior_ids <- unique(previous_run_priors$ID)
-
-    return_priors <- list()
-    # For each parameter
-    for (i1 in prior_ids) {
-      # Find appropriate paramter
-      prior_tmp <- previous_run_priors[previous_run_priors$ID == i1, ]
-
-      # Get user defined inputs
-      fn_inputs <- prior_tmp[grep("^fun_", prior_tmp$INFO), ]
-      fun_in <- as.list(as.numeric(fn_inputs$VALUE))
-      names(fun_in) <- gsub("^fun_", "", fn_inputs$INFO)
-      prior_args <- c(list(dist_base_name = prior_tmp$VALUE[prior_tmp$INFO == "distribution"], parameter_name = i1), fun_in)
-
-      # Get Min/Max values from IMABC if not defined by function inputs
-      minmax <- setdiff(c("mins", "maxs"), names(fun_in))
-      if (length(minmax) > 0) {
-        imabc_minmax <- as.list(as.numeric(prior_tmp$VALUE[prior_tmp$INFO %in% paste0("imabc_", minmax)]))
-        names(imabc_minmax) <- minmax
-      } else {
-        imabc_minmax <- as.null()
-      }
-
-      # Handle fixed parameters
-      if (prior_args$dist_base_name == "fixed") {
-        prior_args$dist_base_name <- NULL
-        prior_args <- c(prior_args, imabc_minmax$maxs)
-        imabc_minmax <- NULL
-      }
-      prior_args <- c(prior_args, imabc_minmax)
-
-      # Add priors to a list
-      return_priors[[i1]] <- do.call(add_prior, arg = prior_args)
-
-      as.priors(previous_run_priors)
-    }
-    # Create a prior object
-    return_priors <- do.call(define_priors, args = return_priors)
-
-    # Update the standard deviation attribute
-    sd <- as.numeric(previous_run_priors$VALUE[previous_run_priors$INFO == "imabc_sds"])
-    names(sd) <- previous_run_priors$ID[previous_run_priors$INFO == "imabc_sds"]
-    attributes(return_priors)$sds <- sd
-    return_priors <- structure(return_priors, class = c("priors", "imabc"))
-  }
-
-  if (length(priors_list) > 0 & !is.null(previous_run_priors)) {
-    stop("Currently does not support adding new parameters to an old set of runs")
+  # If reading from a data.frame or previous imabc run set of results
+  if (!is.null(prior_df)) {
+    return_priors <- as.priors(prior_df)
   }
 
   return(return_priors)
@@ -418,6 +369,7 @@ as.data.frame.priors <- function(priors_list) {
   max <- attr(priors_list, "maxs")
   empirical_sd <- attr(priors_list, "sds")
   out_df <- data.frame(parameter_name, dist_base_name, min, max, empirical_sd)
+  rownames(out_df) <- NULL
   # Remove empirical SD if it hasn't been calculated yet
   if (all(out_df$empirical_sd == 0)) { out_df$empirical_sd <- NULL }
 
@@ -438,12 +390,17 @@ as.data.frame.priors <- function(priors_list) {
     return(df_out)
   })
   fn_inputs <- do.call(rbind, fn_inputs)
-  fn_inputs <- cbind(rownames(fn_inputs), fn_inputs)
-  rownames(fn_inputs) <- NULL
-  colnames(fn_inputs)[1] <- "parameter_name"
 
-  # Merge non-function specific inputs with function specific inputs
-  out_df <- merge(out_df, fn_inputs, by = "parameter_name", sort = FALSE)
+  # Make sure at least one column of inputs has inputs
+  if (any(!is.na(fn_inputs[, 1]))) {
+    fn_inputs <- cbind(rownames(fn_inputs), fn_inputs)
+    fn_inputs <- as.data.frame(fn_inputs)
+    rownames(fn_inputs) <- NULL
+    colnames(fn_inputs)[1] <- "parameter_name"
+
+    # Merge non-function specific inputs with function specific inputs
+    out_df <- merge(out_df, fn_inputs, by = "parameter_name", sort = FALSE)
+  }
 
   return(out_df)
 }

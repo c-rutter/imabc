@@ -1,4 +1,4 @@
-seed_stream <- function(seed_stream_start, length.out) { # same as get.random.seed.strings.R
+seed_stream <- function(seed_stream_start, length.out) {
   # Initialize vector
   stream <- rep(NA_integer_, length.out)
 

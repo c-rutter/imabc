@@ -15,7 +15,7 @@ add_prior(
   parameter_name = NULL
 )
 
-define_priors(..., previous_run_priors = NULL)
+define_priors(..., prior_df = NULL)
 
 as.priors(df, ...)
 }
@@ -35,8 +35,7 @@ info in as.priors) for the prior distribution.}
 \item{parameter_name}{Optional character(1). The name of the parameter (or the column with the parameter_name info in
 as.priors).}
 
-\item{previous_run_priors}{Optional data.frame. The data.frame read into R from the Metadata file saved from a previous
-imabc run.}
+\item{prior_df}{Optional data.frame. Priors stored as a data.frame or from the results object of a previous run.}
 
 \item{df}{data.frame. Each parameter should be a row and each column is an input into add_prior. If a given column doesn't
 relate to a parameter, set its value to NA.}

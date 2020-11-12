@@ -164,6 +164,7 @@ define_target_function <- function(targets, priors, FUN = NULL, use_seed = FALSE
 
   } # ! length(target_funs) > 0 & !is.null(FUN)
 
+  # Add imabc object class to function
   final_function <- structure(final_function, class = c(class(final_function), "imabc"))
 
   return(final_function)
