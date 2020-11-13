@@ -151,7 +151,8 @@ imabc <- function(
   )
 
   # Generate first set of simulated parameters
-  iter_parm_draws$seed <- seed_stream(seed_stream_start, n_rows_init)
+  iter_parm_draws$seed[1:n_draw] <- seed_stream(seed_stream_start, n_draw)
+  seed_stream_start <- as.integer(unlist(strsplit(iter_parm_draws[["seed"]][n_draw], "_")))
   if (!continue_runs) {
     # Generate random inputs for prior distribution calculation
     if (latinHypercube) {
@@ -236,7 +237,7 @@ imabc <- function(
       }
 
       # Store results
-      total_draws <- total_draws + n_draw
+      total_draws <- total_draws + n_draw - sum(iter_parm_draws$step %in% (N_centers + 1))
       iter_sim_target[1:n_draw, (sim_target_names) := iter_sim_results]
       # Evaluate Targets, first based on whether they are in the appropriate range, second by euclidian distance
       iter_target_dist[, (target_distance_names) := eval_targets(sim_targets = iter_sim_target, target_list = targets, criteria = "start")]
@@ -273,18 +274,20 @@ imabc <- function(
 
         # Sort to ensure alignment across all data tables
         center_draw <- sort(center_draw, na.last = TRUE)
-        setorder(iter_parm_draws, iter, draw, step, na.last = TRUE)
-        setorder(good_parm_draws, iter, draw, step, na.last = TRUE)
-        setorder(iter_sim_target, iter, draw, step, na.last = TRUE)
-        setorder(good_sim_target, iter, draw, step, na.last = TRUE)
-        setorder(iter_target_dist, iter, draw, step, na.last = TRUE)
-        setorder(good_target_dist, iter, draw, step, na.last = TRUE)
+        setorder(iter_parm_draws, draw, na.last = TRUE)
+        setorder(good_parm_draws, draw, na.last = TRUE)
+        setorder(iter_sim_target, draw, na.last = TRUE)
+        setorder(good_sim_target, draw, na.last = TRUE)
+        setorder(iter_target_dist, draw, na.last = TRUE)
+        setorder(good_target_dist, draw, na.last = TRUE)
 
         # Replace old center values with current iteration centers
-        good_sim_target[draw %in% center_draw, c("draw", sim_target_names)] <-
-          iter_sim_target[draw %in% center_draw, c("draw", sim_target_names), with = FALSE]
-        good_target_dist[draw %in% center_draw, c("draw", target_distance_names, "n_good")] <-
-          iter_target_dist[draw %in% center_draw, c("draw", target_distance_names, "n_good"), with = FALSE]
+        good_parm_draws[draw %in% center_draw, c("iter", "draw", "step", "seed")] <-
+          iter_parm_draws[draw %in% center_draw, c("iter", "draw", "step", "seed"), with = FALSE]
+        good_sim_target[draw %in% center_draw, c("iter", "draw", "step", sim_target_names)] <-
+          iter_sim_target[draw %in% center_draw, c("iter", "draw", "step", sim_target_names), with = FALSE]
+        good_target_dist[draw %in% center_draw, c("iter", "draw", "step", target_distance_names, "n_good")] <-
+          iter_target_dist[draw %in% center_draw, c("iter", "draw", "step", target_distance_names, "n_good"), with = FALSE]
         good_target_dist$n_good[is.na(good_target_dist$n_good)] <- 0L
 
         # Determine which center draws are still valid (to keep) and which aren't (to remove)
@@ -574,12 +577,12 @@ imabc <- function(
 
       # Create center info objects for calculations
       num_centers <- n_best_draw + n_hiwt
-      center_draw <- c(center_draw_best, center_draw_hiwt)
+      center_draw <- sort(c(center_draw_best, center_draw_hiwt))
       center_next <- as.matrix(good_parm_draws[draw %in% center_draw, all_parm_names, with = FALSE])
 
-      # Calculate number of draws and new steps
-      n_draw <- num_centers*Center_n + num_centers
-      new_steps <- c(rep(1:num_centers, each = Center_n), rep.int((N_centers + 1), num_centers))
+      # Calculate number of new draws and new steps (excluding centers)
+      n_draw <- num_centers*Center_n # + num_centers
+      new_steps <- rep(1:num_centers, each = Center_n) # rep.int((N_centers + 1), num_centers)
 
       # Reset iteration level info
       iter_parm_draws$iter <- iter_sim_target$iter <- iter_target_dist$iter <- main_loop_iter + 1
@@ -600,7 +603,6 @@ imabc <- function(
         sd_next <- matrix(0.5*prior_sds, ncol = n_parms, nrow = num_centers, byrow = TRUE)
         colnames(sd_next) <- names(priors)
         # Perform random draws
-        n_draw <- num_centers*Center_n
         iter_parm_draws[1:n_draw, (all_parm_names) := draw_parms(
           n_add = Center_n,
           mu = center_next[, all_parm_names],
@@ -612,11 +614,10 @@ imabc <- function(
         new_draws <- (total_draws + 1):(total_draws + n_draw)
         iter_parm_draws$draw[1:n_draw] <- iter_target_dist$draw[1:n_draw] <- iter_sim_target$draw[1:n_draw] <- new_draws
         # Set draw seed
-        seed_stream_start <- .Random.seed
         iter_parm_draws$seed[1:n_draw] <- seed_stream(seed_stream_start, n_draw)
+        seed_stream_start <- as.integer(unlist(strsplit(iter_parm_draws[["seed"]][n_draw], "_")))
 
         # Recalculate center
-        center_draw <- sort(center_draw)
         iter_parm_draws[iter_parm_draws$step == (N_centers + 1), (all_parm_names)] <- as.data.table(center_next)
         iter_parm_draws$draw[iter_parm_draws$step == (N_centers + 1) & !is.na(iter_parm_draws$step)] <- center_draw
         iter_sim_target$draw[iter_parm_draws$step == (N_centers + 1) & !is.na(iter_parm_draws$step)] <- center_draw
@@ -766,22 +767,20 @@ imabc <- function(
           break
         }
 
-        # Update iteration parm draws
-        # Which rows should be kept for next iteration
-        keep_rows <- keep_rows | iter_parm_draws$step %in% (N_centers + 1)
+        # Update iteration parm draws with which newly generated rows should be kept for next iteration
         # Reset step column to NA for non-valid rows
         iter_parm_draws$step[!keep_rows] <- iter_target_dist$step[!keep_rows] <- iter_sim_target$step[!keep_rows] <- NA
         # Set draw numbers
         n_draw <- sum(keep_rows)
         new_draws <- (total_draws + 1):(total_draws + n_draw)
         iter_parm_draws$draw[keep_rows] <- iter_target_dist$draw[keep_rows] <- iter_sim_target$draw[keep_rows] <- new_draws
-        # Set draw seed
-        seed_stream_start <- .Random.seed
-        iter_parm_draws$seed[keep_rows] <- seed_stream(seed_stream_start, n_draw)
         # reorder data.tables so NAs are on bottom
-        setorder(iter_parm_draws, iter, step, na.last = TRUE)
-        setorder(iter_sim_target, iter, step, na.last = TRUE)
-        setorder(iter_target_dist, iter, step, na.last = TRUE)
+        setorder(iter_parm_draws, draw, iter, step, na.last = TRUE)
+        setorder(iter_sim_target, draw, iter, step, na.last = TRUE)
+        setorder(iter_target_dist, draw, iter, step, na.last = TRUE)
+        # Set draw seed
+        iter_parm_draws$seed[1:n_draw] <- seed_stream(seed_stream_start, n_draw)
+        seed_stream_start <- as.integer(unlist(strsplit(iter_parm_draws[["seed"]][n_draw], "_")))
 
         # Store results
         if (!is.null(output_directory)) {
@@ -793,10 +792,17 @@ imabc <- function(
         append_to_outfile <- TRUE
 
         # Recalculate centers
-        iter_parm_draws[step == (N_centers + 1), (all_parm_names)] <- as.data.table(center_next)
-        iter_parm_draws[step == (N_centers + 1), ]$draw <- center_draw
-        iter_sim_target[step == (N_centers + 1), ]$draw <- center_draw
-        iter_target_dist[step == (N_centers + 1), ]$draw <- center_draw
+        center_rows <- (n_draw + 1):(n_draw + N_centers)
+        iter_parm_draws[center_rows, (all_parm_names)] <- as.data.table(center_next)
+        iter_parm_draws[center_rows, ]$draw <- center_draw
+        iter_sim_target[center_rows, ]$draw <- center_draw
+        iter_target_dist[center_rows, ]$draw <- center_draw
+        iter_parm_draws[center_rows, ]$step <- N_centers + 1
+        iter_sim_target[center_rows, ]$step <- N_centers + 1
+        iter_target_dist[center_rows, ]$step <- N_centers + 1
+        iter_parm_draws[center_rows, ]$seed <- seed_stream(seed_stream_start, N_centers)
+        seed_stream_start <- as.integer(unlist(strsplit(iter_parm_draws[["seed"]][center_rows[N_centers]], "_")))
+        n_draw <- n_draw + N_centers
 
         # put good_* data tables in draw order
         setorder(good_parm_draws, draw, na.last = TRUE)
