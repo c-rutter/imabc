@@ -552,7 +552,7 @@ imabc <- function(
       n_hiwt <- 0
       center_draw_hiwt <- NULL
       if (length(update_targets) == 0) {
-        max_wt <- max(good_parm_draws$sample_wt[draw %in% in_draws])
+        max_wt <- max(good_parm_draws$sample_wt[good_parm_draws$draw %in% in_draws])
         if (max_wt >= 10/current_good_n) {
           draw_order <- setorder(good_parm_draws[good_row_range, ], -sample_wt, na.last = TRUE)$draw
           n_hiwt <- min(N_centers, length(draw_order))
