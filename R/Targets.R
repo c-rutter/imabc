@@ -435,15 +435,15 @@ as.targets <- function(df, ...) {
       sprintf('as.targets(df, %s = "alternate name")', miss[1]), sep = ""
     ))
   }
-  # Warn the user if no target groups are provided
+  # # Warn the user if no target groups are provided
   groups_var <- "target_groups"
-  if (!groups_var %in% c(col_names_dta, names(col_names_alt))) {
-    warning(paste(
-      "No column for target_groups was found. If this was not intentional, either add a column to the data.frame or point ",
-      "as.targets to the appropriate column like so:\n",
-      'as.targets(df, target_groups = "alternate name")', sep = ""
-    ))
-  }
+  # if (!groups_var %in% c(col_names_dta, names(col_names_alt))) {
+  #   warning(paste(
+  #     "No column for target_groups was found. If this was not intentional, either add a column to the data.frame or point ",
+  #     "as.targets to the appropriate column like so:\n",
+  #     'as.targets(df, target_groups = "alternate name")', sep = ""
+  #   ))
+  # }
 
   # If any alternate names are provided, rename the columns appropriately
   if (length(col_names_alt) > 0) {

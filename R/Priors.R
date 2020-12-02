@@ -337,7 +337,7 @@ as.priors <- function(df, ...) {
     tmp <- dta[i1, , drop = TRUE]
     tmp <- tmp[!is.na(tmp)]
 
-    # Make sure fixed distributions are coverted to single scalar value
+    # Make sure fixed distributions are converted to single scalar value
     if (any(tmp[c("dist_base_name", "density_fn", "quantile_fn")] == "fixed")) {
       # Remove distribution objects
       tmp[c("dist_base_name", "density_fn", "quantile_fn")] <- NULL
@@ -355,7 +355,13 @@ as.priors <- function(df, ...) {
   final_prio_list <- do.call(define_priors, prio_list)
 
   # Add empirical sds if they exist
-
+  if ("empirical_sd" %in% col_names_dta) {
+    # Get sds in proper order with names
+    parms <- names(final_prio_list)
+    sds <- df[["empirical_sd"]][match(parms, df[["parameter_name"]])]
+    names(sds) <- parms
+    attr(final_prio_list, "sds") <- sds
+  }
 
   return(final_prio_list)
 }

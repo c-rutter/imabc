@@ -5,22 +5,23 @@
 \title{Incremental Mixture Approximate Bayesian Computation (IMABC)}
 \usage{
 imabc(
-  priors,
-  targets,
+  priors = NULL,
+  targets = NULL,
   target_fun,
-  previous_results = NULL,
+  output_directory = NULL,
+  output_tag = "timestamp",
   N_start = 1,
-  seed = NULL,
-  latinHypercube = TRUE,
   N_centers = 1,
   Center_n = 50,
   N_post = 100,
   max_iter = 1000,
   N_cov_points = 0,
   sample_inflate = 1,
+  seed = NULL,
+  latinHypercube = TRUE,
   backend_fun = NULL,
-  output_directory = NULL,
-  output_tag = "timestamp",
+  previous_results_dir = NULL,
+  previous_results_tag = NULL,
   verbose = TRUE,
   validate_run = FALSE
 )
@@ -35,11 +36,11 @@ which will be used to evaluate simulated parameters.}
 \item{target_fun}{A function, that will tranform parameters into target values. To ensure that the function takes in
 the correct values and returns the results correctly it is strongly advised to use define_target_function() for this.}
 
-\item{previous_results}{Optional list of results from a previous}
-
 \item{latinHypercube}{Only needed if previous_results not included}
 
 \item{verbose}{}
+
+\item{previous_results}{Optional list of results from a previous}
 }
 \value{
 

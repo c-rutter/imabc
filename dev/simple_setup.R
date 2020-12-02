@@ -238,7 +238,7 @@ backend_fun = NULL
 verbose = T
 output_directory = "dev/outputs/out"
 output_tag = "test"
-validate_run = FALSE
+validate_run = TRUE
 
 # Setup parallel handling
 # registerDoParallel(cores = detectCores() - 1) # cluster auto-closed with foreach
@@ -296,31 +296,40 @@ results <- imabc(
 #   good_target_dist = read.csv(paste(output_directory, "Good_SimulatedDistances_test1.csv", sep = "/")),
 #   mean_cov = read.csv(paste(output_directory, "MeanCovariance_test1.csv", sep = "/"))
 # )
-last_run <- read_previous_results(path = output_directory, tag = "test")
+# last_run <- read_previous_results(path = output_directory, tag = "test")
+#
+#
+#
+# priors = last_run$new_priors # from last calculation (includes empirical SD from beginning of first run)
+# targets = last_run$new_targets # from the end of the last calculation
+# target_fun = target_fun # same as before
+# previous_results = last_run$previous_results # NEW
+#
 
-priors = last_run$new_priors # from last calculation (includes empirical SD from beginning of first run)
-targets = last_run$new_targets # from the end of the last calculation
-target_fun = target_fun # same as before
-previous_results = last_run$previous_results # NEW
-N_start = N_start
-seed = 12346
-latinHypercube = TRUE
-N_centers = N_centers
-Center_n = Center_n
-N_post = N_post
-max_iter = max_iter
-N_cov_points = 0
-sample_inflate = 1.5
-verbose = TRUE
-output_directory = output_directory
-output_tag = "test2"
-validate_run = FALSE
+imabc.args <- list(
+  previous_results_dir = output_directory,
+  previous_results_tag = output_tag,
+  target_fun = target_fun,
+  N_start = N_start,
+  seed = 12346,
+  latinHypercube = TRUE,
+  N_centers = N_centers,
+  Center_n = Center_n,
+  N_post = N_post,
+  max_iter = max_iter,
+  N_cov_points = 0,
+  sample_inflate = 1.5,
+  verbose = TRUE,
+  output_directory = output_directory,
+  output_tag = paste0(output_tag, 2),
+  validate_run = FALSE
+)
+new_results <- do.call(imabc, imabc.args)
 
-new_results <- imabc(
-  priors = last_run$new_priors, # from last calculation (includes empirical SD from beginning of first run)
-  targets = last_run$new_targets, # from the end of the last calculation
+newer_results <- imabc(
+  previous_results_dir = output_directory,
+  previous_results_tag = paste0(output_tag, 2),
   target_fun = target_fun, # same as before
-  previous_results = last_run$previous_results, # NEW
   N_start = N_start,
   seed = 12345,
   latinHypercube = TRUE,
@@ -332,7 +341,7 @@ new_results <- imabc(
   sample_inflate = 1.5,
   verbose = TRUE,
   output_directory = output_directory,
-  output_tag = output_tag,
+  output_tag = paste0(output_tag, 3),
   validate_run = validate_run
 )
 
@@ -340,38 +349,8 @@ new_results <- imabc(
 #########################################################################################################################
 # NEW TO DO #############################################################################################################
 # Test define_priors() when using previous_run_priors
-dt.priors <- data.frame(param_name = NA, param_min = NA, param_max = NA)
-dt.priors[1, ] <- c("infected.count", 60, 380)
-dt.priors[2, ] <- c("susceptible.to.exposed.probability", 0.01, 0.08)
-dt.priors[3, ] <- c("seasonality.multiplier", 0, 0.3)
-dt.priors[4, ] <- c("shielding.scaling", 0.4, 1.0)
-dt.priors[5, ] <- c("isolate.infectivity.household", 0.2, 0.7)
-dt.priors[6, ] <- c("isolate.infectivity.nursinghome", 0.1, 0.7)
-dt.priors[7, ] <- c("d10", 300, 700)
-dt.priors[8, ] <- c("stay.at.home.probability", 0.1, 0.8)
-dt.priors[9, ] <- c("stoe.behavioral.adjustment.probability", 0.01, 0.3)
-dt.priors <- data.table(dt.priors)
 
-# and create the priors list to pass into imabc with:
 
-create.indiv.prior <- function(priors.row){
-  add_prior(
-    parameter_name = priors.row[,param_name],
-    dist_base_name = "unif",
-    min = priors.row[,param_min],
-    max = priors.row[,param_max]
-  )
-}
-
-create.priors <- function(dt.priors){
-  # dt.priors <- fread(priors.path)
-  priors.list <- foreach(i = 1:nrow(dt.priors)) %dopar% {
-    create.indiv.prior(dt.priors[i])
-  }
-  do.call(define_priors,priors.list)
-}
-
-as.data.frame(create.priors(dt.priors))
 #########################################################################################################################
 #########################################################################################################################
 #########################################################################################################################
