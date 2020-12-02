@@ -25,31 +25,68 @@
 #'
 #' @examples
 imabc <- function(
-  priors, # Always needed
-  targets, # Always needed
+  priors = NULL, # Always needed but can be supplied via previous_results_dir
+  targets = NULL, # Always needed but can be supplied via previous_results_dir
   target_fun, # Always needed
-  previous_results = NULL,
+  output_directory = NULL,
+  output_tag = "timestamp",
   N_start = 1,
-  seed = NULL,
-  latinHypercube = TRUE,
   N_centers = 1,
   Center_n = 50,
   N_post = 100,
   max_iter = 1000,
   N_cov_points = 0,
   sample_inflate = 1,
+  seed = NULL,
+  latinHypercube = TRUE,
   backend_fun = NULL,
-  output_directory = NULL,
-  output_tag = "timestamp",
+  previous_results_dir = NULL,
+  previous_results_tag = NULL,
   verbose = TRUE,
   validate_run = FALSE
 ) {
   # Environment setup ---------------------------------------------------------------------------------------------------
+  # Check for priors and targets or previous_results directory
+  if ((is.null(priors) || is.null(targets)) & is.null(previous_results_dir)) {
+    stop("Must provide both a priors object and a targets object or provide a path to previous results.")
+  }
+  # If path to previous results are provided, load the results into environment
+  if (!is.null(previous_results_dir)) {
+    # Warn about using priors/targets from previous results
+    if (!is.null(priors)) {
+      warning("priors object provided is ignored in favor of priors object derived from previous results.")
+    }
+    if (!is.null(targets)) {
+      warning("targets object provided is ignored in favor of targets object derived from previous results.")
+    }
+    # Read in previous results
+    last_run <- read_previous_results(path = previous_results_dir, tag = previous_results_tag)
+    priors <- last_run$new_priors
+    targets <- last_run$new_targets
+    previous_results <- last_run$previous_results
+    continue_runs <- TRUE
+    rm(last_run)
+
+    # Check format of data.tables loaded against objects loaded
+    check_format(
+      imabc_obj = priors,
+      tracking_dt = previous_results$good_parm_draws
+    )
+    check_format(
+      imabc_obj = targets,
+      tracking_dt = previous_results$good_sim_target,
+      dist_dt = previous_results$good_target_dist
+    )
+
+  } else {
+    previous_results <- NULL
+    continue_runs <- FALSE
+  }
+
   # Technical run specifics
   run_timestamp <- Sys.time()
   print_time_fmt <- "%a %b %d %X %Y"
   write_time_fmt <- "%Y%m%d_%H%M%Z"
-  continue_runs <- !is.null(previous_results)
   append_to_outfile <- FALSE
   start_iter <- ifelse(
     continue_runs,
@@ -171,12 +208,11 @@ imabc <- function(
     )
     # Get empirical standard deviation of parameters
     priors <- update_parm_sds(priors, dt = iter_parm_draws, parms = all_parm_names)
-    # Save results
-    if (!is.null(output_directory)) {
-      save_results(list(as.data.frame(priors), priolist_df_outfile), out_dir = output_directory, append = FALSE)
-    }
   } # !continue_runs
-
+  # Save results
+  if (!is.null(output_directory)) {
+    save_results(list(as.data.frame(priors), priolist_df_outfile), out_dir = output_directory, append = FALSE)
+  }
 
   # Print ---------------------------------------------------------------------------------------------------------------
   if (verbose) {
