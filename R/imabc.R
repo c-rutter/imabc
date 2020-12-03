@@ -1,9 +1,30 @@
 #' @title Incremental Mixture Approximate Bayesian Computation (IMABC)
 #'
-#' @description Calibrates a set of parameters following the IMABC method.
+#' @description Calibrates a model using the IMABC algorithm.
 #'
-#' @param target_fun A function that will transform parameters into target values. To ensure that the function takes in
-#' the correct values and returns the results correctly it is strongly advised to use define_target_function for this.
+#' @details
+#' The user specifies the calibrated parameters, their prior distributions, calibration targets with initial and
+#' final acceptance intervals, and the function (i.e., the  model) used to generate targets given calibrated parameters
+#' The algorithm begins by drawing a sample of vectors from the parameter space based on prior distributions.
+#' This initial sample can be drawn using a Latin hypercube. The algorithm identifies and retains parameter
+#' vectors that result in generated targets that are within the current acceptance intervals. The algorithm iteratively
+#' updates this sample and narrows the acceptance intervals until either 1) the algorithm reaches the final
+#' acceptance intervals around each target and identifies the requested sample of parameter vectors that generate
+#' targets within these acceptance intervals, or the algorithm completes the maximum number of iterations.
+#' The algorithm can be restarted to continue iterating.
+#'
+#' A technical description of the imabc algorithm is provided in
+#' Rutter CM, Ozik J, DeYoreo M, Collier N. Microsimulation model calibration using incremental mixture approximate
+#' Bayesian computation. Ann. Appl. Stat. 13 (2019), no. 4, 2189-2212. doi:10.1214/19-AOAS1279.
+#' https://projecteuclid.org/euclid.aoas/1574910041.
+#'
+#' The imabc package implements a small modification to the approach described in the 2019 AOAS paper. In the imabc package,
+#' the user specifies initial and final acceptance intervals directly. This approach is more flexible than the
+#' approach described in the paper and more easily incorporates asymmetric acceptance intervals.
+#'
+#' @param target_fun A function that generate target values given parameters  (i.e., `the model'). The use of
+#' define_target_function is stronlgy advised to ensure that the function takes in the correct values and
+#' correctly returns results.
 #' @param priors A priors object created using define_priors. This contains information regarding the parameters that
 #' are being calibrated. Is ignored if starting from previous results.
 #' @param targets A targets object created using define_targets. This contains information regarding the target values
@@ -14,29 +35,25 @@
 #' the time and date the code was executed.
 #' @param N_start numeric(1). The number of draws to simulate for the first iteration.
 #' @param N_centers numeric(1). The number of centers to use for exploring the parameter space.
-#' @param Center_n numeric(1). The number of points to use for each center
-#' @param N_post numeric(1). The weighted sample that must be achieved using valid parameter values in order to stop algorithm.
-#' @param N_cov_points numeric(1). The number of points to use when determining the covariance between valid parameters
-#' when simulating new parameters to evaluate within for a given center. If 0 (default), uses 25*number of parameters.
+#' @param Center_n numeric(1). The number of points to add around each center
+#' @param N_post numeric(1). The weighted sample size that must be achieved using valid parameter values in order to stop algorithm.
+#' @param N_cov_points numeric(1). The number of points used to estimate the covariance matrix of valid parameters
+#' nearest each center point. The covariance matrix is used when simulating new parameter draws around the center. If 0 (default), uses 25*number of parameters.
 #' @param sample_inflate numeric(1). When generating new results for a given center, how many additional samples should be
-#' simulated to ensure enough valid observations are created for the center.
+#' simulated to ensure enough valid (within range) parameters draws are simulated for the center.
 #' @param max_iter numeric(1). The maximum number of iterations to attempt.
 #' @param seed numeric(1). The seed to set for reproducibility.
 #' @param latinHypercube logical(1). Should algorithm use a Latin Hypercube to generate first set of parameters.
 #' @param backend_fun function. For advanced users only. Lets to user evaluate the target function(s) using their own
-#' backend. i.e. simulate target results with an alternative parallel method. Only necessary if the backend method is
+#' backend, i.e., simulate targets with an alternative parallel method. Only necessary if the backend method is
 #' not compatible with foreach. See details for requirements.
 #' @param previous_results_dir Optional character(1). Path to results stored during a previous run. If the user wishes to
 #' restart a run that didn't complete the calibration, they can continue by using the outputs stored during the previous
 #' run.
 #' @param previous_results_tag Optional character(1). The tag that was added to the previous run output files.
-#' @param verbose logical(1). Prints out info on simulated targets as the model works.
+#' @param verbose logical(1). Prints out progress messages and additional information as the model works.
 #' @param validate_run logical(1). If this is TRUE and an output_directory is specified, the function will save all
 #' parameters generated by the model - even ones that were deemed invalid based on their simulated targets.
-#'
-#' @description Calibrates a set of parameters starting from a set of prior distributions to targets by iteratively evaluating
-#' the quality of parameters based on the target values they generate via a target function(s) and generating new sets
-#' of parameters using the current list of good parameter sets to improve parameter simulation.
 #'
 #' @section Custom Backend Function:
 #' The primary run handler takes each row from the simulated draws and provides the appropriate information to the

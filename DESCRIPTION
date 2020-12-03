@@ -13,4 +13,4 @@ Imports:
     lhs
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
