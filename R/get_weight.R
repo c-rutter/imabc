@@ -1,5 +1,5 @@
 get_weight <- function(parms, parm_names, priors, mixture_file, n) {
-  # Calculate log(prior density) for normally distributed paramters
+  # Calculate log(prior density) for normally distributed parameters
   log_prior_d <- get_log_prior_d(parms = parms, parm_names = parm_names, priors = priors)
   # CM NOTE: See get_mix_dist note
   # Calculate multivariate Normal Density

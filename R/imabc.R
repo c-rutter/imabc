@@ -927,11 +927,13 @@ imabc <- function(
 
     # Save iteration results
     if (!is.null(output_directory)) {
-      save_results(
-        mean_cov[new_rows, c("iter", "step", "center", "B.in", "parm", calibr_parm_names), with = FALSE], meancov_outfile,
-        out_dir = output_directory, append = append_to_outfile
-      )
-      append_to_outfile <- TRUE
+      if (main_loop_iter < end_iter) {
+        save_results(
+          mean_cov[new_rows, c("iter", "step", "center", "B.in", "parm", calibr_parm_names), with = FALSE], meancov_outfile,
+          out_dir = output_directory, append = append_to_outfile
+        )
+        append_to_outfile <- TRUE
+      }
       save_results(
         list(data.frame(info = c("current_iteration", "last_draw"), value = c(main_loop_iter, total_draws)), runmeta_df_outfile),
         list(as.data.frame(targets), targlist_df_outfile),
@@ -948,7 +950,7 @@ imabc <- function(
   } # main_loop_iter in start_iter:end_iter
 
   # Prep final results
-  # Valid Paramters
+  # Valid Parameters
   good_parm_draws <- good_parm_draws[!is.na(draw), ]
   setorder(good_parm_draws, draw, na.last = TRUE)
   # Valid Targets
