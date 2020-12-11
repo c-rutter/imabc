@@ -188,7 +188,7 @@ imabc <- function(
   append_to_outfile <- FALSE
   start_iter <- ifelse(
     continue_runs,
-    as.numeric(previous_results$prev_run_meta$value[previous_results$prev_run_meta$info == "current_iteration"]) + 1,
+    as.numeric(previous_results$prev_run_meta$value[previous_results$prev_run_meta$info == "current_iteration"]),
     1
   )
   end_iter <- (start_iter - 1) + max_iter
@@ -331,9 +331,11 @@ imabc <- function(
     iter_valid_n <- 0
     # What targets are left to update based on stopping bounds
     update_targets <- unique(attr(targets, "update"))
+    # Continuation run first iteration flag
+    is_first_continue_iter <- continue_runs == TRUE & main_loop_iter == start_iter
 
     # Print -------------------------------------------------------------------------------------------------------------
-    if (verbose) {
+    if (verbose & !is_first_continue_iter) {
       header <- sprintf("\n---------- Start Iter %s ----------", main_loop_iter)
       iter_info <- sprintf("Starting at: %s", Sys.time())
       n_info <- sprintf("Current in range draws = %s", current_good_n)
@@ -355,7 +357,7 @@ imabc <- function(
 
     # Evaluate Draws ----------------------------------------------------------------------------------------------------
     # If not a continuing runs first iteration
-    if (!(continue_runs == TRUE & main_loop_iter == start_iter)) {
+    if (!is_first_continue_iter) {
       # Evaluate simulated draws using target function(s)
       parms_to_run <- iter_parm_draws[1:n_draw, c("seed", all_parm_names), with = FALSE]
       iter_sim_results <- run_handler(
@@ -612,7 +614,7 @@ imabc <- function(
       } # ! new_iter_valid_n >= N_cov_points & new_iter_valid_n < current_good_n
 
       # Print -----------------------------------------------------------------------------------------------------------
-      if (verbose) {
+      if (verbose & !is_first_continue_iter) {
         n_info <- sprintf("New in range draws = %s", current_good_n)
         bounds_to_print <- names(attr(targets, "update"))
         bound_info <- lapply(bounds_to_print, FUN = function(x, targ) {
@@ -656,7 +658,7 @@ imabc <- function(
       ESS <- 1/sum(good_parm_draws$sample_wt[good_parm_draws$draw %in% in_draws]^2)
 
       # Print information
-      if (verbose) {
+      if (verbose & !is_first_continue_iter) {
         cat(sprintf("Effective Sample Size is %s", round(ESS, 2)), "\n")
       }
     } # current_good_n >= N_post | length(update_targets) == 0 | (main_loop_iter >= end_iter & current_good_n > 0)
@@ -946,7 +948,7 @@ imabc <- function(
     # The first iteration of a continuing run will essentially repeat all but the target evaluation of the last
     #   iteration of the previous run so no need to save the results
     if (continue_runs == TRUE & main_loop_iter == start_iter) { append_to_outfile <- FALSE }
-    if (verbose) { cat(sprintf("----------- End Iter %s -----------\n", main_loop_iter)) }
+    if (verbose & !is_first_continue_iter) { cat(sprintf("----------- End Iter %s -----------\n", main_loop_iter)) }
   } # main_loop_iter in start_iter:end_iter
 
   # Prep final results

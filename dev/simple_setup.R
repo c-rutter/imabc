@@ -306,7 +306,6 @@ results <- imabc(
 # target_fun = target_fun # same as before
 # previous_results = last_run$previous_results # NEW
 #
-output_tag <- "20201205_0209UTC"
 
 imabc.args <- list(
   previous_results_dir = output_directory,
