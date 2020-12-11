@@ -637,7 +637,7 @@ imabc <- function(
     # Calculate Effective Sample Size -----------------------------------------------------------------------------------
     if ((current_good_n >= N_post | length(update_targets) == 0 | (main_loop_iter >= end_iter & current_good_n > 0)) & main_loop_iter > 1) {
       # Make sure mean and covariance data is in proper format
-      if (continue_runs == TRUE & main_loop_iter == start_iter) {
+      if (is_first_continue_iter) {
         mean_cov <- data.table(previous_results$mean_cov)
       }
       stopifnot("Missing mean_cov object" = exists("mean_cov"))
@@ -947,7 +947,7 @@ imabc <- function(
     }
     # The first iteration of a continuing run will essentially repeat all but the target evaluation of the last
     #   iteration of the previous run so no need to save the results
-    if (continue_runs == TRUE & main_loop_iter == start_iter) { append_to_outfile <- FALSE }
+    if (is_first_continue_iter) { append_to_outfile <- FALSE }
     if (verbose & !is_first_continue_iter) { cat(sprintf("----------- End Iter %s -----------\n", main_loop_iter)) }
   } # main_loop_iter in start_iter:end_iter
 
