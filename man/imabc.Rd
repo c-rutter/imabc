@@ -173,7 +173,7 @@ if validate_run = TRUE, includes:
 \itemize{
 \item SimulatedParameters_tag.csv      = all_iter_parm_draws
 \item SimulatedTargets_tag.csv         = all_iter_sim_target
-\item SimulatedDistances_tags.csv       = all_iter_target_dist
+\item SimulatedDistances_tags.csv      = all_iter_target_dist
 }
 }
 

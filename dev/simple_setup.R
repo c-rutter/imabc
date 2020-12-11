@@ -223,7 +223,8 @@ target_fun(c(x1 = 0.75, x2 = 0.75), targets = targets, priors = priors)
 priors = priors
 targets = targets
 target_fun = target_fun
-previous_results = NULL
+previous_results_dir = NULL
+previous_results_tag = NULL
 N_start = 1000
 seed = 12345
 latinHypercube = TRUE
@@ -305,6 +306,7 @@ results <- imabc(
 # target_fun = target_fun # same as before
 # previous_results = last_run$previous_results # NEW
 #
+output_tag <- "20201205_0209UTC"
 
 imabc.args <- list(
   previous_results_dir = output_directory,
@@ -325,6 +327,23 @@ imabc.args <- list(
   validate_run = FALSE
 )
 new_results <- do.call(imabc, imabc.args)
+
+previous_results_dir = output_directory
+previous_results_tag = output_tag
+target_fun = target_fun
+N_start = N_start
+seed = 12346
+latinHypercube = TRUE
+N_centers = N_centers
+Center_n = Center_n
+N_post = N_post
+max_iter = max_iter
+N_cov_points = 0
+sample_inflate = 1.5
+verbose = TRUE
+output_directory = output_directory
+output_tag = paste0(output_tag, 2)
+validate_run = FALSE
 
 newer_results <- imabc(
   previous_results_dir = output_directory,
