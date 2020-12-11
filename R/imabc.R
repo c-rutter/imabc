@@ -102,7 +102,7 @@
 #' if validate_run = TRUE, includes:
 #' * SimulatedParameters_tag.csv      = all_iter_parm_draws
 #' * SimulatedTargets_tag.csv         = all_iter_sim_target
-#' * SimulatedDistances_tags.csv       = all_iter_target_dist
+#' * SimulatedDistances_tags.csv      = all_iter_target_dist
 #' @md
 #'
 #' @return A list with:
