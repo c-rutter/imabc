@@ -5,7 +5,7 @@
 #'
 #' @param targets targets object. Created using the define_targets function. Available to use within the target function(s)
 #' See Details.
-#' @param priors priors object. Created using the define_targets function. Available to use within the target function(s)
+#' @param priors priors object. Created using the define_priors function. Available to use within the target function(s)
 #' See Details.
 #' @param FUN Optional function. If the user does not define target functions using define_targets, they can specify a
 #' single function here. See Details.
@@ -83,7 +83,7 @@ define_target_function <- function(targets, priors, FUN = NULL, use_seed = FALSE
     # Function applies inputs passed as a named vector to the target functions
     final_function <- function(x, seed = NULL, targets = NULL, priors = NULL) {
       if (use_seed && !is.null(seed)) {
-        set.seed(seed)
+        assign(".Random.seed", seed, envir = .GlobalEnv, inherits = FALSE)
       }
 
       res <- unlist(lapply(expected_names, function(idx, y, x) {
@@ -124,7 +124,7 @@ define_target_function <- function(targets, priors, FUN = NULL, use_seed = FALSE
     # Target functions added with just FUN ------------------------------------------------------------------------------
     final_function <- function(x, seed = NULL, targets, priors) {
       if (use_seed && !is.null(seed)) {
-        set.seed(seed)
+        assign(".Random.seed", seed, envir = .GlobalEnv, inherits = FALSE)
       }
 
       # Which special functions have been defined

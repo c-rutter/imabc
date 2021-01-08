@@ -359,11 +359,12 @@ imabc <- function(
     # If not a continuing runs first iteration
     if (!is_first_continue_iter) {
       # Evaluate simulated draws using target function(s)
-      parms_to_run <- iter_parm_draws[1:n_draw, c("seed", all_parm_names), with = FALSE]
+      parms_to_run <- iter_parm_draws[1:n_draw]
       iter_sim_results <- run_handler(
         parms_to_run = parms_to_run, target_fun = target_fun, all_parm_names = all_parm_names,
         targets = targets, priors = priors, custom_function = backend_fun
       )
+
       # Ensure order of columns matches order of sim_target_names if names exist
       if (all(names(iter_sim_results) %in% colnames(iter_sim_target))) {
         iter_sim_results <- iter_sim_results[, match(sim_target_names, colnames(iter_sim_results))]
@@ -873,12 +874,15 @@ imabc <- function(
 
           # Add simulated values of calibrated data to iter_parm_draws
           iter_parm_draws[draw_rows, (calibr_parm_names) := x]
-          # Add fixed values of calibrated data to iter_parm_draws
-          iter_parm_draws[draw_rows, ] <- parms_from_priors(
-            parm_df = iter_parm_draws[draw_rows, ],
-            name_parms = setdiff(all_parm_names, calibr_parm_names),
-            prior_list = priors, sampling = NULL
-          )
+          # Add fixed values of non calibrated data to iter_parm_draws
+          non_calibr <- setdiff(all_parm_names, calibr_parm_names)
+          if (length(non_calibr) > 0) {
+            iter_parm_draws[draw_rows, ] <- parms_from_priors(
+              parm_df = iter_parm_draws[draw_rows, ],
+              name_parms = non_calibr,
+              prior_list = priors, sampling = NULL
+            )
+          }
         } # center_sim_iter in 1:num_centers
 
         # See how many new valid parameters have been generated
