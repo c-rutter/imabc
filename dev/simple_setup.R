@@ -218,7 +218,8 @@ fn <- function(x1, x2) {
 }
 
 target_fun <- define_target_function(targets, priors, FUN = fn, use_seed = F)
-target_fun(c(x1 = 0.75, x2 = 0.75), targets = targets, priors = priors)
+seed <- .Random.seed
+target_fun(c(x1 = 0.75, x2 = 0.75), targets = targets, priors = priors, seed = seed)
 
 priors = priors
 targets = targets

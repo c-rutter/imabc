@@ -10,7 +10,7 @@ define_target_function(targets, priors, FUN = NULL, use_seed = FALSE)
 \item{targets}{targets object. Created using the define_targets function. Available to use within the target function(s)
 See Details.}
 
-\item{priors}{priors object. Created using the define_targets function. Available to use within the target function(s)
+\item{priors}{priors object. Created using the define_priors function. Available to use within the target function(s)
 See Details.}
 
 \item{FUN}{Optional function. If the user does not define target functions using define_targets, they can specify a
