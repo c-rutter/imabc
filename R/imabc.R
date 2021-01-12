@@ -176,6 +176,14 @@ imabc <- function(
       dist_dt = previous_results$good_target_dist
     )
 
+    # Previous Run info
+    previous_iter <- as.numeric(previous_results$prev_run_meta$value[previous_results$prev_run_meta$info == "current_iteration"])
+    previous_draw <- as.numeric(previous_results$prev_run_meta$value[previous_results$prev_run_meta$info == "last_draw"])
+
+    # Ensure mean_cov has proper number of iterations
+    if (any(previous_results$mean_cov$iter > previous_iter)) {
+      previous_results$mean_cov <- previous_results$mean_cov[previous_results$mean_cov$iter <= previous_iter, ]
+    }
   } else {
     previous_results <- NULL
     continue_runs <- FALSE
@@ -186,19 +194,11 @@ imabc <- function(
   print_time_fmt <- "%a %b %d %X %Y"
   write_time_fmt <- "%Y%m%d_%H%M%Z"
   append_to_outfile <- FALSE
-  start_iter <- ifelse(
-    continue_runs,
-    as.numeric(previous_results$prev_run_meta$value[previous_results$prev_run_meta$info == "current_iteration"]),
-    1
-  )
+  start_iter <- ifelse(continue_runs, previous_iter, 1)
   end_iter <- (start_iter - 1) + max_iter
 
   # Data size specifics
-  total_draws <- ifelse(
-    continue_runs,
-    as.numeric(previous_results$prev_run_meta$value[previous_results$prev_run_meta$info == "last_draw"]),
-    0
-  )
+  total_draws <- ifelse(continue_runs, previous_draw, 0)
   n_draw <- ifelse(continue_runs, N_centers*Center_n, N_start)
   n_rows_init <- max(n_draw, N_centers*Center_n) + N_centers
   n_store <- N_post + N_centers*(Center_n + 1)
