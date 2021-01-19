@@ -107,7 +107,7 @@ define_target_function <- function(targets, priors, FUN = NULL, use_seed = FALSE
           ans <- do.call(y[[idx]], as.list(c(x[reg_inp], special)))
         } else if (length(reg_inp) == 1) {
           # If target function expects a single vector
-          ans <- as.numeric(do.call(y[[idx]], as.list(c(list(x), special))))
+          ans <- do.call(y[[idx]], as.list(c(list(x), special)))
         } else {
           # If target is fixed
           ans <- y[[idx]]()
@@ -149,7 +149,7 @@ define_target_function <- function(targets, priors, FUN = NULL, use_seed = FALSE
         ans <- do.call(FUN, as.list(c(x[reg_inp], special)))
       } else if (length(reg_inp) == 1) {
         # If target function expects a single vector
-        ans <- as.numeric(do.call(FUN, as.list(c(list(x), special))))
+        ans <- do.call(FUN, as.list(c(list(x), special)))
       } else {
         # If targets are fixed
         ans <- FUN()
