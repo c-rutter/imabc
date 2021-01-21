@@ -195,7 +195,7 @@ imabc <- function(
   write_time_fmt <- "%Y%m%d_%H%M%Z"
   append_to_outfile <- FALSE
   start_iter <- ifelse(continue_runs, previous_iter, 1)
-  end_iter <- (start_iter - 1) + max_iter
+  end_iter <- (start_iter - !continue_runs) + max_iter
 
   # Data size specifics
   total_draws <- ifelse(continue_runs, previous_draw, 0)
@@ -362,7 +362,7 @@ imabc <- function(
       parms_to_run <- iter_parm_draws[1:n_draw]
       iter_sim_results <- run_handler(
         parms_to_run = parms_to_run, target_fun = target_fun, all_parm_names = all_parm_names,
-        targets = targets, priors = priors, custom_function = backend_fun
+        targets = targets, priors = priors, verbose = verbose, custom_function = backend_fun
       )
 
       # Ensure order of columns matches order of sim_target_names if names exist
@@ -791,6 +791,9 @@ imabc <- function(
         for (center_sim_iter in 1:num_centers) {
           # center_sim_iter means for calibrated parameters
           sample_mean_i1 <- unlist(sample_mean[center_sim_iter, calibr_parm_names])
+          if (is.null(names(sample_mean_i1))) {
+            names(sample_mean_i1) <- names(priors[calibr_parm_names])
+          }
           # Rows to be filled for a given center
           draw_rows <- ((center_sim_iter - 1)*Center_n + 1):(center_sim_iter*Center_n)
 
@@ -940,8 +943,20 @@ imabc <- function(
         )
         append_to_outfile <- TRUE
       }
+      # Pull complete options except for
+      metaddata <- data.frame(
+        info = c("current_iteration", "last_draw"),
+        value = c(main_loop_iter, total_draws)
+      )
+      # Pull function inputs (except for target_fun, priors, and targets)
+      fn_ops <- mget(names(formals()), sys.frame(sys.nframe()))
+      PickOut <- unlist(lapply(fn_ops, function(x) !(is.function(x) | is.list(x))))
+      fn_ops <- unlist(fn_ops[PickOut])
+      fn_ops <- data.frame(info = names(fn_ops), value = fn_ops, row.names = NULL)
+      metaddata <- rbind(metaddata, fn_ops)
+      # Write out files
       save_results(
-        list(data.frame(info = c("current_iteration", "last_draw"), value = c(main_loop_iter, total_draws)), runmeta_df_outfile),
+        list(metaddata, runmeta_df_outfile),
         list(as.data.frame(targets), targlist_df_outfile),
         list(good_parm_draws, parm_df_outfile),
         list(good_sim_target, simtarg_df_outfile),
@@ -967,10 +982,21 @@ imabc <- function(
   good_target_dist[, (target_distance_names) := lapply(.SD , "abs"), .SDcols = target_distance_names]
   setorder(good_target_dist, draw, na.last = TRUE)
 
+  # Save current iteration and last draw info for restart
+  metaddata <- data.frame(
+    info = c("current_iteration", "last_draw"),
+    value = c(main_loop_iter, total_draws)
+  )
+  # Pull function inputs (except for target_fun, priors, and targets)
+  fn_ops <- mget(names(formals()), sys.frame(sys.nframe()))
+  PickOut <- unlist(lapply(fn_ops, function(x) !(is.function(x) | is.list(x))))
+  fn_ops <- unlist(fn_ops[PickOut])
+  fn_ops <- data.frame(info = names(fn_ops), value = fn_ops, row.names = NULL)
+  metaddata <- rbind(metaddata, fn_ops)
   # Save
   if (!is.null(output_directory)) {
     save_results(
-      list(data.frame(info = c("current_iteration", "last_draw"), value = c(main_loop_iter, total_draws)), runmeta_df_outfile),
+      list(metaddata, runmeta_df_outfile),
       list(as.data.frame(targets), targlist_df_outfile),
       list(good_parm_draws, parm_df_outfile),
       list(good_sim_target, simtarg_df_outfile),
@@ -1011,8 +1037,7 @@ imabc <- function(
       mean_cov = mean_cov,
       priors = priors,
       targets = targets,
-      current_iteration = main_loop_iter,
-      last_draw = total_draws
+      metaddata = metaddata
     )
   } else {
     out_list <- list(
@@ -1022,8 +1047,7 @@ imabc <- function(
       mean_cov = mean_cov,
       priors = priors,
       targets = targets,
-      current_iteration = main_loop_iter,
-      last_draw = total_draws
+      metaddata = metaddata
     )
   }
 

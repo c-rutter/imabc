@@ -115,8 +115,8 @@ priors <- define_priors(
     density_fn = "dtruncnorm",
     mean = 0.5, sd = 0.05, a = x2_min, b = x2_max,
     min = x2_min, max = x2_max # Would otherwise default to -Inf/Inf
-  ),
-  fly = add_prior(0.5)
+  )#,
+  # fly = add_prior(0.5)
 )
 print(priors)
 
@@ -174,6 +174,24 @@ targets <- define_targets(
       # }
     )
   ),
+  group_targets(
+    # group_name = "T3",
+    add_target(
+      target = -1.5,
+      starting_range = -rev(c(1.0, 2.0)),
+      stopping_range = -rev(c(1.49, 1.51))#,
+      # FUN = function(x1, x2) { x1 + x2 + sample(c(-1, 1), 1)*rnorm(1, 0, 0.1) }
+    ),
+    add_target(
+      target = -0.5,
+      starting_range = -rev(c(0.2, 0.9)),
+      stopping_range = -rev(c(0.49, 0.51))#,
+      # FUN = function(x, targets) {
+      #   a <- targets$current_lower_bounds*2
+      #   x[1] * x[2] + sample(c(-1, 1), 1)*rnorm(1, 0, 0.1)
+      # }
+    )
+  ),
   add_target(
     target = 0,
     starting_range = c(-1.0, 1.0),
@@ -209,10 +227,10 @@ fn <- function(x1, x2) {
   res["T2"] <- fn2(x1, x2)
   res["T1"] <- fn1(x1, x2)
 
-  # res["T2"] <- fn2(x[1], x[2])
-  # res["T1"] <- fn1(x[1], x[2])
+  res["T3"] <- -fn1(x1, x2)
+  res["T4"] <- -fn2(x1, x2)
 
-  res["T3"] <- rnorm(1, 0, 0.1)
+  res["T5"] <- rnorm(1, 0, 0.1)
 
   return(res)
 }
@@ -237,13 +255,13 @@ N_cov_points = 50
 sample_inflate = 1.5
 recalc_centers = TRUE
 backend_fun = NULL
-verbose = T
+verbose = TRUE
 output_directory = "dev/outputs/out"
-output_tag = "test"
+output_tag = "tests"
 validate_run = TRUE
 
 # Setup parallel handling
-# registerDoParallel(cores = detectCores() - 1) # cluster auto-closed with foreach
+# registerDoParallel(cores = detectCores() - 4) # cluster auto-closed with foreach
 
 results <- imabc(
   priors = priors,
@@ -265,6 +283,8 @@ results <- imabc(
   validate_run = validate_run
 )
 
+#########################################################################################################################
+# Continue Run Test 1 ###################################################################################################
 # inputs_list <- list(
 #   priors = priors,
 #   targets = targets,
@@ -328,6 +348,8 @@ imabc.args <- list(
 )
 new_results <- do.call(imabc, imabc.args)
 
+#########################################################################################################################
+# Continue Run Test 2 ###################################################################################################
 previous_results_dir = output_directory
 previous_results_tag = output_tag
 target_fun = target_fun
@@ -363,12 +385,6 @@ newer_results <- imabc(
   output_tag = paste0(output_tag, 3),
   validate_run = validate_run
 )
-
-
-#########################################################################################################################
-# NEW TO DO #############################################################################################################
-# Test define_priors() when using previous_run_priors
-
 
 #########################################################################################################################
 #########################################################################################################################
