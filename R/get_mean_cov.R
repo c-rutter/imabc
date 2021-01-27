@@ -3,12 +3,14 @@ get_mean_cov <- function(iter, mu, sd, center, B_in, parm_names) {
   if (is.vector(mu) & length(parm_names) > 1) {
     save_names <- names(mu)
     mu <- matrix(mu, byrow = TRUE, nrow = 1)
+    sd <- matrix(sd, byrow = TRUE, nrow = 1)
     colnames(mu) <- save_names
   } else if (is.vector(mu) & length(parm_names) == 1) {
     mu <- matrix(mu, byrow = TRUE, ncol = 1)
     colnames(mu) <- parm_names
   }
   mu <- data.frame(mu)
+  sd <- data.frame(sd)
 
   # Get data size
   n_parm <- length(parm_names)
@@ -18,7 +20,6 @@ get_mean_cov <- function(iter, mu, sd, center, B_in, parm_names) {
   mu_use <- mu[, which(names(mu) %in% parm_names), drop = FALSE]
 
   # Handle standard deviation in similar manner to means
-  sd <- data.frame(sd)
   names(sd) <- names(mu)
   sd_use <- sd[, which(names(mu) %in% parm_names), drop = FALSE]
 

@@ -782,6 +782,7 @@ imabc <- function(
           mean_cov <- new_mean_cov
           new_rows <- 1:nrow(mean_cov)
         }
+
       } else { # current_good_n < N_cov_points
         # sample MVN points around centers if there are enough points to estimate the cov matrix
         sample_mean <- as.data.frame(center_next)
