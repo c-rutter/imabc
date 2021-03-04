@@ -25,31 +25,102 @@ read_previous_results <- function(path, tag = NULL) {
     )
 
     # Read in inputs needed for run
-    prev_run_meta <- read.csv(paste(path, grep(tag, metadata, value = TRUE)[1], sep = "/"))
-    prev_priors <- read.csv(paste(path, grep(tag, priodata, value = TRUE)[1], sep = "/"))
-    prev_targs <- read.csv(paste(path, grep(tag, targdata, value = TRUE)[1], sep = "/"))
+    prev_run_meta <- tryCatch(
+      read.csv(paste(path, grep(tag, metadata, value = TRUE)[1], sep = "/")),
+      warning = function(w) {
+        stop(sprintf("Can't find RunMetadata_%s.csv in previous_results_dir = %s", tag, path))
+      }
+    )
+    prev_priors <- tryCatch(
+      read.csv(paste(path, grep(tag, priodata, value = TRUE)[1], sep = "/")),
+      warning = function(w) {
+        stop(sprintf("Can't find CurrentPriors_%s.csv in previous_results_dir = %s", tag, path))
+      }
+    )
+    prev_targs <- tryCatch(
+      read.csv(paste(path, grep(tag, targdata, value = TRUE)[1], sep = "/")),
+      warning = function(w) {
+        stop(sprintf("Can't find CurrentTargets_%s.csv in previous_results_dir = %s", tag, path))
+      }
+    )
 
     # Read in Good_* files
     gooddata <- grep(tag, gooddata, value = TRUE)
-    good_parm_draws <- read.csv(paste(path, grep("Parameters", gooddata, value = TRUE)[1], sep = "/"))
-    good_sim_target <- read.csv(paste(path, grep("Targets", gooddata, value = TRUE)[1], sep = "/"))
-    good_target_dist <- read.csv(paste(path, grep("Distances", gooddata, value = TRUE)[1], sep = "/"))
+    good_parm_draws <- tryCatch(
+      read.csv(paste(path, grep("Parameters", gooddata, value = TRUE)[1], sep = "/")),
+      warning = function(w) {
+        stop(sprintf("Can't find Good_SimulatedParameters_%s.csv in previous_results_dir = %s", tag, path))
+      }
+    )
+    good_sim_target <- tryCatch(
+      read.csv(paste(path, grep("Targets", gooddata, value = TRUE)[1], sep = "/")),
+      warning = function(w) {
+        stop(sprintf("Can't find Good_SimulatedTargets_%s.csv in previous_results_dir = %s", tag, path))
+      }
+    )
+    good_target_dist <- tryCatch(
+      read.csv(paste(path, grep("Distances", gooddata, value = TRUE)[1], sep = "/")),
+      warning = function(w) {
+        stop(sprintf("Can't find Good_SimulatedDistances_%s.csv in previous_results_dir = %s", tag, path))
+      }
+    )
 
     # Read in Mean Covariance
-    mean_cov <- read.csv(paste(path, grep(tag, meandata, value = TRUE)[1], sep = "/"))
+    mean_cov <- tryCatch(
+      read.csv(paste(path, grep(tag, meandata, value = TRUE)[1], sep = "/")),
+      warning = function(w) {
+        stop(sprintf("Can't find MeanCovariance_%s.csv in previous_results_dir = %s", tag, path))
+      }
+    )
+
   } else {
     # Read in inputs needed for run
-    prev_run_meta <- read.csv(paste(path, metadata, sep = "/"))
-    prev_priors <- read.csv(paste(path, priodata, sep = "/"))
-    prev_targs <- read.csv(paste(path, targdata, sep = "/"))
+    prev_run_meta <- tryCatch(
+      read.csv(paste(path, metadata, sep = "/")),
+      warning = function(w) {
+        stop(sprintf("Can't find %s in previous_results_dir = %s", "RunMetadata_*.csv", path))
+      }
+    )
+    prev_priors <- tryCatch(
+      read.csv(paste(path, priodata, sep = "/")),
+      warning = function(w) {
+        stop(sprintf("Can't find %s in previous_results_dir = %s", "CurrentPriors_*.csv", path))
+      }
+    )
+    prev_targs <- tryCatch(
+      read.csv(paste(path, targdata, sep = "/")),
+      warning = function(w) {
+        stop(sprintf("Can't find %s in previous_results_dir = %s", "CurrentTargets_*.csv", path))
+      }
+    )
 
     # Read in Good_* files
-    good_parm_draws <- read.csv(paste(path, grep("Parameters", gooddata, value = TRUE), sep = "/"))
-    good_sim_target <- read.csv(paste(path, grep("Targets", gooddata, value = TRUE), sep = "/"))
-    good_target_dist <- read.csv(paste(path, grep("Distances", gooddata, value = TRUE), sep = "/"))
+    good_parm_draws <- tryCatch(
+      read.csv(paste(path, grep("Parameters", gooddata, value = TRUE), sep = "/")),
+      warning = function(w) {
+        stop(sprintf("Can't find %s in previous_results_dir = %s", "Good_SimulatedParameters_*.csv", path))
+      }
+    )
+    good_sim_target <- tryCatch(
+      read.csv(paste(path, grep("Targets", gooddata, value = TRUE), sep = "/")),
+      warning = function(w) {
+        stop(sprintf("Can't find %s in previous_results_dir = %s", "Good_SimulatedTargets_*.csv", path))
+      }
+    )
+    good_target_dist <- tryCatch(
+      read.csv(paste(path, grep("Distances", gooddata, value = TRUE), sep = "/")),
+      warning = function(w) {
+        stop(sprintf("Can't find %s in previous_results_dir = %s", "Good_SimulatedDistances_*.csv", path))
+      }
+    )
 
     # Read in Mean Covariance
-    mean_cov <- read.csv(paste(path, meandata, sep = "/"))
+    mean_cov <- tryCatch(
+      read.csv(paste(path, meandata, sep = "/")),
+      warning = function(w) {
+        stop(sprintf("Can't find %s in previous_results_dir = %s", "MeanCovariance_*.csv", path))
+      }
+    )
   }
 
   # Create Target and prior objects

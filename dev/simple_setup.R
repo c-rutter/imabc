@@ -244,15 +244,15 @@ targets = targets
 target_fun = target_fun
 previous_results_dir = NULL
 previous_results_tag = NULL
-N_start = 1000
+N_start = 50
 seed = 12345
 latinHypercube = TRUE
-N_centers = 10
-Center_n = 50
-N_post = 90
-max_iter = 10
-N_cov_points = 50
-sample_inflate = 1.5
+N_centers = 2
+Center_n = 5
+N_post = 100
+max_iter = 1
+N_cov_points = 26
+sample_inflate = 1
 recalc_centers = TRUE
 backend_fun = NULL
 verbose = TRUE
@@ -344,7 +344,7 @@ imabc.args <- list(
   verbose = TRUE,
   output_directory = output_directory,
   output_tag = paste0(output_tag, 2),
-  validate_run = FALSE
+  validate_run = TRUE
 )
 new_results <- do.call(imabc, imabc.args)
 
