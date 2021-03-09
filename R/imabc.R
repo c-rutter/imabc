@@ -196,6 +196,9 @@ imabc <- function(
     if (any(previous_results$mean_cov$iter > previous_iter)) {
       previous_results$mean_cov <- previous_results$mean_cov[previous_results$mean_cov$iter <= previous_iter, ]
     }
+    # Make sure mean and covariance data is in proper format
+    mean_cov <- data.table(previous_results$mean_cov)
+
   } else {
     previous_results <- NULL
     continue_runs <- FALSE
@@ -205,7 +208,8 @@ imabc <- function(
   run_timestamp <- Sys.time()
   print_time_fmt <- "%a %b %d %X %Y"
   write_time_fmt <- "%Y%m%d_%H%M%Z"
-  append_to_outfile <- FALSE
+  append_meancov_outfile <- FALSE
+  append_iter_outfile <- FALSE
   start_iter <- ifelse(continue_runs, previous_iter, 1)
   end_iter <- (start_iter - !continue_runs) + max_iter
 
@@ -411,8 +415,9 @@ imabc <- function(
             list(iter_parm_draws[!is.na(iter_parm_draws$draw), ], gsub("Good_", "", parm_df_outfile)),
             list(iter_sim_target[!is.na(iter_sim_target$draw), ], gsub("Good_", "", simtarg_df_outfile)),
             list(iter_target_dist[!is.na(iter_target_dist$draw), ], gsub("Good_", "", targdist_df_outfile)),
-            out_dir = output_directory, append = append_to_outfile
+            out_dir = output_directory, append = append_iter_outfile
           )
+          append_iter_outfile <- TRUE
         }
       }
 
@@ -652,12 +657,6 @@ imabc <- function(
 
     # Calculate Effective Sample Size -----------------------------------------------------------------------------------
     if ((current_good_n >= N_post | length(update_targets) == 0 | (main_loop_iter >= end_iter & current_good_n > 0)) & main_loop_iter > 1) {
-      # Make sure mean and covariance data is in proper format
-      if (is_first_continue_iter) {
-        mean_cov <- data.table(previous_results$mean_cov)
-      }
-      stopifnot("Missing mean_cov object" = exists("mean_cov"))
-
       # Calculate sample weight
       good_parm_draws$sample_wt <- 0
       in_draws <- good_target_dist$draw[!is.na(good_target_dist$draw)]
@@ -952,12 +951,17 @@ imabc <- function(
 
     # Save iteration results
     if (!is.null(output_directory)) {
-      if (main_loop_iter < end_iter) {
+      if (main_loop_iter < end_iter || main_loop_iter == 1) {
+        if (append_meancov_outfile) {
+          save_rows <- new_rows
+        } else {
+          save_rows <- 1:nrow(mean_cov)
+        }
         save_results(
-          mean_cov[new_rows, c("iter", "step", "center", "B.in", "parm", calibr_parm_names), with = FALSE], meancov_outfile,
-          out_dir = output_directory, append = append_to_outfile
+          mean_cov[save_rows, c("iter", "step", "center", "B.in", "parm", calibr_parm_names), with = FALSE], meancov_outfile,
+          out_dir = output_directory, append = append_meancov_outfile
         )
-        append_to_outfile <- TRUE
+        append_meancov_outfile <- TRUE
       }
       # Pull complete options except for
       metaddata <- data.frame(
@@ -980,9 +984,6 @@ imabc <- function(
         out_dir = output_directory, append = FALSE
       )
     }
-    # The first iteration of a continuing run will essentially repeat all but the target evaluation of the last
-    #   iteration of the previous run so no need to save the results
-    if (is_first_continue_iter) { append_to_outfile <- FALSE }
     if (verbose & !is_first_continue_iter) { cat(sprintf("----------- End Iter %s -----------\n", main_loop_iter)) }
   } # main_loop_iter in start_iter:end_iter
 
