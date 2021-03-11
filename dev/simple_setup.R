@@ -369,7 +369,7 @@ validate_run = FALSE
 
 newer_results <- imabc(
   previous_results_dir = output_directory,
-  previous_results_tag = paste0(output_tag, 2),
+  previous_results_tag = output_tag,
   target_fun = target_fun, # same as before
   N_start = N_start,
   seed = 12345,
