@@ -12,7 +12,7 @@
 #' @param N_start numeric(1). The number of draws to simulate for the first iteration.
 #' @param N_centers numeric(1). The number of centers to use for exploring the parameter space.
 #' @param Center_n numeric(1). The number of points to add around each center
-#' @param N_cov_points numeric(1). The number of points used to estimate the covariance matrix of valid parameters
+#' @param N_cov_points numeric(1). The minimum number of points used to estimate the covariance matrix of valid parameters
 #' nearest each center point. The covariance matrix is used when simulating new parameter draws around the center. If 0
 #' (default), uses 25*number of parameters.
 #' @param N_post numeric(1). The weighted sample size that must be achieved using valid parameter values in order to stop
@@ -143,7 +143,7 @@ imabc <- function(
   Center_n = 50,
   N_cov_points = 0,
   N_post = 100,
-  sample_inflate = 1,
+  sample_inflate = 1.5,
   max_iter = 1000,
   seed = NULL,
   latinHypercube = TRUE,
@@ -153,7 +153,7 @@ imabc <- function(
   previous_results_dir = NULL,
   previous_results_tag = NULL,
   verbose = TRUE,
-  validate_run = FALSE
+  validate_run = TRUE
 ) {
   # Environment setup ---------------------------------------------------------------------------------------------------
   # Check for priors and targets or previous_results directory
@@ -401,7 +401,7 @@ imabc <- function(
 
       # If user wants to explore results of all simulated parameters
       if (validate_run) {
-        if (!exists("all_iter_parm_draws") | !exists("all_iter_parm_draws") | !exists("all_iter_parm_draws")) {
+        if (!append_iter_outfile) {
           all_iter_parm_draws <- iter_parm_draws[!is.na(iter_parm_draws$draw), ]
           all_iter_sim_target <- iter_sim_target[!is.na(iter_sim_target$draw), ]
           all_iter_target_dist <- iter_target_dist[!is.na(iter_target_dist$draw), ]
@@ -412,7 +412,7 @@ imabc <- function(
         }
         if (!is.null(output_directory)) {
           save_results(
-            list(iter_parm_draws[!is.na(iter_parm_draws$draw), ], gsub("Good_", "", parm_df_outfile)),
+            list(iter_parm_draws[!is.na(iter_parm_draws$draw), ][, scaled_dist:= NULL], gsub("Good_", "", parm_df_outfile)),
             list(iter_sim_target[!is.na(iter_sim_target$draw), ], gsub("Good_", "", simtarg_df_outfile)),
             list(iter_target_dist[!is.na(iter_target_dist$draw), ], gsub("Good_", "", targdist_df_outfile)),
             out_dir = output_directory, append = append_iter_outfile
@@ -656,18 +656,20 @@ imabc <- function(
     } # (current_good_n >= 2*N_cov_points) & length(update_targets) > 0
 
     # Calculate Effective Sample Size -----------------------------------------------------------------------------------
-    if ((current_good_n >= N_post | length(update_targets) == 0 | (main_loop_iter >= end_iter & current_good_n > 0)) & main_loop_iter > 1) {
+    # Only really need weights in these scenarios but will calculate everytime for potential debugging
+    # if ((current_good_n >= N_post | length(update_targets) == 0 | (main_loop_iter >= end_iter & current_good_n > 0)) &
+    if (main_loop_iter > 1) {
       # Calculate sample weight
       good_parm_draws$sample_wt <- 0
       in_draws <- good_target_dist$draw[!is.na(good_target_dist$draw)]
       good_parm_draws[good_parm_draws$draw %in% in_draws, sample_wt :=
-        get_weight(
-          parms = good_parm_draws[draw %in% in_draws, ],
-          parm_names = calibr_parm_names,
-          priors = priors[calibr_parm_names],
-          mixture_file = mean_cov,
-          n = N_start
-        )]
+                        get_weight(
+                          parms = good_parm_draws[draw %in% in_draws, ],
+                          parm_names = calibr_parm_names,
+                          priors = priors[calibr_parm_names],
+                          mixture_file = mean_cov,
+                          n = N_start
+                        )]
 
       # Calculate effective sample size using Kish formula. Here sum(sample_wt) = 1
       ESS <- 1/sum(good_parm_draws$sample_wt[good_parm_draws$draw %in% in_draws]^2)
@@ -699,7 +701,7 @@ imabc <- function(
       #   maximum weight is 10 times greater than expected for a simple random sample from in-range points
       n_hiwt <- 0
       center_draw_hiwt <- NULL
-      if (length(update_targets) == 0) {
+      if (length(update_targets) == 0 & main_loop_iter > 1) {
         max_wt <- max(good_parm_draws$sample_wt[good_parm_draws$draw %in% in_draws])
         if (max_wt >= 10/current_good_n) {
           draw_order <- setorder(good_parm_draws[good_row_range, ], -sample_wt, na.last = TRUE)$draw
@@ -823,17 +825,18 @@ imabc <- function(
             scale = TRUE
           )
 
-          # Find best points based on scaled distance
-          var_data <- good_parm_draws[order(good_parm_draws$scaled_dist)[1:N_cov_points], calibr_parm_names, with = FALSE]
+          # Find nearest points based on scaled distance
+          calc_cov_points <- 1:max(N_cov_points, trunc(current_good_n/N_centers))
+          var_data <- good_parm_draws[order(good_parm_draws$scaled_dist)[calc_cov_points], calibr_parm_names, with = FALSE]
 
           # Find center specific var-cov matrices using N_cov_points closest points
           sample_cov <- parm_covariance(var_data)
 
           # Deal with parameters that don't have any variance
-          if (any(diag(sample_cov) == 0)) {
+          if (any(diag(sample_cov) <= 0.05*prior_sds)) {
             # This occurs when adding a new parameter: it is set to default for all prior draws
             is_zero <- (diag(sample_cov) == 0)
-            sd_next <- 0.5*prior_sds
+            sd_next <- 0.05*prior_sds
             sd_next[!is_zero] <- 0
             diag(sample_cov) <- diag(sample_cov) + (sd_next^2)
           }
@@ -978,7 +981,7 @@ imabc <- function(
       save_results(
         list(metaddata, runmeta_df_outfile),
         list(as.data.frame(targets), targlist_df_outfile),
-        list(good_parm_draws, parm_df_outfile),
+        list(copy(good_parm_draws)[, scaled_dist:= NULL, ], parm_df_outfile),
         list(good_sim_target, simtarg_df_outfile),
         list(good_target_dist, targdist_df_outfile),
         out_dir = output_directory, append = FALSE
@@ -1015,7 +1018,7 @@ imabc <- function(
     save_results(
       list(metaddata, runmeta_df_outfile),
       list(as.data.frame(targets), targlist_df_outfile),
-      list(good_parm_draws, parm_df_outfile),
+      list(copy(good_parm_draws)[, scaled_dist:= NULL], parm_df_outfile),
       list(good_sim_target, simtarg_df_outfile),
       list(good_target_dist, targdist_df_outfile),
       out_dir = output_directory, append = FALSE
@@ -1045,10 +1048,10 @@ imabc <- function(
   # If user wants all intermediate results saved
   if (validate_run) {
     out_list <- list(
-      all_iter_parm_draws = all_iter_parm_draws,
+      all_iter_parm_draws = all_iter_parm_draws[, scaled_dist:= NULL],
       all_iter_sim_target = all_iter_sim_target,
       all_iter_target_dist = all_iter_target_dist,
-      good_parm_draws = good_parm_draws,
+      good_parm_draws = good_parm_draws[, scaled_dist:= NULL],
       good_sim_target = good_sim_target,
       good_target_dist = good_target_dist,
       mean_cov = mean_cov,
@@ -1058,7 +1061,7 @@ imabc <- function(
     )
   } else {
     out_list <- list(
-      good_parm_draws = good_parm_draws,
+      good_parm_draws = good_parm_draws[, scaled_dist:= NULL],
       good_sim_target = good_sim_target,
       good_target_dist = good_target_dist,
       mean_cov = mean_cov,

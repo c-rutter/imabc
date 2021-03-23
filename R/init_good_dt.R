@@ -7,6 +7,10 @@ init_good_dt <- function(final_n, current_n = 0, previous_dt = NULL, cols, type 
 
   # Handle if a previous data.table already exists
   if (!is.null(previous_dt)) {
+    if (type == "parm_draws") {
+      previous_dt$scaled_dist <- NA_real_
+    }
+
     # Handle if we don't need any new rows added to a previous data.table
     if (need_n > 0) {
       dt <- data.table(rbind(previous_dt, init_good_dt(final_n = need_n, cols = cols, type = type)))

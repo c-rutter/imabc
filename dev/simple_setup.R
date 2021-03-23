@@ -250,7 +250,7 @@ latinHypercube = TRUE
 N_centers = 2
 Center_n = 5
 N_post = 100
-max_iter = 1
+max_iter = 10
 N_cov_points = 26
 sample_inflate = 1
 recalc_centers = TRUE
@@ -346,26 +346,27 @@ imabc.args <- list(
   output_tag = paste0(output_tag, 2),
   validate_run = TRUE
 )
+# previous_results_dir = output_directory
+# previous_results_tag = output_tag
+# target_fun = target_fun
+# N_start = N_start
+# seed = 12346
+# latinHypercube = TRUE
+# N_centers = N_centers
+# Center_n = Center_n
+# N_post = N_post
+# max_iter = max_iter
+# N_cov_points = 0
+# sample_inflate = 1.5
+# verbose = TRUE
+# output_directory = output_directory
+# output_tag = paste0(output_tag, 2)
+# validate_run = TRUE
+
 new_results <- do.call(imabc, imabc.args)
 
 #########################################################################################################################
 # Continue Run Test 2 ###################################################################################################
-previous_results_dir = output_directory
-previous_results_tag = output_tag
-target_fun = target_fun
-N_start = N_start
-seed = 12346
-latinHypercube = TRUE
-N_centers = N_centers
-Center_n = Center_n
-N_post = N_post
-max_iter = max_iter
-N_cov_points = 0
-sample_inflate = 1.5
-verbose = TRUE
-output_directory = output_directory
-output_tag = paste0(output_tag, 2)
-validate_run = FALSE
 
 newer_results <- imabc(
   previous_results_dir = output_directory,

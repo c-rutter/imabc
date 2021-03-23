@@ -23,7 +23,7 @@ imabc(
   previous_results_dir = NULL,
   previous_results_tag = NULL,
   verbose = TRUE,
-  validate_run = FALSE
+  validate_run = TRUE
 )
 }
 \arguments{
@@ -43,7 +43,7 @@ which will be used to evaluate simulated parameters. Is ignored if starting from
 
 \item{Center_n}{numeric(1). The number of points to add around each center}
 
-\item{N_cov_points}{numeric(1). The number of points used to estimate the covariance matrix of valid parameters
+\item{N_cov_points}{numeric(1). The minimum number of points used to estimate the covariance matrix of valid parameters
 nearest each center point. The covariance matrix is used when simulating new parameter draws around the center. If 0
 (default), uses 25*number of parameters.}
 

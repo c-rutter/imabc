@@ -355,10 +355,10 @@ as.priors <- function(df, ...) {
   final_prio_list <- do.call(define_priors, prio_list)
 
   # Add empirical sds if they exist
-  if ("empirical_sd" %in% col_names_dta) {
+  if ("prior_sd" %in% col_names_dta) {
     # Get sds in proper order with names
     parms <- names(final_prio_list)
-    sds <- df[["empirical_sd"]][match(parms, df[["parameter_name"]])]
+    sds <- df[["prior_sd"]][match(parms, df[["parameter_name"]])]
     names(sds) <- parms
     attr(final_prio_list, "sds") <- sds
   }
@@ -373,11 +373,11 @@ as.data.frame.priors <- function(priors_list) {
   dist_base_name <- attr(priors_list, "distributions")
   min <- attr(priors_list, "mins")
   max <- attr(priors_list, "maxs")
-  empirical_sd <- attr(priors_list, "sds")
-  out_df <- data.frame(parameter_name, dist_base_name, min, max, empirical_sd)
+  prior_sd <- attr(priors_list, "sds")
+  out_df <- data.frame(parameter_name, dist_base_name, min, max, prior_sd)
   rownames(out_df) <- NULL
   # Remove empirical SD if it hasn't been calculated yet
-  if (all(out_df$empirical_sd == 0)) { out_df$empirical_sd <- NULL }
+  if (all(out_df$prior_sd == 0)) { out_df$prior_sd <- NULL }
 
   # Turn function specific inputs into a data.frame
   fn_inputs <- lapply(attr(priors_list, "fun_inputs"), FUN = function(x) {
