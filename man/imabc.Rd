@@ -13,7 +13,7 @@ imabc(
   Center_n = 50,
   N_cov_points = 0,
   N_post = 100,
-  sample_inflate = 1,
+  sample_inflate = 1.5,
   max_iter = 1000,
   seed = NULL,
   latinHypercube = TRUE,

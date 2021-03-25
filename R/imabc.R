@@ -217,7 +217,7 @@ imabc <- function(
   total_draws <- ifelse(continue_runs, previous_draw, 0)
   n_draw <- ifelse(continue_runs, N_centers*Center_n, N_start)
   n_rows_init <- max(n_draw, N_centers*Center_n) + N_centers
-  n_store <- N_post + N_centers*(Center_n + 1)
+  n_store <- max((N_post + N_centers*(Center_n + 1)), 2*N_cov_points + 1)
   ESS <- 0 # Effective Sample Size
 
   # Create output directory if it doesn't already exist

@@ -93,7 +93,8 @@ unique_names.groups <- function(x, name_vec) {
 
   # Check for uniqueness
   stopifnot(
-    "Names must be unique." = length(current_names) == length(unique(current_names))
+    "Names must be unique." = length(current_names) == length(unique(current_names)),
+    "Object names must be syntactically valid R names - see '?make.names' for more details" = all(current_names %in% make.names(current_names))
   )
 
   return(current_names)
