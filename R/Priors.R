@@ -212,7 +212,7 @@ add_prior <- function(..., dist_base_name = NULL, density_fn = NULL, quantile_fn
 #' @param prior_df Optional data.frame. Priors stored as a data.frame or from the results object of a previous run.
 #'
 #' @examples
-#' x1, x2, and x3 reflect three parameters in the mdoel.
+#' # x1, x2, and x3 reflect three parameters in the mdoel.
 #' x1 <- add_prior(dist_base_name = "norm")
 #' define_priors(
 #'   x1 = x1,
