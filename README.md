@@ -4,7 +4,6 @@
 # IMABC
 
 <!-- badges: start -->
-
 <!-- badges: end -->
 
 ## Installation
@@ -14,7 +13,7 @@ You can install the development version from
 
 ``` r
 # install.packages("devtools")
-# devtools::install_github("jozik/imabc")
+# devtools::install_github("carolyner/imabc")
 # library(imabc)
 ```
 
@@ -43,76 +42,76 @@ components as well.
 The primary function is imabc(). The inputs and their descriptions are
 as follows:
 
-  - priors - list. A list of information on the prior distributions. Two
+-   priors - list. A list of information on the prior distributions. Two
     helper functions exist for properly defining this list. See below
     for more details.
-  - targets - list. A list of information on the targets. Four helper
+-   targets - list. A list of information on the targets. Four helper
     functions exist for properly defining this list as well. See below
     for more details.
-  - target\_fun - function. A function that returns a data set of the
+-   target\_fun - function. A function that returns a data set of the
     predicted targets from simulated parameters. A helper function
     exists for help defining this. See below for more details.
-  - previous\_results - list. A list of results saved during the last
+-   previous\_results - list. A list of results saved during the last
     run. A helper function exist for helping read in all results from a
     previous run. See below for more details.
-  - N\_start - integer. The sample size used for the first set of
+-   N\_start - integer. The sample size used for the first set of
     simulated parameters.
-  - seed - integer. The seed value for reproducibility.
-  - latinHypercube - boolean. Should the first simulated set of
-    paramters use a latinHypercube to generate parameters.
-  - N\_centers - integer. The number of centers to use for simulating
+-   seed - integer. The seed value for reproducibility.
+-   latinHypercube - boolean. Should the first simulated set of
+    parameters use a latinHypercube to generate parameters.
+-   N\_centers - integer. The number of centers to use for simulating
     parameters.
-  - Center\_n - integer. Sample size per center for simulating
+-   Center\_n - integer. Sample size per center for simulating
     parameters (used to be called B).
-  - N\_post - integer. The minimum sample required for stopping the
+-   N\_post - integer. The minimum sample required for stopping the
     simulation before max\_iter is reached.
-  - max\_iter - integer. The maximum number of iterations the code will
+-   max\_iter - integer. The maximum number of iterations the code will
     attempt if N\_post is never reached.
-  - N\_cov\_points - integer. The number of points needed to move from
+-   N\_cov\_points - integer. The number of points needed to move from
     an independent covariance assumption.
-  - sample\_inflate - numeric. When simulating results under certain
+-   sample\_inflate - numeric. When simulating results under certain
     conditions, how much more should the sample be simulated to make
     sure there are parameters within the appropriate bounds. (See
     R/get\_B\_draws.R)
-  - recalc\_centers - boolean. Should the centers be recalculated in
+-   recalc\_centers - boolean. Should the centers be recalculated in
     each iteration.
-  - backend\_fun - function. If the user wishes to use something other
+-   backend\_fun - function. If the user wishes to use something other
     than foreach () %dopar% {} to apply the target function to simulated
     parameters in parallel they may define the function here. The
     minimum requirements are:
-      - The first input is expected to be a data.table where the first
+    -   The first input is expected to be a data.table where the first
         column is called seed followed by columns for the parameters in
         the order and with the names they were given when initialized by
         define\_priors().
-      - The second input is the target function which should be defined
+    -   The second input is the target function which should be defined
         using define\_target\_function().
-      - The third input is a list of other inputs of potential use to
+    -   The third input is a list of other inputs of potential use to
         the evaluation of the parameters and targets. As of right now
         all that is included in this list is all\_parm\_names (which is
         a vector of the parameter names), lower\_bounds and
         upper\_bounds (which are named vectors with the current bounds
         of each target, the names are the target IDs created when using
         define\_targets()).
-      - The return value is a data.table with the estimated targets
+    -   The return value is a data.table with the estimated targets
         values for all simulated parameters
-  - continue\_runs - DEPRECATED. boolean. previous\_results input lets
+-   continue\_runs - DEPRECATED. boolean. previous\_results input lets
     function know when to continue a run. Only does a simple restart (no
     altering targets or parameters between runs).
-  - output\_directory - character. The path where you would like results
+-   output\_directory - character. The path where you would like results
     saved. Defaults to NULL which indicates the current directory is
     where results should be saved. If path doesn’t exist, imabc will try
     to create it.
-  - output\_tag - character. This value is affixed to the end of the
+-   output\_tag - character. This value is affixed to the end of the
     output files to make tracking multiple sets of results stored in the
     same directory easy to differentiate. The default, “timestamp”, is a
     special case where the date and time the run begins is affixed to
     the end of the output files.
-  - verbose - boolean. Should verbose information be printed while the
+-   verbose - boolean. Should verbose information be printed while the
     algorithm is running.
 
 Some additional notes:
 
-  - Regarding parallelization: If the user wishes to take advantage of
+-   Regarding parallelization: If the user wishes to take advantage of
     parallelization they can register a parallel backend before running
     the imabc function (e.g. registerDoParallel(cores = detectCores() -
     1)). imabc() uses foreach to submit parameters to the target
@@ -123,7 +122,7 @@ Some additional notes:
     passed to foreach specifically the user must handle the entire
     submission of runs themselves by defining the backend\_fun option in
     imabc.
-  - At the moment, The distance between simulated targets and set target
+-   At the moment, The distance between simulated targets and set target
     values (desired targets) is calculated following a chisquare
     ((desired - simulated)<sup>2</sup>)/(desired<sup>2</sup>)) except in
     the case where the desired target is 0. For desired targets = 0, the
@@ -132,8 +131,8 @@ Some additional notes:
     lower\_bound\_stop))<sup>2</sup>). If the user wishes to use the
     stopping range to scale all the target distances they can set the
     global option imabc.target\_eval\_distance to “stopping\_range”
-    (i.e. before running imabc, run `options(imabc.target_eval_distance
-    = "stopping_range")`)
+    (i.e. before running imabc, run
+    `options(imabc.target_eval_distance = "stopping_range")`)
 
 ### priors
 
@@ -145,7 +144,7 @@ associated with a specific parameter that is being calibrated. For the
 current version of the code the user should specify at least the
 following things:
 
-  - … - The input(s) to feed into the distribution functions selected,
+-   … - The input(s) to feed into the distribution functions selected,
     if any input is not provided, the default value from the
     distribution functions will be used in its place. Additionally,
     imabc uses min and max values of a parameter for certain
@@ -160,7 +159,7 @@ following things:
     their min/max inputs (e.g. the truncnorm package uses a and b
     respectively. If using truncnorm functions, you will need to specify
     a, b, min, and max to have all these values set properly).
-  - dist\_base\_name, density\_fn, quantile\_fn - character. optional.
+-   dist\_base\_name, density\_fn, quantile\_fn - character. optional.
     The names of the functions that will be used to generate random
     values for the parameters. If the RNG functions follow most standard
     RNG function sets (i.e. follow the same naming scheme as the uniform
@@ -171,7 +170,7 @@ following things:
     supplied, a fixed parameter is created, however, it is not the most
     efficient way to create/use a fixed parameter and is not
     recommended.
-  - parameter\_name - character. optional. The name used to reference
+-   parameter\_name - character. optional. The name used to reference
     this parameter in the target function and in the results files. This
     can also be supplied via define\_priors().
 
@@ -192,8 +191,7 @@ If no name is provided between add\_prior or define\_priors, a unique
 one will be generated following the format V\[0-9\]+. In the target
 function(s), the user can call the parameters using the names that are
 set for each parameter or they can use the order they were created in.
-See below for
-details.
+See below for details.
 
 ``` r
 # If dist_base_name, density_fn, and quantile_fn are NULL, parameter will be fixed
@@ -233,9 +231,9 @@ the targets.
 
 add\_target(): This lets the user define a target. Each target must be a
 list of the following values: target, starting\_range, stopping\_range.
-starting\_range\[1\] \< stopping\_range\[1\] \< target \<
-stopping\_range\[2\] \< starting\_range\[2\] must be satisfied by these
-values. Optionally the user can give the target a name using
+starting\_range\[1\] &lt;= stopping\_range\[1\] &lt;= target &lt;=
+stopping\_range\[2\] &lt;= starting\_range\[2\] must be satisfied by
+these values. Optionally the user can give the target a name using
 target\_name and a target function using FUN. See below for details.
 
 group\_targets(): This lets the user group a set of targets that are to
@@ -274,8 +272,7 @@ min, start max, stop min, stop max. There are default values for what
 these columns should be called but the user can also select which
 columns go with which value.
 
-For example, the user can specify something
-like:
+For example, the user can specify something like:
 
 ``` r
 # If no name is provided, function assigns name based on group and target.
@@ -349,7 +346,7 @@ require heavy computation it can be advantageous to use the target range
 values to fail out of a given test early. To utilize these, the user can
 add inputs for them in their target function(s). If the user is creating
 target functions individually using add\_target(), the user should use
-the input names lower\_bound and upper\_bound (e.g. ). If the user is
+the input names lower\_bound and upper\_bound (e.g. ). If the user is
 creating a single target function using define\_target\_function() they
 would use the plural form, lower\_bounds and upper\_bounds. When
 add\_target() is used, imabc will map the appropriate bounds to the
@@ -389,16 +386,10 @@ target_fun <- define_target_function(targets, priors, FUN = fn, use_seed = FALSE
 
 ## To do
 
-  - Determine where we should place warnings vs errors vs simple prints
-  - Clean code and better name conventions
-  - Document code better/more
-  - Allow for continuing runs
-      - target modification
-      - parameter modification
-  - Allow for fixed vs calibrated parameters - This can be avoided if
-    desired by having all fixed parameter values just be properly
-    defined within the target\_fun by the user.
-  - testing
-      - small noise
-      - large noise (visually inspect which points are good vs bad)
-      - Deterministic function for testing
+-   Allow for continuing runs
+    -   target modification
+    -   parameter modification
+-   testing
+    -   small noise
+    -   large noise (visually inspect which points are good vs bad)
+    -   Deterministic function for testing

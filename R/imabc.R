@@ -133,6 +133,10 @@
 #' * all_iter_sim_target - all simulated target values from the parameters in all_iter_parm_draws
 #' * all_iter_target_dist - all distances based on simulated target results
 #'
+#' @import MASS data.table foreach parallel truncnorm lhs
+#' @importFrom methods formalArgs
+#' @importFrom stats cov dnorm runif sd
+#' @importFrom utils flush.console read.csv read.table setTxtProgressBar txtProgressBar write.table
 #' @export
 imabc <- function(
   target_fun,
@@ -156,6 +160,8 @@ imabc <- function(
   validate_run = TRUE
 ) {
   # Environment setup ---------------------------------------------------------------------------------------------------
+  sample_wt <- tot_dist <- step <- iter <- n_good <- scaled_dist <- draw <- NULL
+
   # Check for priors and targets or previous_results directory
   if ((is.null(priors) || is.null(targets)) & is.null(previous_results_dir)) {
     stop("Must provide both a priors object and a targets object or provide a path to previous results.")
@@ -261,7 +267,7 @@ imabc <- function(
   current_good_n <- ifelse(continue_runs, sum(previous_results$good_target_dist$n_good == n_target_distances, na.rm = TRUE), 0)
 
   # Initialize current iteration distance data.table
-  iter_target_dist <- init_iter_dt(n = n_rows_init, cols = target_distance_names, type = "targ_dists")
+  iter_target_dist <- init_iter_dt(n_row = n_rows_init, cols = target_distance_names, type = "targ_dists")
   iter_target_dist[draw > n_draw, draw := NA]
 
   # Initialize good distance data.table or add rows to previous good results
@@ -275,7 +281,7 @@ imabc <- function(
   sim_target_names <- attr(targets, "target_names")
 
   # Initialize current iteration simulated target data.table
-  iter_sim_target <- init_iter_dt(n = n_rows_init, cols = sim_target_names, type = "sim_targs")
+  iter_sim_target <- init_iter_dt(n_row = n_rows_init, cols = sim_target_names, type = "sim_targs")
   iter_sim_target[draw > n_draw, draw := NA]
 
   # Initialize good distance data.table or add rows to previous good results
@@ -295,7 +301,7 @@ imabc <- function(
   if (N_cov_points == 0) { N_cov_points <- 25*n_parms }
 
   # Initialize current iteration simulated parameters data.table
-  iter_parm_draws <- init_iter_dt(n = n_rows_init, cols = all_parm_names, type = "parm_draws")
+  iter_parm_draws <- init_iter_dt(n_row = n_rows_init, cols = all_parm_names, type = "parm_draws")
   iter_parm_draws[draw > n_draw, draw := NA]
 
   # Initialize good distance data.table or add rows to previous good results
@@ -781,13 +787,13 @@ imabc <- function(
           out = "logical"
         )
         setkey(x, iter, step)
-        B_in <- x[step <= N_centers, list(B.in = sum(in_range, na.rm = TRUE)), by = .(iter, step)]
+        B_in <- x[step <= N_centers, list(B.in = sum(in_range, na.rm = TRUE)), by = list(iter, step)]
         new_mean_cov <- get_mean_cov(
           iter = main_loop_iter + 1,
           mu = center_next[, calibr_parm_names],
           sd = sd_next[, calibr_parm_names],
           center = center_draw,
-          B = B_in,
+          B_in = B_in,
           parm_names = calibr_parm_names
         )
         # If mean_cov has already been created, add new values in. Otherwise create mean_cov with values

@@ -1,5 +1,6 @@
 draw_parms <- function(n_add, mu, sigma, priors_list) {
   # Samples parameters from a truncated normal under the assumption of independence
+  center_id <- NULL
 
   # Make sure mu is a matrix
   if (is.vector(mu)) {

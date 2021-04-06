@@ -1,4 +1,5 @@
 get_sampling_d <- function(parms, parm_names, mixture_file) {
+  parm <- iter <- step <- NULL
   # CM NOTE: See get_mix_dist note
   mean_cov <- get_mix_dist(parm_names, mixture_file)
 

@@ -53,6 +53,17 @@
 #' @return An imabc ready function.
 #'
 #' @examples
+#' priors <- define_priors(
+#'   x1 = add_prior(dist_base_name = "unif"),
+#'   x2 = add_prior(density_fn = "dnorm", mean = 0.5, sd = 0.25)
+#' )
+#' targets <- define_targets(
+#'   T1 = add_target(target = 0.5, starting_range = c(0.2, 0.9), stopping_range = c(0.48, 0.51)),
+#'   add_target(
+#'     target_name = "T2",
+#'     target = 1.5, starting_range = c(1.0, 2.0), stopping_range = c(1.49, 1.51)
+#'   )
+#' )
 #' fn1 <- function(x1, x2) { x1 + x2 + sample(c(-1, 1), 1)*rnorm(1, 0, 0.1) }
 #' fn2 <- function(x1, x2) { x1 * x2 + sample(c(-1, 1), 1)*rnorm(1, 0, 0.1) }
 #' fn <- function(x1, x2) {
@@ -81,7 +92,7 @@ define_target_function <- function(targets, priors, FUN = NULL, use_seed = FALSE
     )
 
     # Function applies inputs passed as a named vector to the target functions
-    final_function <- function(x, seed = NULL, targets = NULL, priors = NULL) {
+    final_function1 <- function(x, seed = NULL, targets = NULL, priors = NULL) {
       if (use_seed && !is.null(seed)) {
         assign(".Random.seed", seed, envir = .GlobalEnv, inherits = FALSE)
       }
@@ -119,10 +130,10 @@ define_target_function <- function(targets, priors, FUN = NULL, use_seed = FALSE
 
       return(res)
     }
-
+    final_function <- final_function1
   } else if (length(target_funs) == 0 & !is.null(FUN)) { # ! length(target_funs) > 0 & is.null(FUN)
     # Target functions added with just FUN ------------------------------------------------------------------------------
-    final_function <- function(x, seed = NULL, targets, priors) {
+    final_function2 <- function(x, seed = NULL, targets = NULL, priors = NULL) {
       if (use_seed && !is.null(seed)) {
         assign(".Random.seed", seed, envir = .GlobalEnv, inherits = FALSE)
       }
@@ -157,7 +168,7 @@ define_target_function <- function(targets, priors, FUN = NULL, use_seed = FALSE
 
       return(ans)
     }
-
+    final_function <- final_function2
   } else if (length(target_funs) > 0 & !is.null(FUN)) { # ! length(target_funs) == 0 & !is.null(FUN)
     # Target functions added through add_targets and FUN ----------------------------------------------------------------
     stop("Adding individual target functions and a main target function is not supported.")

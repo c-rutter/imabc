@@ -1,4 +1,6 @@
 run_handler <- function(parms_to_run, all_parm_names, target_fun, custom_function = NULL, verbose = TRUE, ...) {
+  i1 <- NULL
+
   # Extra inputs, currently includes targets and priors object
   other_inputs <- list(...)
 

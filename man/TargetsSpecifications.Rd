@@ -36,7 +36,8 @@ calibrated.}
 
 \item{...}{In group_targets: The results of add_target calls - one for each target within a grouping of targets. See
 Target Groups. In define_targets: The results of add_target and/or group_target calls - one for each target or grouping
-of targets.}
+of targets. In as.targets: alternate column names for the target settings can be any one of target_names, targets,
+current_lower_bounds, current_upper_bounds, stopping_lower_bounds, or stopping_upper_bounds}
 
 \item{group_name}{Optional character(1). The name for the grouping of targets.}
 
@@ -44,24 +45,6 @@ of targets.}
 
 \item{df}{data.frame. Each row is a target and the columns represent the different pieces of information relevant to
 the targets.}
-
-\item{groups_var}{Optional character(1). The name of the column that represents what group a target is a part of.}
-
-\item{names_var}{character(1). The name of the column that represents the targets name.}
-
-\item{targets_var}{character(1). The name of the column that represents the target value.}
-
-\item{current_lower_bounds_var}{character(1). The name of the column that represents the starting or current lower bound
-of the target range.}
-
-\item{current_upper_bounds_var}{character(1). The name of the column that represents the starting or current upper bound
-of the target range.}
-
-\item{stopping_lower_bounds_var}{character(1). The name of the column that represents the final lower bound of the target
-range.}
-
-\item{stopping_upper_bounds_var}{character(1). The name of the column that represents the final upper bound of the target
-range.}
 }
 \value{
 A targets imabc object.

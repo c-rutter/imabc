@@ -65,6 +65,17 @@ if you didn't provide names, you can find the generated names using `attr(target
 not named, the order of the results in the vector must match the order the targets were added in define_targets.
 }
 \examples{
+priors <- define_priors(
+  x1 = add_prior(dist_base_name = "unif"),
+  x2 = add_prior(density_fn = "dnorm", mean = 0.5, sd = 0.25)
+)
+targets <- define_targets(
+  T1 = add_target(target = 0.5, starting_range = c(0.2, 0.9), stopping_range = c(0.48, 0.51)),
+  add_target(
+    target_name = "T2",
+    target = 1.5, starting_range = c(1.0, 2.0), stopping_range = c(1.49, 1.51)
+  )
+)
 fn1 <- function(x1, x2) { x1 + x2 + sample(c(-1, 1), 1)*rnorm(1, 0, 0.1) }
 fn2 <- function(x1, x2) { x1 * x2 + sample(c(-1, 1), 1)*rnorm(1, 0, 0.1) }
 fn <- function(x1, x2) {

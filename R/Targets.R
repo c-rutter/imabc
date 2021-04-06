@@ -3,7 +3,8 @@
 #'
 #' @param ... In group_targets: The results of add_target calls - one for each target within a grouping of targets. See
 #' Target Groups. In define_targets: The results of add_target and/or group_target calls - one for each target or grouping
-#' of targets.
+#' of targets. In as.targets: alternate column names for the target settings can be any one of target_names, targets,
+#' current_lower_bounds, current_upper_bounds, stopping_lower_bounds, or stopping_upper_bounds
 #'
 #' @description Helper functions that can be used to create an imabc targets object used by imabc().
 #'
@@ -391,17 +392,6 @@ define_targets <- function(..., target_df = NULL) {
 #'
 #' @param df data.frame. Each row is a target and the columns represent the different pieces of information relevant to
 #' the targets.
-#' @param groups_var Optional character(1). The name of the column that represents what group a target is a part of.
-#' @param names_var character(1). The name of the column that represents the targets name.
-#' @param targets_var character(1). The name of the column that represents the target value.
-#' @param current_lower_bounds_var character(1). The name of the column that represents the starting or current lower bound
-#' of the target range.
-#' @param current_upper_bounds_var character(1). The name of the column that represents the starting or current upper bound
-#' of the target range.
-#' @param stopping_lower_bounds_var character(1). The name of the column that represents the final lower bound of the target
-#' range.
-#' @param stopping_upper_bounds_var character(1). The name of the column that represents the final upper bound of the target
-#' range.
 #'
 #' @examples
 #' df <- data.frame(
@@ -505,19 +495,19 @@ as.targets <- function(df, ...) {
 }
 
 #' @export
-as.data.frame.targets <- function(targets_list) {
+as.data.frame.targets <- function(x, ...) {
   # Get all values
-  target_names <- attr(targets_list, "target_names")
-  targets <- targets_list$targets
-  current_lower_bounds <- targets_list$current_lower_bounds
-  current_upper_bounds <- targets_list$current_upper_bounds
-  stopping_lower_bounds <- targets_list$stopping_lower_bounds
-  stopping_upper_bounds <- targets_list$stopping_upper_bounds
+  target_names <- attr(x, "target_names")
+  targets <- x$targets
+  current_lower_bounds <- x$current_lower_bounds
+  current_upper_bounds <- x$current_upper_bounds
+  stopping_lower_bounds <- x$stopping_lower_bounds
+  stopping_upper_bounds <- x$stopping_upper_bounds
 
   # Handle grouped vs non-grouped
-  if (any(attr(targets_list, "grouped_targets"))) {
-    target_groups <- attr(targets_list, "target_groups")
-    target_groups[!attr(targets_list, "grouped_targets")] <- NA
+  if (any(attr(x, "grouped_targets"))) {
+    target_groups <- attr(x, "target_groups")
+    target_groups[!attr(x, "grouped_targets")] <- NA
 
     out_df <- data.frame(
       target_names, target_groups, targets,
@@ -584,25 +574,26 @@ as.data.frame.targets <- function(targets_list) {
 }
 
 #' @export
-print.grouped <- function(t, digits = getOption("digits")) {
+print.grouped <- function(x, ...) {
+  digits <- getOption("digits")
   # Give non-grouped targets an unique group ID to handle printing scenarios
   random_string <- "ufkwnbiusheb"
-  group_ids <- attr(t, "target_groups")
-  group_ids[!attr(t, "grouped_target")] <- paste0(random_string, which(!attr(t, "grouped_target")))
+  group_ids <- attr(x, "target_groups")
+  group_ids[!attr(x, "grouped_target")] <- paste0(random_string, which(!attr(x, "grouped_target")))
 
   disp <- t(data.frame(
-    t$current_lower_bounds,
-    t$stopping_lower_bounds,
-    t$targets,
-    t$stopping_upper_bounds,
-    t$current_upper_bounds
+    x$current_lower_bounds,
+    x$stopping_lower_bounds,
+    x$targets,
+    x$stopping_upper_bounds,
+    x$current_upper_bounds
   ))
   disp <- data.frame(
     cols = c("Current Lower Bounds", "Lower Stopping Bounds", "Target", "Upper Stopping Bounds", "Current Upper Bounds"),
     disp
   )
 
-  cols <- split(attr(t, "target_names"), group_ids)
+  cols <- split(attr(x, "target_names"), group_ids)
   # Fix order
   cols <- cols[match(unique(group_ids), names(cols))]
 
@@ -619,17 +610,19 @@ print.grouped <- function(t, digits = getOption("digits")) {
     cat("\n")
   }
 
-  invisible(t)
+  invisible(x)
 }
 
 #' @export
-print.targets <- function(t, digits = getOption("digits")) {
+print.targets <- function(x, ...) {
+  digits <- getOption("digits")
+
   disp <- t(data.frame(
-    t$current_lower_bounds,
-    t$stopping_lower_bounds,
-    t$targets,
-    t$stopping_upper_bounds,
-    t$current_upper_bounds
+    x$current_lower_bounds,
+    x$stopping_lower_bounds,
+    x$targets,
+    x$stopping_upper_bounds,
+    x$current_upper_bounds
   ))
   disp <- data.frame(
     cols = c("Current Lower Bounds", "Lower Stopping Bounds", "Target", "Upper Stopping Bounds", "Current Upper Bounds"),
@@ -638,7 +631,7 @@ print.targets <- function(t, digits = getOption("digits")) {
   colnames(disp)[1] <- ""
   print(disp, row.names = FALSE)
 
-  invisible(t)
+  invisible(x)
 }
 
 

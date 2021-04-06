@@ -1,4 +1,6 @@
 get_mean_cov <- function(iter, mu, sd, center, B_in, parm_names) {
+  step <- NULL
+
   # Convert mu to a matrix if it is currently a vector
   if (is.vector(mu) & length(parm_names) > 1) {
     save_names <- names(mu)

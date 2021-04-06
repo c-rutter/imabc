@@ -1,4 +1,6 @@
 init_iter_dt <- function(n_row, cols, type = c("parm_draws", "targ_dists", "sim_targs")) {
+  seed <- scaled_dist <- sample_wt <- tot_dist <- n_good <- NULL
+
   # Type to return
   type <- match.arg(type)
 

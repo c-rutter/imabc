@@ -294,13 +294,27 @@ define_priors <- function(..., prior_df = NULL) {
 #' relate to a parameter, set its value to NA.
 #'
 #' @examples
+#' x1_min <- 0.1
+#' x2_min <- 0.5
+#' x1_max <- 0.9
+#' x2_max <- 1.1
 #' df <- data.frame(
-#'   parameter_name = c("x1", "x2", "x3"), dist_base_name = c("unif", NA, NA), density_fn = c(NA, "dtruncnorm", NA),
-#'   quantile_fn = c(NA, NA, "qnorm"), mean = c(NA, 0.75, NA), sd = c(NA, 0.05, NA), min = c(x1_min, x2_min, NA),
-#'   max = c(x1_max, x2_max, NA), a = c(NA, x2_min, NA), b = c(NA, x2_max, NA)
+#'   name_var = c("x1", "x2", "x3"),
+#'   dist_var = c("unif", NA, NA),
+#'   density_var = c(NA, "dtruncnorm", NA),
+#'   quantile_var = c(NA, NA, "qnorm"),
+#'   mean = c(NA, 0.75, 0.5),
+#'   sd = c(NA, 0.05, NA),
+#'   min = c(x1_min, x2_min, NA),
+#'   max = c(x1_max, x2_max, NA),
+#'   a = c(NA, x2_min, NA),
+#'   b = c(NA, x2_max, NA)
 #' )
-#' as.priors(df, name_var = "parameter_name", dist_var = "dist_base_name", density_var = "density_fn", quantile_var = "quantile_fn")
-#'
+#' as.priors(
+#'   df,
+#'   parameter_name = "name_var", dist_base_name = "dist_var",
+#'   density_fn = "density_var", quantile_fn = "quantile_var"
+#' )
 #' @export
 as.priors <- function(df, ...) {
   # Columns: parameter_name = NULL, dist_base_name = NULL, density_fn = NULL, quantile_fn = NULL
@@ -367,20 +381,20 @@ as.priors <- function(df, ...) {
 }
 
 #' @export
-as.data.frame.priors <- function(priors_list) {
+as.data.frame.priors <- function(x, ...) {
   # Put non-function specific inputs into data.frame
-  parameter_name <- names(priors_list)
-  dist_base_name <- attr(priors_list, "distributions")
-  min <- attr(priors_list, "mins")
-  max <- attr(priors_list, "maxs")
-  prior_sd <- attr(priors_list, "sds")
+  parameter_name <- names(x)
+  dist_base_name <- attr(x, "distributions")
+  min <- attr(x, "mins")
+  max <- attr(x, "maxs")
+  prior_sd <- attr(x, "sds")
   out_df <- data.frame(parameter_name, dist_base_name, min, max, prior_sd)
   rownames(out_df) <- NULL
   # Remove empirical SD if it hasn't been calculated yet
   if (all(out_df$prior_sd == 0)) { out_df$prior_sd <- NULL }
 
   # Turn function specific inputs into a data.frame
-  fn_inputs <- lapply(attr(priors_list, "fun_inputs"), FUN = function(x) {
+  fn_inputs <- lapply(attr(x, "fun_inputs"), FUN = function(x) {
     fn_in <- names(x$fun_inputs)
     df_out <- NA
     if (!is.null(fn_in)) {
@@ -445,26 +459,27 @@ as.data.frame.priors <- function(priors_list) {
 }
 
 #' @export
-print.priors <- function(p, digits = getOption("digits")) {
-  n_parms <- length(p)
-  parm_names <- names(p)
+print.priors <- function(x, ...) {
+  digits <- getOption("digits")
+  n_parms <- length(x)
+  parm_names <- names(x)
 
   cat(sprintf("There are %s defined parameters.\n", n_parms))
-  p_text <- lapply(parm_names, FUN = function(x, p) {
-    dist_text <- sprintf("Distribution base name: %s", attr(p, "distributions")[x])
-    fun_text <- sprintf("User specified inputs: %s", attr(p, "fun_inputs")[x])
+  p_text <- lapply(parm_names, FUN = function(y, x) {
+    dist_text <- sprintf("Distribution base name: %s", attr(x, "distributions")[y])
+    fun_text <- sprintf("User specified inputs: %s", attr(x, "fun_inputs")[y])
     fun_text <- sub("(.*)(list\\(fun_inputs = c*\\(*)(.*)(\\))", "\\1\\3", fun_text, perl = T)
     fun_text <- sub("\\)", "", fun_text)
     range_text <- sprintf("Allowable range: %s - %s",
-                          format(attr(p, "mins")[x], digits = digits),
-                          format(attr(p, "maxs")[x], digits = digits))
-    sd_text <- sprintf("Empirical Standard Deviation: %s", format(attr(p, "sds")[x], digits = digits))
+                          format(attr(x, "mins")[y], digits = digits),
+                          format(attr(x, "maxs")[y], digits = digits))
+    sd_text <- sprintf("Empirical Standard Deviation: %s", format(attr(x, "sds")[y], digits = digits))
 
     full_text <- paste(dist_text, fun_text, range_text, sd_text, sep = "\n")
-  }, p = p)
+  }, x = x)
   cat(
     paste(sprintf("\nParameter %s has the following specifications:", parm_names), p_text, sep = "\n", collapse = "\n")
   )
 
-  invisible(p)
+  invisible(x)
 }

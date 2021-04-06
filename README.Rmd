@@ -23,7 +23,7 @@ knitr::opts_chunk$set(
 You can install the development version from [GitHub](https://github.com/) with:
 ``` r
 # install.packages("devtools")
-# devtools::install_github("jozik/imabc")
+# devtools::install_github("carolyner/imabc")
 # library(imabc)
 ```
 
@@ -57,7 +57,7 @@ The primary function is imabc(). The inputs and their descriptions are as follow
 * previous_results - list. A list of results saved during the last run. A helper function exist for helping read in all results from a previous run. See below for more details.
 * N_start - integer. The sample size used for the first set of simulated parameters.
 * seed - integer. The seed value for reproducibility.
-* latinHypercube - boolean. Should the first simulated set of paramters use a latinHypercube to generate parameters.
+* latinHypercube - boolean. Should the first simulated set of parameters use a latinHypercube to generate parameters.
 * N_centers - integer. The number of centers to use for simulating parameters.
 * Center_n - integer. Sample size per center for simulating parameters (used to be called B).
 * N_post - integer. The minimum sample required for stopping the simulation before max_iter is reached.
@@ -215,6 +215,3 @@ target_fun <- define_target_function(targets, priors, FUN = fn, use_seed = FALSE
   * small noise
   * large noise (visually inspect which points are good vs bad)
   * Deterministic function for testing
-
-
-

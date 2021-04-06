@@ -87,7 +87,7 @@ add_prior(dist_base_name = "norm")
 add_prior(density_fn = "dnorm", mean = 50, sd = 10)
 add_prior(quantile_fn = "qnorm", min = 0, max = 1)
 
-x1, x2, and x3 reflect three parameters in the mdoel.
+# x1, x2, and x3 reflect three parameters in the mdoel.
 x1 <- add_prior(dist_base_name = "norm")
 define_priors(
   x1 = x1,
@@ -95,11 +95,25 @@ define_priors(
   add_prior(parameter_name = "x3", quantile_fn = "qnorm", min = 0, max = 1)
 )
 
+x1_min <- 0.1
+x2_min <- 0.5
+x1_max <- 0.9
+x2_max <- 1.1
 df <- data.frame(
-  parameter_name = c("x1", "x2", "x3"), dist_base_name = c("unif", NA, NA), density_fn = c(NA, "dtruncnorm", NA),
-  quantile_fn = c(NA, NA, "qnorm"), mean = c(NA, 0.75, NA), sd = c(NA, 0.05, NA), min = c(x1_min, x2_min, NA),
-  max = c(x1_max, x2_max, NA), a = c(NA, x2_min, NA), b = c(NA, x2_max, NA)
+  name_var = c("x1", "x2", "x3"),
+  dist_var = c("unif", NA, NA),
+  density_var = c(NA, "dtruncnorm", NA),
+  quantile_var = c(NA, NA, "qnorm"),
+  mean = c(NA, 0.75, 0.5),
+  sd = c(NA, 0.05, NA),
+  min = c(x1_min, x2_min, NA),
+  max = c(x1_max, x2_max, NA),
+  a = c(NA, x2_min, NA),
+  b = c(NA, x2_max, NA)
 )
-as.priors(df, name_var = "parameter_name", dist_var = "dist_base_name", density_var = "density_fn", quantile_var = "quantile_fn")
-
+as.priors(
+  df,
+  parameter_name = "name_var", dist_base_name = "dist_var",
+  density_fn = "density_var", quantile_fn = "quantile_var"
+)
 }
