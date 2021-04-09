@@ -232,7 +232,9 @@ imabc <- function(
   }
 
   # Randomization method (must be L'Ecuyer-CMRG for parallelization)
-  RNGkind(kind = "L'Ecuyer-CMRG", normal.kind = NULL)
+  og_kind <- RNGkind()
+  RNGkind(kind = "L'Ecuyer-CMRG")
+  on.exit(RNGkind(kind = og_kind[1], normal.kind = og_kind[2], sample.kind = og_kind[3]), add = TRUE)
   set.seed(seed)
   seed_stream_start <- .Random.seed
 

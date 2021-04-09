@@ -32,13 +32,14 @@ Authors@R:
         comment = c(ORCID = "0000-0002-2376-4156")
       )
     )
-Description: IMABC is a likelihood-free method for estimating the parameters of complex models that results in a 
-    simulated sample from the posterior distribution of model parameters given targets. IMABC begins with a accept/reject 
-    ABC step applied to a sample of points from the prior distribution of model parameters. Accepted points result in model 
-    predictions that are within the initially specified tolerance intervals around the target points. The sample is 
-    iteratively updated by drawing additional points from a mixture of multivariate normal distributions, accepting points 
-    within tolerance intervals. As the algorithm proceeds, the acceptance intervals are narrowed. The algorithm returns 
-    a set of points and sampling weights that account for the adaptive sampling scheme.
+Description: Provides functionality to perform a likelihood-free method for estimating the parameters of complex models
+    that results in a simulated sample from the posterior distribution of model parameters given targets. The method begins
+    with a accept/reject approximate bayes computation (ABC) step applied to a sample of points from the prior distribution
+    of model parameters. Accepted points result in model predictions that are within the initially specified tolerance
+    intervals around the target points. The sample is iteratively updated by drawing additional points from a mixture of
+    multivariate normal distributions, accepting points within tolerance intervals. As the algorithm proceeds, the
+    acceptance intervals are narrowed. The algorithm returns a set of points and sampling weights that account for the
+    adaptive sampling scheme. For more details see Rutter, Ozik, DeYoreo, and Collier (2018) <arXiv:1804.02090>.
 License: GPL-3
 URL: https://github.com/carolyner/imabc
 BugReports: https://github.com/carolyner/imabc/issues

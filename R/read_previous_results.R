@@ -6,9 +6,19 @@
 #' @param tag Optional character(1). If multiple runs have been saved to a single path, provide the tag that differentiates them.
 #'
 #' @note tag is required if multiple sets of results are stored in a single location.
+#' @note While the output of this function are necessary for a restart, the user does not need to use this function for
+#'   restarting a calibration. imabc() handles this function for the user via the previous_results_* input options.
+#'
+#' @return A list with a priors object, a targets object, and a list of data.frames needed to continue a calibration with
+#'   imabc().
 #'
 #' @export
 read_previous_results <- function(path, tag = NULL) {
+  old_saf <- getOption("stringsAsFactors")
+  if (!is.null(old_saf)) {
+    options(stringsAsFactors = FALSE)
+    on.exit(options(stringsAsFactors = old_saf), add = TRUE)
+  }
   # Get files in path
   files_to_read <- sort(list.files(path))
   metadata <- grep("RunMetadata", files_to_read, value = TRUE)

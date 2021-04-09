@@ -94,7 +94,13 @@ define_target_function <- function(targets, priors, FUN = NULL, use_seed = FALSE
     # Function applies inputs passed as a named vector to the target functions
     final_function1 <- function(x, seed = NULL, targets = NULL, priors = NULL) {
       if (use_seed && !is.null(seed)) {
+        og_seed <- .GlobalEnv$.Random.seed
         assign(".Random.seed", seed, envir = .GlobalEnv, inherits = FALSE)
+        if (is.null(og_seed)) {
+          on.exit(rm(".Random.seed", envir = globalenv()), add = TRUE)
+        } else {
+          on.exit(assign('.Random.seed', og_seed, envir = .GlobalEnv), add = TRUE)
+        }
       }
 
       res <- unlist(lapply(expected_names, function(idx, y, x) {
@@ -135,9 +141,14 @@ define_target_function <- function(targets, priors, FUN = NULL, use_seed = FALSE
     # Target functions added with just FUN ------------------------------------------------------------------------------
     final_function2 <- function(x, seed = NULL, targets = NULL, priors = NULL) {
       if (use_seed && !is.null(seed)) {
+        og_seed <- .GlobalEnv$.Random.seed
         assign(".Random.seed", seed, envir = .GlobalEnv, inherits = FALSE)
+        if (is.null(og_seed)) {
+          on.exit(rm(".Random.seed", envir = globalenv()), add = TRUE)
+        } else {
+          on.exit(assign('.Random.seed', og_seed, envir = .GlobalEnv), add = TRUE)
+        }
       }
-
       # Which special functions have been defined
       internal_opts <- c("targets", "priors")
       # All inputs into a given function

@@ -11,9 +11,16 @@ read_previous_results(path, tag = NULL)
 
 \item{tag}{Optional character(1). If multiple runs have been saved to a single path, provide the tag that differentiates them.}
 }
+\value{
+A list with a priors object, a targets object, and a list of data.frames needed to continue a calibration with
+  imabc().
+}
 \description{
 Searches the files found in path for the files saved by an imabc run and reads them into the current environment.
 }
 \note{
 tag is required if multiple sets of results are stored in a single location.
+
+While the output of this function are necessary for a restart, the user does not need to use this function for
+  restarting a calibration. imabc() handles this function for the user via the previous_results_* input options.
 }
