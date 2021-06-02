@@ -425,8 +425,8 @@ imabc <- function(
             list(iter_target_dist[!is.na(iter_target_dist$draw), ], gsub("Good_", "", targdist_df_outfile)),
             out_dir = output_directory, append = append_iter_outfile
           )
-          append_iter_outfile <- TRUE
         }
+        append_iter_outfile <- TRUE
       }
 
       # Update centers in good_* which have been re-simulated since last iteration
