@@ -426,7 +426,7 @@ imabc <- function(
             out_dir = output_directory, append = append_iter_outfile
           )
         }
-        append_iter_outfile <- TRUE
+        # append_iter_outfile <- TRUE
       }
 
       # Update centers in good_* which have been re-simulated since last iteration
@@ -985,15 +985,36 @@ imabc <- function(
       fn_ops <- unlist(fn_ops[PickOut])
       fn_ops <- data.frame(info = names(fn_ops), value = fn_ops, row.names = NULL)
       metaddata <- rbind(metaddata, fn_ops)
+      if (validate_run) {
+        save_good_parm_draws <- copy(good_parm_draws)[, scaled_dist := NULL, ]
+        save_good_parm_draws <- save_good_parm_draws[!is.na(draw), ]
+        save_good_parm_draws$actual_iter <- main_loop_iter
+        save_good_sim_target <- copy(good_sim_target)
+        save_good_sim_target <- save_good_sim_target[!is.na(draw), ]
+        save_good_sim_target$actual_iter <- main_loop_iter
+        save_good_target_dist <- copy(good_target_dist)
+        save_good_target_dist <- save_good_target_dist[!is.na(draw), ]
+        save_good_target_dist$actual_iter <- main_loop_iter
+      } else {
+        save_good_parm_draws <- copy(good_parm_draws)[, scaled_dist:= NULL, ]
+        save_good_sim_target <- good_sim_target
+        save_good_target_dist <- good_target_dist
+      }
       # Write out files
       save_results(
         list(metaddata, runmeta_df_outfile),
         list(as.data.frame(targets), targlist_df_outfile),
-        list(copy(good_parm_draws)[, scaled_dist:= NULL, ], parm_df_outfile),
-        list(good_sim_target, simtarg_df_outfile),
-        list(good_target_dist, targdist_df_outfile),
         out_dir = output_directory, append = FALSE
       )
+      save_results(
+        list(save_good_parm_draws, parm_df_outfile),
+        list(save_good_sim_target, simtarg_df_outfile),
+        list(save_good_target_dist, targdist_df_outfile),
+        out_dir = output_directory, append = append_iter_outfile # FALSE
+      )
+      if (validate_run) {
+        append_iter_outfile <- TRUE
+      }
     }
     if (verbose & !is_first_continue_iter) { cat(sprintf("----------- End Iter %s -----------\n", main_loop_iter)) }
   } # main_loop_iter in start_iter:end_iter
@@ -1026,10 +1047,28 @@ imabc <- function(
     save_results(
       list(metaddata, runmeta_df_outfile),
       list(as.data.frame(targets), targlist_df_outfile),
-      list(copy(good_parm_draws)[, scaled_dist:= NULL], parm_df_outfile),
-      list(good_sim_target, simtarg_df_outfile),
-      list(good_target_dist, targdist_df_outfile),
       out_dir = output_directory, append = FALSE
+    )
+    if (validate_run) {
+      save_good_parm_draws <- copy(good_parm_draws)[, scaled_dist := NULL, ]
+      save_good_parm_draws <- save_good_parm_draws[!is.na(draw), ]
+      save_good_parm_draws$actual_iter <- main_loop_iter
+      save_good_sim_target <- copy(good_sim_target)
+      save_good_sim_target <- save_good_sim_target[!is.na(draw), ]
+      save_good_sim_target$actual_iter <- main_loop_iter
+      save_good_target_dist <- copy(good_target_dist)
+      save_good_target_dist <- save_good_target_dist[!is.na(draw), ]
+      save_good_target_dist$actual_iter <- main_loop_iter
+    } else {
+      save_good_parm_draws <- copy(good_parm_draws)[, scaled_dist:= NULL, ]
+      save_good_sim_target <- good_sim_target
+      save_good_target_dist <- good_target_dist
+    }
+    save_results(
+      list(save_good_parm_draws, parm_df_outfile),
+      list(save_good_sim_target, simtarg_df_outfile),
+      list(save_good_target_dist, targdist_df_outfile),
+      out_dir = output_directory, append = append_iter_outfile
     )
   }
 
