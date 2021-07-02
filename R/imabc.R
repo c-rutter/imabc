@@ -160,6 +160,7 @@ imabc <- function(
   validate_run = TRUE
 ) {
   # Environment setup ---------------------------------------------------------------------------------------------------
+  # For CRAN checks
   sample_wt <- tot_dist <- step <- iter <- n_good <- scaled_dist <- draw <- NULL
 
   # Check for priors and targets or previous_results directory
@@ -367,15 +368,22 @@ imabc <- function(
       iter_info <- sprintf("Starting at: %s", Sys.time())
       n_info <- sprintf("Current in range draws = %s", current_good_n)
       if (length(update_targets) > 0) {
+        n_info <- sprintf("New in range draws = %s", current_good_n)
         bounds_to_print <- names(attr(targets, "update"))
-        bound_info <- lapply(bounds_to_print, FUN = function(x, targ) {
-          tmp <- targ[x]
-          paste(sprintf("%s: %s - %s", x, tmp$current_lower_bounds, tmp$current_upper_bounds), collapse = "\n")
-        }, targ = targets)
+        bound_info <- lapply(attr(targets,"target_names"), FUN = function(x, targ, to_print) {
+          if (x %in% to_print) {
+            tmp <- targ[x]
+            y <- paste(sprintf("%s: %s - %s", x, tmp$current_lower_bounds, tmp$current_upper_bounds), collapse = "\n")
+          } else {
+            y <- paste(sprintf("%s: Reached stopping bounds", x), collapse = "\n")
+          }
+          return(y)
+        }, targ = targets, to_print = bounds_to_print)
         bound_info <- lapply(unique(attr(targets, "target_groups")), FUN = function(x, groups, bound_info) {
           paste(unlist(bound_info[x == groups]), collapse = "\n")
         }, groups = attr(targets, "target_groups"), bound_info = bound_info)
         bound_info <- paste(sprintf("---- %s ----", unique(attr(targets, "target_groups"))), bound_info, sep = "\n", collapse = "\n")
+        bound_info <- ifelse(bound_info == "", "All tolerance intervals at target bounds", bound_info)
         cat(header, iter_info, n_info, "Current bound info:", bound_info, sep = "\n")
       } else {
         cat(header, iter_info, "All tolerance intervals at target bounds", sep = "\n")
@@ -646,10 +654,15 @@ imabc <- function(
       if (verbose & !is_first_continue_iter) {
         n_info <- sprintf("New in range draws = %s", current_good_n)
         bounds_to_print <- names(attr(targets, "update"))
-        bound_info <- lapply(bounds_to_print, FUN = function(x, targ) {
-          tmp <- targ[x]
-          paste(sprintf("%s: %s - %s", x, tmp$current_lower_bounds, tmp$current_upper_bounds), collapse = "\n")
-        }, targ = targets)
+        bound_info <- lapply(attr(targets,"target_names"), FUN = function(x, targ, to_print) {
+          if (x %in% to_print) {
+            tmp <- targ[x]
+            y <- paste(sprintf("%s: %s - %s", x, tmp$current_lower_bounds, tmp$current_upper_bounds), collapse = "\n")
+          } else {
+            y <- paste(sprintf("%s: Reached stopping bounds", x), collapse = "\n")
+          }
+          return(y)
+        }, targ = targets, to_print = bounds_to_print)
         bound_info <- lapply(unique(attr(targets, "target_groups")), FUN = function(x, groups, bound_info) {
           paste(unlist(bound_info[x == groups]), collapse = "\n")
         }, groups = attr(targets, "target_groups"), bound_info = bound_info)
@@ -960,62 +973,62 @@ imabc <- function(
       } # ! current_good_n < N_cov_points
     } # if (main_loop_iter < end_iter)
 
-    # Save iteration results
-    if (!is.null(output_directory)) {
-      if (main_loop_iter < end_iter || main_loop_iter == 1) {
-        if (append_meancov_outfile) {
-          save_rows <- new_rows
-        } else {
-          save_rows <- 1:nrow(mean_cov)
-        }
-        save_results(
-          mean_cov[save_rows, c("iter", "step", "center", "B.in", "parm", calibr_parm_names), with = FALSE], meancov_outfile,
-          out_dir = output_directory, append = append_meancov_outfile
-        )
-        append_meancov_outfile <- TRUE
-      }
-      # Pull complete options except for
-      metaddata <- data.frame(
-        info = c("current_iteration", "last_draw"),
-        value = c(main_loop_iter, total_draws)
-      )
-      # Pull function inputs (except for target_fun, priors, and targets)
-      fn_ops <- mget(names(formals()), sys.frame(sys.nframe()))
-      PickOut <- unlist(lapply(fn_ops, function(x) !(is.function(x) | is.list(x))))
-      fn_ops <- unlist(fn_ops[PickOut])
-      fn_ops <- data.frame(info = names(fn_ops), value = fn_ops, row.names = NULL)
-      metaddata <- rbind(metaddata, fn_ops)
-      if (validate_run) {
-        save_good_parm_draws <- copy(good_parm_draws)[, scaled_dist := NULL, ]
-        save_good_parm_draws <- save_good_parm_draws[!is.na(draw), ]
-        save_good_parm_draws$actual_iter <- main_loop_iter
-        save_good_sim_target <- copy(good_sim_target)
-        save_good_sim_target <- save_good_sim_target[!is.na(draw), ]
-        save_good_sim_target$actual_iter <- main_loop_iter
-        save_good_target_dist <- copy(good_target_dist)
-        save_good_target_dist <- save_good_target_dist[!is.na(draw), ]
-        save_good_target_dist$actual_iter <- main_loop_iter
-      } else {
-        save_good_parm_draws <- copy(good_parm_draws)[, scaled_dist:= NULL, ]
-        save_good_sim_target <- good_sim_target
-        save_good_target_dist <- good_target_dist
-      }
-      # Write out files
-      save_results(
-        list(metaddata, runmeta_df_outfile),
-        list(as.data.frame(targets), targlist_df_outfile),
-        out_dir = output_directory, append = FALSE
-      )
-      save_results(
-        list(save_good_parm_draws, parm_df_outfile),
-        list(save_good_sim_target, simtarg_df_outfile),
-        list(save_good_target_dist, targdist_df_outfile),
-        out_dir = output_directory, append = append_iter_outfile # FALSE
-      )
-      if (validate_run) {
-        append_iter_outfile <- TRUE
-      }
-    }
+    # # Save iteration results
+    # if (!is.null(output_directory)) {
+    #   if (main_loop_iter < end_iter || main_loop_iter == 1) {
+    #     if (append_meancov_outfile) {
+    #       save_rows <- new_rows
+    #     } else {
+    #       save_rows <- 1:nrow(mean_cov)
+    #     }
+    #     save_results(
+    #       mean_cov[save_rows, c("iter", "step", "center", "B.in", "parm", calibr_parm_names), with = FALSE], meancov_outfile,
+    #       out_dir = output_directory, append = append_meancov_outfile
+    #     )
+    #     append_meancov_outfile <- TRUE
+    #   }
+    #   # Pull complete options except for
+    #   metaddata <- data.frame(
+    #     info = c("current_iteration", "last_draw"),
+    #     value = c(main_loop_iter, total_draws)
+    #   )
+    #   # Pull function inputs (except for target_fun, priors, and targets)
+    #   fn_ops <- mget(names(formals()), sys.frame(sys.nframe()))
+    #   PickOut <- unlist(lapply(fn_ops, function(x) !(is.function(x) | is.list(x))))
+    #   fn_ops <- unlist(fn_ops[PickOut])
+    #   fn_ops <- data.frame(info = names(fn_ops), value = fn_ops, row.names = NULL)
+    #   metaddata <- rbind(metaddata, fn_ops)
+    #   if (validate_run) {
+    #     save_good_parm_draws <- copy(good_parm_draws)[, scaled_dist := NULL, ]
+    #     save_good_parm_draws <- save_good_parm_draws[!is.na(draw), ]
+    #     save_good_parm_draws$actual_iter <- main_loop_iter
+    #     save_good_sim_target <- copy(good_sim_target)
+    #     save_good_sim_target <- save_good_sim_target[!is.na(draw), ]
+    #     save_good_sim_target$actual_iter <- main_loop_iter
+    #     save_good_target_dist <- copy(good_target_dist)
+    #     save_good_target_dist <- save_good_target_dist[!is.na(draw), ]
+    #     save_good_target_dist$actual_iter <- main_loop_iter
+    #   } else {
+    #     save_good_parm_draws <- copy(good_parm_draws)[, scaled_dist:= NULL, ]
+    #     save_good_sim_target <- good_sim_target
+    #     save_good_target_dist <- good_target_dist
+    #   }
+    #   # Write out files
+    #   save_results(
+    #     list(metaddata, runmeta_df_outfile),
+    #     list(as.data.frame(targets), targlist_df_outfile),
+    #     out_dir = output_directory, append = FALSE
+    #   )
+    #   save_results(
+    #     list(save_good_parm_draws, parm_df_outfile),
+    #     list(save_good_sim_target, simtarg_df_outfile),
+    #     list(save_good_target_dist, targdist_df_outfile),
+    #     out_dir = output_directory, append = append_iter_outfile # FALSE
+    #   )
+    #   if (validate_run) {
+    #     append_iter_outfile <- TRUE
+    #   }
+    # } # Save iteration results
     if (verbose & !is_first_continue_iter) { cat(sprintf("----------- End Iter %s -----------\n", main_loop_iter)) }
   } # main_loop_iter in start_iter:end_iter
 
