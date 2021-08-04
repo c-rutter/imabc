@@ -151,6 +151,7 @@ imabc <- function(
   max_iter = 1000,
   seed = NULL,
   latinHypercube = TRUE,
+  improve_method = c("sample_reduce", "gtbr", "both"),
   backend_fun = NULL,
   output_directory = NULL,
   output_tag = "timestamp",
@@ -238,6 +239,10 @@ imabc <- function(
   on.exit(RNGkind(kind = og_kind[1], normal.kind = og_kind[2], sample.kind = og_kind[3]), add = TRUE)
   set.seed(seed)
   seed_stream_start <- .Random.seed
+
+  # Target improvement method
+  improve_method <- match.arg(improve_method, c("sample_reduce", "gtbr", "both"))
+  improve_min_samplefactor <- 2
 
   # File names for saving
   output_tag <- ifelse(output_tag == "timestamp", format(run_timestamp, write_time_fmt), output_tag)
@@ -565,60 +570,108 @@ imabc <- function(
     good_row_range <- which(good_target_dist$n_good == n_target_distances)
 
     # Improve Target Bounds ---------------------------------------------------------------------------------------------
-    if ((current_good_n >= 2*N_cov_points) & length(update_targets) > 0) {
-      # Sort targets based on overall distance of target distances still being calibrated
-      good_target_dist$tot_dist <- total_distance(dt = good_target_dist, target_names = update_targets, scale = FALSE)
+    if ((current_good_n >= improve_min_samplefactor*N_cov_points) & length(update_targets) > 0) {
+      # Method 1: Use fewest number of points greater than or equal to N_cov_points that improves the target bounds
+      improve <- FALSE
+      if (improve_method %in% c("sample_reduce", "both")) {
+        # Sort targets based on overall distance of target distances still being calibrated
+        good_target_dist$tot_dist <- total_distance(dt = good_target_dist, target_names = update_targets, scale = FALSE)
 
-      # Find least amount of points that move us towards the stopping bounds while letting us have enough for the more
-      #   complex resampling method
-      keep_points <- c(trunc(seq(1.0, 2.0, 0.1)*N_cov_points), current_good_n)
-      for (test_n_iter in keep_points) {
-        # If we can use less than the entire sample, calculate bounds with the subset. Otherwise, bounds do not change
-        if (test_n_iter < current_good_n) {
-          # Get the test_n_iter best draws to determine an empirical set of new bounds
-          get_draws <- good_target_dist$draw[order(good_target_dist$tot_dist)][1:test_n_iter]
+        # Find least amount of points that move us towards the stopping bounds while letting us have enough for the more
+        #   complex resampling method
+        # CM NOTE: Should we change 0.1 to be (improve_min_samplefactor - 1)/10?
+        keep_points <- c(trunc(seq(1.0, improve_min_samplefactor, 0.1)*N_cov_points), current_good_n)
+        for (test_n_iter in keep_points) {
+          # If we can use less than the entire sample, calculate bounds with the subset. Otherwise, bounds do not change
+          if (test_n_iter < current_good_n) {
+            # Get the test_n_iter best draws to determine an empirical set of new bounds
+            get_draws <- good_target_dist$draw[order(good_target_dist$tot_dist)][1:test_n_iter]
 
-          # Get new bounds using test_n_iter best draws
+            # Get new bounds using test_n_iter best draws
+            targets <- get_new_bounds(
+              to_update = update_targets,
+              targets_list = targets,
+              sims = good_sim_target[draw %in% get_draws, ]
+            )
+          } else { # test_n_iter < current_good_n
+            # set the new bounds back to the current bounds
+            targets <- update_target_bounds(targets, from = "new", to = "current")
+          } # ! test_n_iter < current_good_n
+
+          # Find if any targets have moved closer to the stopping bounds
+          improve <- any(
+            targets$new_lower_bounds != targets$current_lower_bounds |
+              targets$new_upper_bounds != targets$current_upper_bounds
+          )
+
+          # If we can improve any targets, test our current valid draws against new bounds OR
+          # If we have no more sample to use, reset our evaluation of good draws to the current bounds set
+          if (improve | test_n_iter == current_good_n) {
+            # Update distances (values < 0 indicate out of tolerance bounds)
+            good_target_dist[good_row_range, (update_targets) := eval_targets(
+              sim_targets = good_sim_target[good_row_range, ],
+              target_list = targets[update_targets, groups_given = TRUE],
+              criteria = "update"
+            )]
+            # Update number of targets that were hit for each draw
+            good_target_dist$n_good <- 0L
+            good_target_dist[good_row_range]$n_good <- rowSums(
+              good_target_dist[good_row_range, (target_distance_names), with = FALSE] >= 0,
+              na.rm = TRUE
+            )
+            # Calculate new number of valid draws
+            new_iter_valid_n <- sum(good_target_dist$n_good == n_target_distances, na.rm = TRUE)
+
+            # If we have enough new draws, stop looking for more by stopping the test_n_iter loop
+            if (new_iter_valid_n >= N_cov_points) { break } else { improve <- FALSE }
+          } # any(improve) | test_n_iter == current_good_n
+        } # test_n_iter in keep_points
+      } # improve_method %in% c("sample_reduce", "both")
+
+      # Method 2: Gradual Target Bound Ratcheting
+      # In future we would trigger this based on too few points thrown out in method 1 and current_good_n >= X*N_cov_points
+      if (improve_method == "gtbr" | (improve_method == "both" & !improve)) {
+        # Find the greatest percentage improvement we can make while remaining above N_cov_points
+        ratchet_levels <- seq(1, 0.05, -0.05)
+        new_iter_valid_n <- 0
+        for (ratchet_i1 in ratchet_levels) {
+          # Get new bounds moving ratchet_i1 closer towards the stopping bounds
           targets <- get_new_bounds(
             to_update = update_targets,
             targets_list = targets,
-            sims = good_sim_target[draw %in% get_draws, ]
-          )
-        } else { # test_n_iter < current_good_n
-          # set the new bounds back to the current bounds
-          targets <- update_target_bounds(targets, from = "new", to = "current")
-        } # ! test_n_iter < current_good_n
-
-        # Find if any targets have moved closer to the stopping bounds
-        improve <- any(
-          targets$new_lower_bounds != targets$current_lower_bounds |
-            targets$new_upper_bounds != targets$current_upper_bounds
+            ratchet_pct = ratchet_i1
           )
 
-        # If we can improve any targets, test our current valid draws against new bounds OR
-        # If we have no more sample to use, reset our evaluation of good draws to the current bounds set
-        if (improve | test_n_iter == current_good_n) {
           # Update distances (values < 0 indicate out of tolerance bounds)
           good_target_dist[good_row_range, (update_targets) := eval_targets(
             sim_targets = good_sim_target[good_row_range, ],
             target_list = targets[update_targets, groups_given = TRUE],
             criteria = "update"
           )]
+
           # Update number of targets that were hit for each draw
           good_target_dist$n_good <- 0L
           good_target_dist[good_row_range]$n_good <- rowSums(
             good_target_dist[good_row_range, (target_distance_names), with = FALSE] >= 0,
             na.rm = TRUE
           )
+
           # Calculate new number of valid draws
-          new_iter_valid_n <- sum(good_target_dist$n_good == n_target_distances, na.rm = TRUE)
+          iter_valid_n <- sum(good_target_dist$n_good == n_target_distances, na.rm = TRUE)
 
-          # If we have enough new draws, stop looking for more by stopping the test_n_iter loop
-          if (new_iter_valid_n >= N_cov_points) { break }
-        } # any(improve) | test_n_iter == current_good_n
-      } # test_n_iter in keep_points
+          # If we have enough new draws, save the improvement otherwise reset the target values
+          if (iter_valid_n >= N_cov_points) {
+            # Store valid N
+            new_iter_valid_n <- iter_valid_n
+            break
+          } else {
+            # set the new bounds back to the current bounds
+            targets <- update_target_bounds(targets, from = "new", to = "current")
+          }
+        } # ratchet_i1 in seq(0.05, 1, 0.05)
+      } # improve_method %in% c("gtbr", "both")
 
-      # If we consticted our target ranges with fewer draws
+      # If we constricted our target ranges successfully
       if (new_iter_valid_n >= N_cov_points & new_iter_valid_n < current_good_n) {
         # Update current bounds to the newly calculated bounds
         targets <- update_target_bounds(targets, from = "current", to = "new")
@@ -847,7 +900,7 @@ imabc <- function(
           )
 
           # Find nearest points based on scaled distance
-          calc_cov_points <- 1:max(N_cov_points, trunc(current_good_n/N_centers))
+          calc_cov_points <- 1:max(c(N_cov_points, trunc(current_good_n/N_centers)))
           var_data <- good_parm_draws[order(good_parm_draws$scaled_dist)[calc_cov_points], calibr_parm_names, with = FALSE]
 
           # Find center specific var-cov matrices using N_cov_points closest points

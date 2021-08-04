@@ -17,6 +17,7 @@ imabc(
   max_iter = 1000,
   seed = NULL,
   latinHypercube = TRUE,
+  improve_method = c("sample_reduce", "gtbr", "both"),
   backend_fun = NULL,
   output_directory = NULL,
   output_tag = "timestamp",
