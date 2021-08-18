@@ -872,7 +872,6 @@ imabc <- function(
           mean_cov <- new_mean_cov
           new_rows <- 1:nrow(mean_cov)
         }
-
       } else { # current_good_n < N_cov_points
         # sample MVN points around centers if there are enough points to estimate the cov matrix
         sample_mean <- as.data.frame(center_next)
@@ -1023,9 +1022,9 @@ imabc <- function(
         setorder(good_parm_draws, draw, na.last = TRUE)
         setorder(good_sim_target, draw, na.last = TRUE)
         setorder(good_target_dist, draw, na.last = TRUE)
+      } # ! current_good_n < N_cov_points
 
-        # TODO: change to output dir check and validate_run check
-        if(!is.null(output_directory) && validate_run){
+      if(!is.null(output_directory) && validate_run){
           # Valid Parameters
           good_parm_draws_output <- good_parm_draws[!is.na(draw), ]
           # Valid Targets
@@ -1053,7 +1052,6 @@ imabc <- function(
             out_dir = output_directory, append = FALSE
           )
         }
-      } # ! current_good_n < N_cov_points
     } # if (main_loop_iter < end_iter)
 
     # # Save iteration results
