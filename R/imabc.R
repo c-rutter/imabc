@@ -1042,10 +1042,14 @@ imabc <- function(
           save_good_target_dist <- copy(good_target_dist_output) # unneeded copy
           save_good_target_dist$actual_iter <- main_loop_iter
         
+          interim_parm_df_outfile <- paste0("iter_", (main_loop_iter), "_", parm_df_outfile)
+          interim_simtarg_df_outfile <- paste0("iter_", (main_loop_iter), "_", simtarg_df_outfile)
+          interim_targdist_df_outfile <- paste0("iter_", (main_loop_iter), "_", targdist_df_outfile)
+
           save_results(
-            list(save_good_parm_draws, parm_df_outfile),
-            list(save_good_sim_target, simtarg_df_outfile),
-            list(save_good_target_dist, targdist_df_outfile),
+            list(save_good_parm_draws, interim_parm_df_outfile),
+            list(save_good_sim_target, interim_simtarg_df_outfile),
+            list(save_good_target_dist, interim_targdist_df_outfile),
             out_dir = output_directory, append = FALSE
           )
         }
