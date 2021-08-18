@@ -1025,33 +1025,33 @@ imabc <- function(
       } # ! current_good_n < N_cov_points
 
       if(!is.null(output_directory) && validate_run){
-          # Valid Parameters
-          good_parm_draws_output <- good_parm_draws[!is.na(draw), ]
-          # Valid Targets
-          good_sim_target_output <- good_sim_target[!is.na(draw), ]
-          
-          # Valid Distances
-          good_target_dist_output <- good_target_dist[!is.na(draw), ]
-          good_target_dist_output[, (target_distance_names) := lapply(.SD , "abs"), .SDcols = target_distance_names]
-
-          save_good_parm_draws <- copy(good_parm_draws_output)[, scaled_dist := NULL, ]
-          save_good_parm_draws$actual_iter <- main_loop_iter
-          save_good_sim_target <- copy(good_sim_target_output) # unneeded copy
-          save_good_sim_target$actual_iter <- main_loop_iter
-          save_good_target_dist <- copy(good_target_dist_output) # unneeded copy
-          save_good_target_dist$actual_iter <- main_loop_iter
+        # Valid Parameters
+        good_parm_draws_output <- good_parm_draws[!is.na(draw), ]
+        # Valid Targets
+        good_sim_target_output <- good_sim_target[!is.na(draw), ]
         
-          interim_parm_df_outfile <- paste0("iter_", (main_loop_iter), "_", parm_df_outfile)
-          interim_simtarg_df_outfile <- paste0("iter_", (main_loop_iter), "_", simtarg_df_outfile)
-          interim_targdist_df_outfile <- paste0("iter_", (main_loop_iter), "_", targdist_df_outfile)
+        # Valid Distances
+        good_target_dist_output <- good_target_dist[!is.na(draw), ]
+        good_target_dist_output[, (target_distance_names) := lapply(.SD , "abs"), .SDcols = target_distance_names]
 
-          save_results(
-            list(save_good_parm_draws, interim_parm_df_outfile),
-            list(save_good_sim_target, interim_simtarg_df_outfile),
-            list(save_good_target_dist, interim_targdist_df_outfile),
-            out_dir = output_directory, append = FALSE
-          )
-        }
+        save_good_parm_draws <- copy(good_parm_draws_output)[, scaled_dist := NULL, ]
+        save_good_parm_draws$actual_iter <- main_loop_iter
+        save_good_sim_target <- copy(good_sim_target_output) # unneeded copy
+        save_good_sim_target$actual_iter <- main_loop_iter
+        save_good_target_dist <- copy(good_target_dist_output) # unneeded copy
+        save_good_target_dist$actual_iter <- main_loop_iter
+      
+        interim_parm_df_outfile <- paste0("iter_", (main_loop_iter), "_", parm_df_outfile)
+        interim_simtarg_df_outfile <- paste0("iter_", (main_loop_iter), "_", simtarg_df_outfile)
+        interim_targdist_df_outfile <- paste0("iter_", (main_loop_iter), "_", targdist_df_outfile)
+
+        save_results(
+          list(save_good_parm_draws, interim_parm_df_outfile),
+          list(save_good_sim_target, interim_simtarg_df_outfile),
+          list(save_good_target_dist, interim_targdist_df_outfile),
+          out_dir = output_directory, append = FALSE
+        )
+      }
     } # if (main_loop_iter < end_iter)
 
     # # Save iteration results
