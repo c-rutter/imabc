@@ -1023,6 +1023,32 @@ imabc <- function(
         setorder(good_parm_draws, draw, na.last = TRUE)
         setorder(good_sim_target, draw, na.last = TRUE)
         setorder(good_target_dist, draw, na.last = TRUE)
+
+        # TODO: change to output dir check and validate_run check
+        if(!is.null(output_directory) && validate_run){
+          # Valid Parameters
+          good_parm_draws_output <- good_parm_draws[!is.na(draw), ]
+          # Valid Targets
+          good_sim_target_output <- good_sim_target[!is.na(draw), ]
+          
+          # Valid Distances
+          good_target_dist_output <- good_target_dist[!is.na(draw), ]
+          good_target_dist_output[, (target_distance_names) := lapply(.SD , "abs"), .SDcols = target_distance_names]
+
+          save_good_parm_draws <- copy(good_parm_draws_output)[, scaled_dist := NULL, ]
+          save_good_parm_draws$actual_iter <- main_loop_iter
+          save_good_sim_target <- copy(good_sim_target_output) # unneeded copy
+          save_good_sim_target$actual_iter <- main_loop_iter
+          save_good_target_dist <- copy(good_target_dist_output) # unneeded copy
+          save_good_target_dist$actual_iter <- main_loop_iter
+        
+          save_results(
+            list(save_good_parm_draws, parm_df_outfile),
+            list(save_good_sim_target, simtarg_df_outfile),
+            list(save_good_target_dist, targdist_df_outfile),
+            out_dir = output_directory, append = FALSE
+          )
+        }
       } # ! current_good_n < N_cov_points
     } # if (main_loop_iter < end_iter)
 
