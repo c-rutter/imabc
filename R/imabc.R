@@ -1124,7 +1124,14 @@ imabc <- function(
   good_target_dist <- good_target_dist[!is.na(draw), ]
   good_target_dist[, (target_distance_names) := lapply(.SD , "abs"), .SDcols = target_distance_names]
   setorder(good_target_dist, draw, na.last = TRUE)
-
+  
+  # Save MeanCovariance file
+  save_results(
+    mean_cov[, c("iter", "step", "center", "B.in", "parm", calibr_parm_names), with = FALSE], meancov_outfile,
+    out_dir = output_directory, append = FALSE
+  )
+  
+  
   # Save current iteration and last draw info for restart
   metaddata <- data.frame(
     info = c("current_iteration", "last_draw"),
