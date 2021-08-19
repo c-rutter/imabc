@@ -41,8 +41,11 @@ check_format.priors <- function(imabc_obj, tracking_dt) {
   act_pnames_names <- colnames(tracking_dt)
 
   # Remove non-target/distance names from data.tables
-  standard_names <- c("iter", "draw", "step", "seed", "scaled_dist", "sample_wt")
+  standard_names <- c("iter", "draw", "step", "seed", "scaled_dist", "sample_wt", "actual_iter")
   act_pnames_names <- act_pnames_names[!act_pnames_names %in% standard_names]
+
+  print(act_pnames_names)
+  print(exp_pnames_names)
 
   # Errors
   stopifnot(
