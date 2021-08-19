@@ -1045,11 +1045,19 @@ imabc <- function(
         interim_simtarg_df_outfile <- paste0("iter_", (main_loop_iter), "_", simtarg_df_outfile)
         interim_targdist_df_outfile <- paste0("iter_", (main_loop_iter), "_", targdist_df_outfile)
 
+        interim_output_directory_sub_dir <- ifelse(is.null(output_tag), "interim_output", sprintf("interim_output_%s", output_tag))
+
+        interim_output_directory <- file.path(output_directory, interim_output_directory_sub_dir)
+
+        if (!dir.exists(interim_output_directory)){
+          dir.create(interim_output_directory)
+        }
+
         save_results(
           list(save_good_parm_draws, interim_parm_df_outfile),
           list(save_good_sim_target, interim_simtarg_df_outfile),
           list(save_good_target_dist, interim_targdist_df_outfile),
-          out_dir = output_directory, append = FALSE
+          out_dir = interim_output_directory, append = FALSE
         )
       }
     } # if (main_loop_iter < end_iter)
