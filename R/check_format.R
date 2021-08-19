@@ -12,7 +12,7 @@ check_format.targets <- function(imabc_obj, tracking_dt, dist_dt = NULL) {
   act_gnames_names <- colnames(dist_dt)
 
   # Remove non-target/distance names from data.tables
-  standard_names <- c("iter", "draw", "step", "tot_dist", "n_good")
+  standard_names <- c("iter", "draw", "step", "tot_dist", "n_good", "actual_iter")
   act_tnames_names <- act_tnames_names[!act_tnames_names %in% standard_names]
   act_gnames_names <- act_gnames_names[!act_gnames_names %in% standard_names]
 
