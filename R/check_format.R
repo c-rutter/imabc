@@ -44,9 +44,6 @@ check_format.priors <- function(imabc_obj, tracking_dt) {
   standard_names <- c("iter", "draw", "step", "seed", "scaled_dist", "sample_wt")
   act_pnames_names <- act_pnames_names[!act_pnames_names %in% standard_names]
 
-  print(act_pnames_names)
-  print(exp_pnames_names)
-
   # Errors
   stopifnot(
     # Make sure all object names appear in data.tables

@@ -196,6 +196,19 @@ imabc <- function(
       dist_dt = previous_results$good_target_dist
     )
 
+    # Evaluate good_distances to verify we can perform run
+    target_distance_names <- unique(attr(targets, "target_groups"))
+    n_target_distances <- length(target_distance_names)
+    previous_results$good_target_dist[, (target_distance_names) := eval_targets(
+      sim_targets = previous_results$good_sim_target, target_list = targets, criteria = "start"
+    )]
+    previous_results$good_target_dist$n_good <- rowSums(
+      previous_results$good_target_dist[, (target_distance_names), with = FALSE] >= 0, na.rm = TRUE
+    )
+    # Number of draws in range of targets from previous run. 0 if no previous run was supplied
+    current_good_n <- sum(previous_results$good_target_dist$n_good == n_target_distances, na.rm = TRUE)
+    stopifnot("No good values from previous run to start from." = current_good_n > 0)
+
     # Previous Run info
     previous_iter <- as.numeric(previous_results$prev_run_meta$value[previous_results$prev_run_meta$info == "current_iteration"])
     previous_draw <- as.numeric(previous_results$prev_run_meta$value[previous_results$prev_run_meta$info == "last_draw"])
@@ -204,9 +217,9 @@ imabc <- function(
     if (any(previous_results$mean_cov$iter > previous_iter)) {
       previous_results$mean_cov <- previous_results$mean_cov[previous_results$mean_cov$iter <= previous_iter, ]
     }
-    # Make sure mean and covariance data is in proper format
-    mean_cov <- data.table(previous_results$mean_cov)
 
+    # Store mean and covariance from previous results to mean_cov
+    mean_cov <- previous_results$mean_cov
   } else {
     previous_results <- NULL
     continue_runs <- FALSE
@@ -1024,12 +1037,12 @@ imabc <- function(
         setorder(good_target_dist, draw, na.last = TRUE)
       } # ! current_good_n < N_cov_points
 
-      if(!is.null(output_directory) && validate_run){
+      if (!is.null(output_directory) && validate_run){
         # Valid Parameters
         good_parm_draws_output <- good_parm_draws[!is.na(draw), ]
         # Valid Targets
         good_sim_target_output <- good_sim_target[!is.na(draw), ]
-        
+
         # Valid Distances
         good_target_dist_output <- good_target_dist[!is.na(draw), ]
         good_target_dist_output[, (target_distance_names) := lapply(.SD , "abs"), .SDcols = target_distance_names]
@@ -1040,7 +1053,7 @@ imabc <- function(
         save_good_sim_target$actual_iter <- main_loop_iter
         save_good_target_dist <- copy(good_target_dist_output) # unneeded copy
         save_good_target_dist$actual_iter <- main_loop_iter
-      
+
         interim_parm_df_outfile <- paste0("iter_", (main_loop_iter), "_", parm_df_outfile)
         interim_simtarg_df_outfile <- paste0("iter_", (main_loop_iter), "_", simtarg_df_outfile)
         interim_targdist_df_outfile <- paste0("iter_", (main_loop_iter), "_", targdist_df_outfile)
@@ -1132,14 +1145,14 @@ imabc <- function(
   good_target_dist <- good_target_dist[!is.na(draw), ]
   good_target_dist[, (target_distance_names) := lapply(.SD , "abs"), .SDcols = target_distance_names]
   setorder(good_target_dist, draw, na.last = TRUE)
-  
+
   # Save MeanCovariance file
   save_results(
     mean_cov[, c("iter", "step", "center", "B.in", "parm", calibr_parm_names), with = FALSE], meancov_outfile,
     out_dir = output_directory, append = FALSE
   )
-  
-  
+
+
   # Save current iteration and last draw info for restart
   metaddata <- data.frame(
     info = c("current_iteration", "last_draw"),

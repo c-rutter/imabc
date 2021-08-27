@@ -145,10 +145,10 @@ read_previous_results <- function(path, tag = NULL) {
   # Previous results object
   previous_results <- list(
     prev_run_meta = prev_run_meta,
-    good_parm_draws = good_parm_draws,
-    good_sim_target = good_sim_target,
-    good_target_dist = good_target_dist,
-    mean_cov = mean_cov
+    good_parm_draws = as.data.table(good_parm_draws),
+    good_sim_target = as.data.table(good_sim_target),
+    good_target_dist = as.data.table(good_target_dist),
+    mean_cov = as.data.table(mean_cov)
   )
 
   return(list(

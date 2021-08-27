@@ -65,7 +65,7 @@ get_mix_dist <- function(parm_names, mixture_file) {
         # keep info up to first iter in next file
         first_iter <- dta_i1$iter[1]
         n_keep <- (n_parms_now + 1)*(first_iter - 1)
-        mean_cov <- mean_cov[iter <= n_keep, ]
+        mean_cov <- mixture_file[iter <= n_keep, ]
         mean_cov <- rbind(mean_cov, dta_i1)
 
       } # ! i1 == 1
