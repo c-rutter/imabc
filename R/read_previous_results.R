@@ -133,6 +133,11 @@ read_previous_results <- function(path, tag = NULL) {
     )
   }
 
+  drops <- c("actual_iter")
+  good_parm_draws <- good_parm_draws[, !(names(good_parm_draws) %in% drops)]
+  good_sim_target <- good_sim_target[, !(names(good_sim_target) %in% drops)]
+  good_target_dist <- good_target_dist[, !(names(good_target_dist) %in% drops)]
+
   # Create Target and prior objects
   new_priors <- define_priors(prior_df = prev_priors)
   new_targets <- define_targets(target_df = prev_targs)

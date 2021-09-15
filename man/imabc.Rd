@@ -91,7 +91,7 @@ A list with:
 N_cov_points
 \item priors - The prior object with empirical standard deviation from first N_start generated values
 \item targets - The target object with updated bounds based on calibration
-\item metaddata - Important info regarding the function inputs and current set of results including current_iteration (the
+\item metadata - Important info regarding the function inputs and current set of results including current_iteration (the
 last iteration that completed) and last_draw (the total number of draws simulated during execution)
 }
 
@@ -181,7 +181,7 @@ as follows:
 \item MeanCovariance_tag.csv           = mean_cov
 \item CurrentPriors_tag.csv            = priors
 \item CurrentTargets_tag.csv           = targets
-\item RunMetadata_tag.csv              = metaddata
+\item RunMetadata_tag.csv              = metadata
 }
 
 if validate_run = TRUE, includes:
