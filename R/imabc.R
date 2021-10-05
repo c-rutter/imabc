@@ -1057,6 +1057,7 @@ imabc <- function(
         interim_parm_df_outfile <- paste0("iter_", (main_loop_iter), "_", parm_df_outfile)
         interim_simtarg_df_outfile <- paste0("iter_", (main_loop_iter), "_", simtarg_df_outfile)
         interim_targdist_df_outfile <- paste0("iter_", (main_loop_iter), "_", targdist_df_outfile)
+        interim_targlist_df_outfile <- paste0("iter_", (main_loop_iter), "_", targlist_df_outfile)
 
         interim_output_directory_sub_dir <- ifelse(is.null(output_tag), "interim_output", sprintf("interim_output_%s", output_tag))
 
@@ -1070,6 +1071,7 @@ imabc <- function(
           list(save_good_parm_draws, interim_parm_df_outfile),
           list(save_good_sim_target, interim_simtarg_df_outfile),
           list(save_good_target_dist, interim_targdist_df_outfile),
+          list(as.data.frame(targets), interim_targlist_df_outfile),
           out_dir = interim_output_directory, append = FALSE
         )
       }
