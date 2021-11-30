@@ -1074,7 +1074,39 @@ imabc <- function(
           list(as.data.frame(targets), interim_targlist_df_outfile),
           out_dir = interim_output_directory, append = FALSE
         )
-      }
+
+        # To guard against premature ending of the run and still be able to continue, output the mean cov and meta data files here
+
+        # TODO: create interim_meancov_outfile and interim_runmeta_df_outfile
+
+        # Save MeanCovariance file
+        save_results(
+          mean_cov[, c("iter", "step", "center", "B.in", "parm", calibr_parm_names), with = FALSE], interim_meancov_outfile,
+          out_dir = output_directory, append = FALSE
+        )
+
+
+        # Save current iteration and last draw info for restart
+        metaddata <- data.frame(
+          info = c("current_iteration", "last_draw"),
+          value = c(main_loop_iter, total_draws)
+        )
+        # Pull function inputs (except for target_fun, priors, and targets)
+        fn_ops <- mget(names(formals()), sys.frame(sys.nframe()))
+        PickOut <- unlist(lapply(fn_ops, function(x) !(is.function(x) | is.list(x))))
+        fn_ops <- unlist(fn_ops[PickOut])
+        fn_ops <- data.frame(info = names(fn_ops), value = fn_ops, row.names = NULL)
+        metaddata <- rbind(metaddata, fn_ops)
+        # Save
+        save_results(
+          list(metaddata, interim_runmeta_df_outfile),
+          out_dir = output_directory, append = FALSE
+        )
+
+      
+      
+
+
     } # if (main_loop_iter < end_iter)
 
     # # Save iteration results
