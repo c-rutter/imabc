@@ -1037,7 +1037,7 @@ imabc <- function(
         setorder(good_target_dist, draw, na.last = TRUE)
       } # ! current_good_n < N_cov_points
 
-      if (!is.null(output_directory) && validate_run){
+      if (!is.null(output_directory) && validate_run) {
         # Valid Parameters
         good_parm_draws_output <- good_parm_draws[!is.na(draw), ]
         # Valid Targets
@@ -1076,13 +1076,13 @@ imabc <- function(
         )
 
         # To guard against premature ending of the run and still be able to continue, output the mean cov and meta data files here
-
-        # TODO: create interim_meancov_outfile and interim_runmeta_df_outfile
+        interim_meancov_outfile <- paste0("iter_", (main_loop_iter), "_", meancov_outfile)
+        interim_runmeta_df_outfile <- paste0("iter_", (main_loop_iter), "_", runmeta_df_outfile)
 
         # Save MeanCovariance file
         save_results(
           mean_cov[, c("iter", "step", "center", "B.in", "parm", calibr_parm_names), with = FALSE], interim_meancov_outfile,
-          out_dir = output_directory, append = FALSE
+          out_dir = interim_output_directory, append = FALSE
         )
 
 
@@ -1100,13 +1100,13 @@ imabc <- function(
         # Save
         save_results(
           list(metaddata, interim_runmeta_df_outfile),
-          out_dir = output_directory, append = FALSE
+          out_dir = interim_output_directory, append = FALSE
         )
-
-      
-      
-
-
+        # save as CurrentPriors .. but in interim directory
+        # this makes sure that we have a CurrentPriors to restart from in the interim directory
+        # it should be the same as what is written at the start of the code to the main output directory
+        save_results(list(as.data.frame(priors), priolist_df_outfile), out_dir = interim_output_directory, append = FALSE)
+      }
     } # if (main_loop_iter < end_iter)
 
     # # Save iteration results

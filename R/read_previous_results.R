@@ -62,6 +62,7 @@ read_previous_results <- function(path, tag = NULL) {
         stop(sprintf("Can't find Good_SimulatedParameters_%s.csv in previous_results_dir = %s", tag, path))
       }
     )
+ 
     good_sim_target <- tryCatch(
       read.csv(paste(path, grep("Targets", gooddata, value = TRUE)[1], sep = "/")),
       warning = function(w) {
@@ -111,6 +112,7 @@ read_previous_results <- function(path, tag = NULL) {
         stop(sprintf("Can't find %s in previous_results_dir = %s", "Good_SimulatedParameters_*.csv", path))
       }
     )
+
     good_sim_target <- tryCatch(
       read.csv(paste(path, grep("Targets", gooddata, value = TRUE), sep = "/")),
       warning = function(w) {
