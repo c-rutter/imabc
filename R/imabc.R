@@ -1252,11 +1252,11 @@ imabc <- function(
   if (validate_run) {
     out_list <- list(
       # all_iter_parm_draws = all_iter_parm_draws[, scaled_dist:= NULL],
-      all_iter_parm_draws = iter_parm_draws[!is.na(iter_parm_draws$draw), ][, scaled_dist:= NULL]
+      all_iter_parm_draws = iter_parm_draws[!is.na(iter_parm_draws$draw), ][, scaled_dist:= NULL],
       # all_iter_sim_target = all_iter_sim_target,
-      all_iter_sim_target = iter_sim_target[!is.na(iter_sim_target$draw), ]
+      all_iter_sim_target = iter_sim_target[!is.na(iter_sim_target$draw), ],
       # all_iter_target_dist = all_iter_target_dist,
-      all_iter_target_dist = iter_target_dist[!is.na(iter_target_dist$draw), ]
+      all_iter_target_dist = iter_target_dist[!is.na(iter_target_dist$draw), ],
 
       good_parm_draws = good_parm_draws[, scaled_dist:= NULL],
       good_sim_target = good_sim_target,
