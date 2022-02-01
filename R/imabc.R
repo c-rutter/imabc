@@ -21,7 +21,12 @@
 #' simulated to ensure enough valid (within range) parameters draws are simulated for the center.
 #' @param max_iter numeric(1). The maximum number of iterations to attempt.
 #' @param seed numeric(1). The seed to set for reproducibility.
-#' @param latinHypercube logical(1). Should algorithm use a Latin Hypercube to generate first set of parameters.
+#' @param latinHypercube logical(1). Should algorithm use a Latin Hypercube to generate first set of parameters. Ignored
+#' if starting_draws is provided.
+#' @param starting_draws Optional data.frame. a data.frame containing an initial sample of draws for the first set of
+#' parameters. Must have the same number of columns as parameters specified in the priors object. If names are provided
+#' they must be the same as the parameters specified in the priors object. If names are not provided, imabc will assume
+#' they are in the same order as the parameters specified in the priors object.
 #' @param backend_fun function. For advanced users only. Lets to user evaluate the target function(s) using their own
 #' backend, i.e., simulate targets with an alternative parallel method. Only necessary if the backend method is
 #' not compatible with foreach. See details for requirements.
@@ -151,7 +156,8 @@ imabc <- function(
   max_iter = 1000,
   seed = NULL,
   latinHypercube = TRUE,
-  improve_method = c("sample_reduce", "gtbr", "both"),
+  starting_draws = NULL,
+  improve_method = c("direct", "percentile", "both"),
   backend_fun = NULL,
   output_directory = NULL,
   output_tag = "timestamp",
@@ -168,6 +174,10 @@ imabc <- function(
   if ((is.null(priors) || is.null(targets)) & is.null(previous_results_dir)) {
     stop("Must provide both a priors object and a targets object or provide a path to previous results.")
   }
+  if (!is.null(starting_draws)) {
+    stopifnot("starting_draws must be a matrix or data.frame" = length(dim(starting_draws)) == 2)
+  }
+
   # If path to previous results are provided, load the results into environment
   if (!is.null(previous_results_dir)) {
     # Warn about using priors/targets from previous results
@@ -236,6 +246,7 @@ imabc <- function(
 
   # Data size specifics
   total_draws <- ifelse(continue_runs, previous_draw, 0)
+  N_start <- ifelse(is.null(starting_draws), N_start, nrow(starting_draws))
   n_draw <- ifelse(continue_runs, N_centers*Center_n, N_start)
   n_rows_init <- max(n_draw, N_centers*Center_n) + N_centers
   n_store <- max((N_post + N_centers*(Center_n + 1)), 2*N_cov_points + 1)
@@ -254,7 +265,7 @@ imabc <- function(
   seed_stream_start <- .Random.seed
 
   # Target improvement method
-  improve_method <- match.arg(improve_method, c("sample_reduce", "gtbr", "both"))
+  improve_method <- match.arg(improve_method, c("direct", "percentile", "both"))
   improve_min_samplefactor <- 2
 
   # File names for saving
@@ -335,21 +346,62 @@ imabc <- function(
   iter_parm_draws$seed[1:n_draw] <- seed_stream(seed_stream_start, n_draw)
   seed_stream_start <- as.integer(unlist(strsplit(iter_parm_draws[["seed"]][n_draw], "_")))
   if (!continue_runs) {
-    # Generate random inputs for prior distribution calculation
-    if (latinHypercube) {
-      u_draws <- lhs::randomLHS(N_start, n_parms)
-    } else {
-      u_draws <- matrix(runif(N_start*n_parms), nrow = N_start, ncol = n_parms)
-    }
-    colnames(u_draws) <- all_parm_names
+    if (is.null(starting_draws)) {
+      # Generate random inputs for prior distribution calculation
+      if (latinHypercube) {
+        u_draws <- lhs::randomLHS(N_start, n_parms)
+      } else {
+        u_draws <- matrix(runif(N_start*n_parms), nrow = N_start, ncol = n_parms)
+      }
+      colnames(u_draws) <- all_parm_names
 
-    # Generate parameter space from prior distribution functions
-    iter_parm_draws <- parms_from_priors(
-      parm_df = iter_parm_draws,
-      name_parms = all_parm_names,
-      prior_list = priors,
-      sampling = u_draws
-    )
+      # Generate parameter space from prior distribution functions
+      iter_parm_draws <- parms_from_priors(
+        parm_df = iter_parm_draws,
+        name_parms = all_parm_names,
+        prior_list = priors,
+        sampling = u_draws
+      )
+
+    } else { # is.null(starting_draws)
+      # If names are provided check they match priors object
+      if (!is.null(colnames(starting_draws))) {
+        # Stop if not all parameters specified in priors object are provided in starting_draws
+        stopifnot(
+          "Not all parameters provided in starting_draws" = all(all_parm_names %in% colnames(starting_draws))
+        )
+        # Warn if more parameters given than needed
+        if (!all(colnames(starting_draws) %in% all_parm_names)) {
+          warning("starting_draws has parameters not specified in the priors object. They will be ignored")
+        }
+
+        u_draws <- as.data.frame(starting_draws[, all_parm_names])
+      } else { # !is.null(colnames(starting_draws))
+        # If names are not provided check same number of columns as parameters
+        # Stop if not all parameters specified in priors object are provided in starting_draws
+        stopifnot(
+          "Not enough parameters provided in starting_draws" = n_parms > ncol(starting_draws)
+        )
+
+        # Extra warning about order mattering
+        warning("Parameter names not specified in starting_draws. Assuming the order of draws matches the order of the priors object.")
+
+        # Warn if more parameters given than needed
+        if (n_parms < ncol(starting_draws)) {
+          warning("starting_draws has more parameters than specified in priors object. Extra columns will be ignored.")
+        }
+
+        u_draws <- as.data.frame(starting_draws[, 1:n_parms])
+        colnames(u_draws) <- all_parm_names
+      } # is.null(colnames(starting_draws))
+
+      # Assign draws
+      iter_parm_draws[1:n_draw, (all_parm_names) := lapply(all_parm_names, FUN = function(x, dta) {
+        dta[[x]]
+
+      }, dta = u_draws[1:n_draw, all_parm_names])]
+    } # ! is.null(starting_draws)
+
     # Get empirical standard deviation of parameters
     priors <- update_parm_sds(priors, dt = iter_parm_draws, parms = all_parm_names)
   } # !continue_runs
@@ -586,7 +638,7 @@ imabc <- function(
     if ((current_good_n >= improve_min_samplefactor*N_cov_points) & length(update_targets) > 0) {
       # Method 1: Use fewest number of points greater than or equal to N_cov_points that improves the target bounds
       improve <- FALSE
-      if (improve_method %in% c("sample_reduce", "both")) {
+      if (improve_method %in% c("percentile", "both")) {
         # Sort targets based on overall distance of target distances still being calibrated
         good_target_dist$tot_dist <- total_distance(dt = good_target_dist, target_names = update_targets, scale = FALSE)
 
@@ -639,11 +691,11 @@ imabc <- function(
             if (new_iter_valid_n >= N_cov_points) { break } else { improve <- FALSE }
           } # any(improve) | test_n_iter == current_good_n
         } # test_n_iter in keep_points
-      } # improve_method %in% c("sample_reduce", "both")
+      } # improve_method %in% c("percentile", "both")
 
       # Method 2: Gradual Target Bound Ratcheting
       # In future we would trigger this based on too few points thrown out in method 1 and current_good_n >= X*N_cov_points
-      if (improve_method == "gtbr" | (improve_method == "both" & !improve)) {
+      if (improve_method == "direct" | (improve_method == "both" & !improve)) {
         # Find the greatest percentage improvement we can make while remaining above N_cov_points
         ratchet_levels <- seq(1, 0.05, -0.05)
         new_iter_valid_n <- 0
@@ -682,7 +734,7 @@ imabc <- function(
             targets <- update_target_bounds(targets, from = "new", to = "current")
           }
         } # ratchet_i1 in seq(0.05, 1, 0.05)
-      } # improve_method %in% c("gtbr", "both")
+      } # improve_method %in% c("direct", "both")
 
       # If we constricted our target ranges successfully
       if (new_iter_valid_n >= N_cov_points & new_iter_valid_n < current_good_n) {
