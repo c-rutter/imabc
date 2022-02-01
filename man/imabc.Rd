@@ -17,7 +17,8 @@ imabc(
   max_iter = 1000,
   seed = NULL,
   latinHypercube = TRUE,
-  improve_method = c("sample_reduce", "gtbr", "both"),
+  starting_draws = NULL,
+  improve_method = c("percentile", "direct", "both"),
   backend_fun = NULL,
   output_directory = NULL,
   output_tag = "timestamp",
@@ -58,7 +59,13 @@ simulated to ensure enough valid (within range) parameters draws are simulated f
 
 \item{seed}{numeric(1). The seed to set for reproducibility.}
 
-\item{latinHypercube}{logical(1). Should algorithm use a Latin Hypercube to generate first set of parameters.}
+\item{latinHypercube}{logical(1). Should algorithm use a Latin Hypercube to generate first set of parameters. Ignored
+if starting_draws is provided.}
+
+\item{starting_draws}{Optional data.frame. a data.frame containing an initial sample of draws for the first set of
+parameters. Must have the same number of columns as parameters specified in the priors object. If names are provided
+they must be the same as the parameters specified in the priors object. If names are not provided, imabc will assume
+they are in the same order as the parameters specified in the priors object.}
 
 \item{backend_fun}{function. For advanced users only. Lets to user evaluate the target function(s) using their own
 backend, i.e., simulate targets with an alternative parallel method. Only necessary if the backend method is
