@@ -9,7 +9,7 @@
 #' are being calibrated. Is ignored if starting from previous results.
 #' @param targets A targets object created using define_targets. This contains information regarding the target values
 #' which will be used to evaluate simulated parameters. Is ignored if starting from previous results.
-#' @param N_start numeric(1). The number of draws to simulate for the first iteration.
+#' @param N_start numeric(1). The number of draws to simulate for the first iteration. Overwritten if starting_draws provided.
 #' @param N_centers numeric(1). The number of centers to use for exploring the parameter space.
 #' @param Center_n numeric(1). The number of points to add around each center
 #' @param N_cov_points numeric(1). The minimum number of points used to estimate the covariance matrix of valid parameters
