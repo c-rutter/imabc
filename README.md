@@ -4,6 +4,9 @@
 # IMABC
 
 <!-- badges: start -->
+
+[![Build & R-CMD
+Check](https://github.com/carolyner/imabc/workflows/R-CMD-check/badge.svg)](https://github.com/carolyner/imabc/actions)
 <!-- badges: end -->
 
 ## Installation
