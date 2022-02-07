@@ -1,5 +1,3 @@
-# whether or not to run the test with randomness
-
 # Testing IMABC with a simple test:
 
 # This is a simple test:
@@ -76,8 +74,8 @@ simple_calibration_test = function(x = c(0.5,1), y = c(0.5,1.5), target_biases =
 
 }
 
-
-simplest_test = simple_calibration_test(
+# Simplest possible test with the direct method:
+direct_simple_test = simple_calibration_test(
                                 x = c(0.5,1),
                                 y = c(1.5,0.5),
                                 target_biases = c(0,0),
@@ -91,7 +89,26 @@ simplest_test = simple_calibration_test(
                                 max_iter = 10
 )
 
-test_that("simplest possible test works", {
-  expect_s3_class(simplest_test, class = "imabc")
+test_that("simple test with the direct method", {
+  expect_s3_class(direct_simple_test, class = "imabc")
+})
+
+# Percentile method:
+percentile_simple_test = simple_calibration_test(
+  x = c(0.5,1),
+  y = c(1.5,0.5),
+  target_biases = c(0,0),
+  stopping_bounds_margin_of_error = 0.1,
+  initial_bounds_margin_of_error = 0.99,
+  priors_relative_width = 0.2,
+  with_randomness = F,
+  omit.y1 = F,
+  omit.y2 = F,
+  improve_method = "percentile",
+  max_iter = 10
+)
+
+test_that("simple test with the percentile method", {
+  expect_s3_class(percentile_simple_test, class = "imabc")
 })
 
