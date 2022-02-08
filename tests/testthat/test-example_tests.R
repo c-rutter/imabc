@@ -7,7 +7,7 @@
 # y2 = x1 * x2 = 0.5
 
 # This function creates an example calibration exercise for test purposes.
-simple_calibration_test = function(x = c(0.5,1), y = c(0.5,1.5), target_biases = c(0,0), stopping_bounds_margin_of_error = 0.1, initial_bounds_margin_of_error = 0.9, priors_relative_width = 0.1, with_randomness = F, omit.y1 = F, omit.y2 = F, improve_method = "direct", max_iter = 10) {
+simple_calibration_test = function(x = c(0.5,1), y = c(1.5,0.5), target_biases = c(0,0), stopping_bounds_margin_of_error = 0.1, initial_bounds_margin_of_error = 0.9, priors_relative_width = 0.1, with_randomness = F, omit.y1 = F, omit.y2 = F, improve_method = "direct", max_iter = 10) {
 
   # Target eval function:
   fn1 <- function(x1, x2) { x1 + x2 + with_randomness * sample(c(-1, 1), 1)*rnorm(1, 0, 0.1) }
@@ -74,6 +74,9 @@ simple_calibration_test = function(x = c(0.5,1), y = c(0.5,1.5), target_biases =
 
 }
 
+
+# Tests without randomness ------------------------------------------------
+
 # Simplest possible test with the direct method:
 direct_simple_test = simple_calibration_test(
                                 x = c(0.5,1),
@@ -112,3 +115,43 @@ test_that("simple test with the percentile method", {
   expect_s3_class(percentile_simple_test, class = "list")
 })
 
+
+# Tests with Randomness ---------------------------------------------------
+
+# Simplest possible test with the direct method:
+direct_rand_test = simple_calibration_test(
+  x = c(0.5,1),
+  y = c(1.5,0.5),
+  target_biases = c(0,0),
+  stopping_bounds_margin_of_error = 0.02,
+  initial_bounds_margin_of_error = 0.99,
+  priors_relative_width = 0.9,
+  with_randomness = T,
+  omit.y1 = F,
+  omit.y2 = F,
+  improve_method = "direct",
+  max_iter = 100
+)
+
+test_that("random test with the direct method", {
+  expect_s3_class(direct_rand_test, class = "list")
+})
+
+# Percentile method:
+percentile_rand_test = simple_calibration_test(
+  x = c(0.5,1),
+  y = c(1.5,0.5),
+  target_biases = c(0,0),
+  stopping_bounds_margin_of_error = 0.02,
+  initial_bounds_margin_of_error = 0.99,
+  priors_relative_width = 0.9,
+  with_randomness = T,
+  omit.y1 = F,
+  omit.y2 = F,
+  improve_method = "percentile",
+  max_iter = 10
+)
+
+test_that("random test with the percentile method", {
+  expect_s3_class(percentile_rand_test, class = "list")
+})
