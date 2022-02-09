@@ -18,7 +18,7 @@ imabc(
   seed = NULL,
   latinHypercube = TRUE,
   starting_draws = NULL,
-  improve_method = c("percentile", "direct", "both"),
+  improve_method = c("direct", "percentile", "both"),
   backend_fun = NULL,
   output_directory = NULL,
   output_tag = "timestamp",
@@ -39,7 +39,7 @@ are being calibrated. Is ignored if starting from previous results.}
 \item{targets}{A targets object created using define_targets. This contains information regarding the target values
 which will be used to evaluate simulated parameters. Is ignored if starting from previous results.}
 
-\item{N_start}{numeric(1). The number of draws to simulate for the first iteration.}
+\item{N_start}{numeric(1). The number of draws to simulate for the first iteration. Overwritten if starting_draws provided.}
 
 \item{N_centers}{numeric(1). The number of centers to use for exploring the parameter space.}
 
@@ -66,6 +66,8 @@ if starting_draws is provided.}
 parameters. Must have the same number of columns as parameters specified in the priors object. If names are provided
 they must be the same as the parameters specified in the priors object. If names are not provided, imabc will assume
 they are in the same order as the parameters specified in the priors object.}
+
+\item{improve_method}{character (1). Either "percentile", "direct" or "both".}
 
 \item{backend_fun}{function. For advanced users only. Lets to user evaluate the target function(s) using their own
 backend, i.e., simulate targets with an alternative parallel method. Only necessary if the backend method is
