@@ -93,7 +93,7 @@ direct_simple_test = simple_calibration_test(
 )
 
 test_that("simple test with the direct method", {
-  expect_s3_class(direct_simple_test, class = "list")
+  expect_true(class(direct_simple_test) == "list")
 })
 
 # Percentile method:
@@ -112,7 +112,7 @@ percentile_simple_test = simple_calibration_test(
 )
 
 test_that("simple test with the percentile method", {
-  expect_s3_class(percentile_simple_test, class = "list")
+  expect_true(class(percentile_simple_test) == "list")
 })
 
 
@@ -134,7 +134,7 @@ direct_rand_test = simple_calibration_test(
 )
 
 test_that("random test with the direct method", {
-  expect_s3_class(direct_rand_test, class = "list")
+  expect_true(class(direct_rand_test) == "list")
 })
 
 # Percentile method:
@@ -153,5 +153,5 @@ percentile_rand_test = simple_calibration_test(
 )
 
 test_that("random test with the percentile method", {
-  expect_s3_class(percentile_rand_test, class = "list")
+  expect_true(class(percentile_rand_test) == "list")
 })
