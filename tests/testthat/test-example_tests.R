@@ -7,7 +7,7 @@
 # y2 = x1 * x2 = 0.5
 
 # This function creates an example calibration exercise for test purposes.
-simple_calibration_test = function(x = c(0.5,1), y = c(1.5,0.5), target_biases = c(0,0), stopping_bounds_margin_of_error = 0.1, initial_bounds_margin_of_error = 0.9, priors_relative_width = 0.1, with_randomness = F, omit.y1 = F, omit.y2 = F, improve_method = "direct", max_iter = 10) {
+simple_calibration_test = function(x = c(0.5,1), y = c(1.5,0.5), target_biases = c(0,0), stopping_bounds_margin_of_error = 0.1, initial_bounds_margin_of_error = 0.9, priors_relative_width = 0.1, with_randomness = F, omit.y1 = F, omit.y2 = F, improve_method = "direct", max_iter = 10, starting_draws = NULL) {
 
   # Target eval function:
   fn1 <- function(x1, x2) { x1 + x2 + with_randomness * sample(c(-1, 1), 1)*rnorm(1, 0, 0.1) }
@@ -69,7 +69,8 @@ simple_calibration_test = function(x = c(0.5,1), y = c(1.5,0.5), target_biases =
     N_centers = 2,
     Center_n = 500,
     N_cov_points = 50,
-    N_post = 100
+    N_post = 100,
+    starting_draws = starting_draws
   )
 
 }
@@ -154,4 +155,29 @@ percentile_rand_test = simple_calibration_test(
 
 test_that("random test with the percentile method", {
   expect_true(class(percentile_rand_test) == "list")
+})
+
+
+# warm start ------------------------------------------------
+
+warm_start = data.frame(x1 = rnorm(n = 100, mean = 0.5, sd = 0.02),
+                        x2 = rnorm(n = 100, mean = 1.5, sd = 0.02))
+
+warm_start_test = simple_calibration_test(
+  x = c(0.5,1),
+  y = c(1.5,0.5),
+  target_biases = c(0,0),
+  stopping_bounds_margin_of_error = 0.02,
+  initial_bounds_margin_of_error = 0.99,
+  priors_relative_width = 0.9,
+  with_randomness = T,
+  omit.y1 = F,
+  omit.y2 = F,
+  improve_method = "percentile",
+  max_iter = 10,
+  starting_draws = warm_start
+)
+
+test_that("warm start test", {
+  expect_true(class(warm_start_test) == "list")
 })
