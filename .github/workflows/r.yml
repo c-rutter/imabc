@@ -10,9 +10,9 @@ name: R-CMD-check
 
 on:
   push:
-    branches: [ master, manual_sample]
+    branches: [ master, manual_sample, develop]
   pull_request:
-    branches: [ master, manual_sample]
+    branches: [ master, manual_sample, develop]
 
 jobs:
   R-CMD-check:
