@@ -1181,10 +1181,12 @@ imabc <- function(
   setorder(good_target_dist, draw, na.last = TRUE)
 
   # Save MeanCovariance file
-  save_results(
-    mean_cov[, c("iter", "step", "center", "B.in", "parm", calibr_parm_names), with = FALSE], meancov_outfile,
-    out_dir = output_directory, append = FALSE
-  )
+  if (!is.null(output_directory)) {
+    save_results(
+      mean_cov[, c("iter", "step", "center", "B.in", "parm", calibr_parm_names), with = FALSE], meancov_outfile,
+      out_dir = output_directory, append = FALSE
+    )
+  }
 
 
   # Save current iteration and last draw info for restart
