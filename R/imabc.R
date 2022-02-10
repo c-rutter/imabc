@@ -158,7 +158,7 @@ imabc <- function(
   seed = NULL,
   latinHypercube = TRUE,
   starting_draws = NULL,
-  improve_method = c("direct", "percentile", "both"),
+  improve_method = c("percentile", "direct", "both"),
   backend_fun = NULL,
   output_directory = NULL,
   output_tag = "timestamp",
@@ -266,7 +266,7 @@ imabc <- function(
   seed_stream_start <- .Random.seed
 
   # Target improvement method
-  improve_method <- match.arg(improve_method, c("direct", "percentile", "both"))
+  improve_method <- match.arg(improve_method, c("percentile", "direct", "both"))
   improve_min_samplefactor <- 2
 
   # File names for saving
