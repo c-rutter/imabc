@@ -250,7 +250,7 @@ imabc <- function(
   N_start <- ifelse(is.null(starting_draws), N_start, nrow(starting_draws))
   n_draw <- ifelse(continue_runs, N_centers*Center_n, N_start)
   n_rows_init <- max(n_draw, N_centers*Center_n) + N_centers
-  n_store <- max((N_post + N_centers*(Center_n + 1)), 2*N_cov_points + 1)
+  n_store <- 2*max((N_post + N_centers*(Center_n + 1)), 2*N_cov_points + 1)
   ESS <- 0 # Effective Sample Size
 
   # Create output directory if it doesn't already exist
@@ -538,6 +538,7 @@ imabc <- function(
         # Update good draw distance and stopping criteria
         if (length(keep_draws) > 0) {
           # if there are any centers that are kept, recalculate
+          # Only use targets that are being updated (unless all are at stopping bounds)
           if (length(update_targets) == 0) {
             good_target_dist[draw %in% keep_draws, ]$tot_dist <- total_distance(
               dt = good_target_dist[draw %in% keep_draws, ],
@@ -613,6 +614,7 @@ imabc <- function(
         good_target_dist[update_row_range, ] <- iter_target_dist[draw %in% add_draws, ]
 
         # Make sure total distance is correct in good_target_dist
+        # Only use targets that are being updated (unless all are at stopping bounds)
         if (length(update_targets) == 0) {
           good_target_dist[update_row_range, tot_dist := total_distance(
             dt = good_target_dist[update_row_range, ],
@@ -636,7 +638,7 @@ imabc <- function(
     good_row_range <- which(good_target_dist$n_good == n_target_distances)
 
     # Improve Target Bounds ---------------------------------------------------------------------------------------------
-    if ((current_good_n >= improve_min_samplefactor*N_cov_points) & length(update_targets) > 0) {
+    if ((current_good_n >= improve_min_samplefactor*N_cov_points) & length(update_targets) > 0 & iter_valid_n > 0) {
       # Method 1: Use fewest number of points greater than or equal to N_cov_points that improves the target bounds
       improve <- FALSE
       if (improve_method %in% c("percentile", "both")) {
@@ -649,7 +651,7 @@ imabc <- function(
         keep_points <- c(trunc(seq(1.0, improve_min_samplefactor, 0.1)*N_cov_points), current_good_n)
         for (test_n_iter in keep_points) {
           # If we can use less than the entire sample, calculate bounds with the subset. Otherwise, bounds do not change
-          if (test_n_iter < current_good_n) {
+          if (test_n_iter < current_good_n | test_n_iter == n_store) {
             # Get the test_n_iter best draws to determine an empirical set of new bounds
             get_draws <- good_target_dist$draw[order(good_target_dist$tot_dist)][1:test_n_iter]
 
@@ -738,7 +740,7 @@ imabc <- function(
       } # improve_method %in% c("direct", "both")
 
       # If we constricted our target ranges successfully
-      if (new_iter_valid_n >= N_cov_points & new_iter_valid_n < current_good_n) {
+      if (new_iter_valid_n >= N_cov_points & (new_iter_valid_n < current_good_n | new_iter_valid_n == n_store)) {
         # Update current bounds to the newly calculated bounds
         targets <- update_target_bounds(targets, from = "current", to = "new")
 
