@@ -15,7 +15,7 @@ imabc(
   N_post = 100,
   sample_inflate = 1.5,
   max_iter = 1000,
-  n_cons_fail_update = max_iter,
+  max_fail_iter = max_iter,
   seed = NULL,
   latinHypercube = TRUE,
   starting_draws = NULL,
@@ -58,7 +58,7 @@ simulated to ensure enough valid (within range) parameters draws are simulated f
 
 \item{max_iter}{numeric(1). The maximum number of iterations to attempt.}
 
-\item{n_cons_fail_update}{numeric(1). Number of iterations that imabc will stop after no updates of the target bounds.}
+\item{max_fail_iter}{numeric(1). Number of iterations that imabc will stop after no updates of the target bounds.}
 
 \item{seed}{numeric(1). The seed to set for reproducibility.}
 
