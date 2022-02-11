@@ -15,6 +15,7 @@ imabc(
   N_post = 100,
   sample_inflate = 1.5,
   max_iter = 1000,
+  n_cons_fail_update = max_iter,
   seed = NULL,
   latinHypercube = TRUE,
   starting_draws = NULL,
@@ -57,6 +58,8 @@ simulated to ensure enough valid (within range) parameters draws are simulated f
 
 \item{max_iter}{numeric(1). The maximum number of iterations to attempt.}
 
+\item{n_cons_fail_update}{numeric(1). Number of iterations that imabc will stop after no updates of the target bounds.}
+
 \item{seed}{numeric(1). The seed to set for reproducibility.}
 
 \item{latinHypercube}{logical(1). Should algorithm use a Latin Hypercube to generate first set of parameters. Ignored
@@ -67,7 +70,7 @@ parameters. Must have the same number of columns as parameters specified in the 
 they must be the same as the parameters specified in the priors object. If names are not provided, imabc will assume
 they are in the same order as the parameters specified in the priors object.}
 
-\item{improve_method}{character (1). Either "percentile", "direct" or "both".}
+\item{improve_method}{character(1). Either "percentile", "direct" or "both".}
 
 \item{backend_fun}{function. For advanced users only. Lets to user evaluate the target function(s) using their own
 backend, i.e., simulate targets with an alternative parallel method. Only necessary if the backend method is
