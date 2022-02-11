@@ -18,7 +18,7 @@ imabc(
   seed = NULL,
   latinHypercube = TRUE,
   starting_draws = NULL,
-  improve_method = c("direct", "percentile", "both"),
+  improve_method = c("percentile", "direct", "both"),
   backend_fun = NULL,
   output_directory = NULL,
   output_tag = "timestamp",
