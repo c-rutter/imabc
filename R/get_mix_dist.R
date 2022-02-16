@@ -1,5 +1,8 @@
 get_mix_dist <- function(parm_names, mixture_file) {
-
+  iter <- step <- center <- parm_num <- NULL
+  # CM NOTE: At the moment, imabc is only able to handle an object being passed, which means this is just returning
+  #  mean_cov which is passed to it. Should clarify that all mean_cov needs to be row bound together prior to a continuing
+  #  run in order for them to all be used.
   if (is.character(mixture_file)) {
     non_parm_vars <- c("iter", "step", "center", "B.in", "parm")
     n_parms_now <- length(parm_names)
@@ -62,7 +65,7 @@ get_mix_dist <- function(parm_names, mixture_file) {
         # keep info up to first iter in next file
         first_iter <- dta_i1$iter[1]
         n_keep <- (n_parms_now + 1)*(first_iter - 1)
-        mean_cov <- mean_cov[iter <= n_keep, ]
+        mean_cov <- mixture_file[iter <= n_keep, ]
         mean_cov <- rbind(mean_cov, dta_i1)
 
       } # ! i1 == 1

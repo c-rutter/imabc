@@ -1,16 +1,19 @@
-get_B_draws <- function(B, inflate, center, cov_matrix, priors, parm_names) {
-  # Simulate values following a multivariate normal
+get_B_draws <- function(B, inflate, center, cov_matrix, priors) {
+  # Samples parameters from a multivariate normal with no assumption of independence
+
+  # inflate allows the function to generate extra values in case some or considered to be invalid
   x <- as.data.table(mvrnorm(n = trunc(inflate*B), mu = center, Sigma = cov_matrix))
-  x$in_range <- get_in_range(parms = x, priors = priors, parm_names = parm_names)
-  if (sum(x$in_range) > 0) {
-    setorder(x, -in_range)
+
+  # Reject out of bounds parameters
+  x$in_range <- get_in_range(compare_list = priors, check_dt = x, out = "numeric")
+  if (any(x$in_range > 0)) {
+    x <- x[in_range > 0]
     x$in_range <- NULL
 
+    # If sum(in_range > 0) < B, then B - sum(in_range > 0) rows will be assigned NAs
     return(x[1:B, ])
   } else {
-    # CM NOTE: Should this be an actual error?
-    print(paste("get_B_draws error: no parameter draws are in range with inflate =", inflate))
-
+    # Warning is created and handled by imabc.R
     return(NULL)
   }
 }

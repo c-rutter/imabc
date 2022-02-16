@@ -1,4 +1,9 @@
+^renv$
+^renv\.lock$
 ^.*\.Rproj$
 ^\.Rproj\.user$
 dev
 data
+.github
+^README\.Rmd$
+^cran-comments\.md$

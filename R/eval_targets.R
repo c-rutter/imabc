@@ -2,32 +2,12 @@ eval_targets <- function(sim_targets, target_list, criteria = c("start", "update
   # selected criteria point
   criteria <- match.arg(criteria, c("start", "update", "stop"))
 
-  # Calculate Good Distances by major targets
-  tot_dist <- sapply(target_list, FUN = function(x, dt) {
-    # Get total distance for a given major target
-    tot_dist <- get_distance(dt = dt, target_list = x)
+  # Calculate distances (by group if target groups exist)
+  distances <- target_distance(dt = sim_targets, target_list = target_list)
 
-    # Determine if all sub targets are in their appropriate ranges
-    check <- rep.int(1, times = nrow(dt))
-    for (sub in x$names) {
-      targ_id <- paste0(x["target_group"], "_", sub)
-      if (criteria == "start") {
-        check <- check*in_range(dt[, targ_id, with = FALSE], x$lower_bounds_start[sub], x$upper_bounds_start[sub])
-      } else if (criteria == "update") {
-        check <- check*in_range(dt[, targ_id, with = FALSE], x$lower_bounds_new[sub], x$upper_bounds_new[sub])
-      } else if (criteria == "stop") {
-        check <- check*in_range(dt[, targ_id, with = FALSE], x$lower_bounds_stop[sub], x$upper_bounds_stop[sub])
-      } else {
-        stop("criteria must be either start, update, or stop")
-      }
-    }
+  # Determine which targets are in range (by group if target groups exist)
+  check <- get_in_range(compare_list = target_list, check_dt = sim_targets, criteria = criteria, out = "numeric")
+  fin_distance <- distances*check
 
-    # Turn total distance negative if sub targets aren't all in the appropriate range
-    fin_distance <- tot_dist*(check*2 - 1)
-
-    return(fin_distance)
-  }, dt = sim_targets)
-  tot_dist <- as.data.table(tot_dist)
-
-  return(tot_dist)
+  return(as.data.table(fin_distance))
 }

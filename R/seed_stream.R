@@ -1,6 +1,6 @@
-seed_stream <- function(seed_stream_start, length.out) { # same as get.random.seed.strings.R
+seed_stream <- function(seed_stream_start, length.out) {
   # Initialize vector
-  stream <- rep(NA_character_, length.out)
+  stream <- rep(NA_integer_, length.out)
 
   # Loop over vector to get
   for (i1 in 1:length.out) {
