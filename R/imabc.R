@@ -646,6 +646,8 @@ imabc <- function(
       improve <- FALSE
       if (improve_method %in% c("percentile", "both")) {
         # Sort targets based on overall distance of target distances still being calibrated
+        # Calculated tot_dist is "updating distance" that is based only on targets 
+        # whose bounds have not yet narrowed to stopping bounds
         good_target_dist$tot_dist <- total_distance(dt = good_target_dist, target_names = update_targets, scale = FALSE)
 
         # Find least amount of points that move us towards the stopping bounds while letting us have enough for the more
@@ -874,7 +876,8 @@ imabc <- function(
       n_best_draw <- 0
       center_draw_best <- NULL
       if (n_hiwt < N_centers) {
-        # Pull the draw numbers while ordering them based on their total distance
+        # Pull the draw numbers while ordering them based on tot_dist, equal to 
+        # "updating distance" when target bounds are  being narroed and total distance once stopping bound are reached
         draw_order <- good_target_dist$draw[good_row_range][order(good_target_dist$tot_dist[good_row_range])]
         n_best_draw <- min(current_good_n, (N_centers - n_hiwt))
         center_draw_best <- draw_order[1:n_best_draw]
