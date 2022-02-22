@@ -650,8 +650,8 @@ imabc <- function(
 
         # Find least amount of points that move us towards the stopping bounds while letting us have enough for the more
         #   complex resampling method
-        # CM NOTE: Should we change 0.1 to be (improve_min_samplefactor - 1)/10?
-        keep_points <- c(trunc(seq(1.0, improve_min_samplefactor, 0.1)*N_cov_points), current_good_n)
+        improve_step=min(trunc((current_good_n - N_cov_points)/10),100)
+        keep_points <- c(seq(N_cov_points,(current_good_n-improve_step),improve_step), current_good_n)
         for (test_n_iter in keep_points) {
           # If we can use less than the entire sample, calculate bounds with the subset. Otherwise, bounds do not change
           if (test_n_iter < current_good_n | test_n_iter == n_store) {
