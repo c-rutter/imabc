@@ -703,7 +703,7 @@ imabc <- function(
       # In future we would trigger this based on too few points thrown out in method 1 and current_good_n >= X*N_cov_points
       if (improve_method == "direct" | (improve_method == "both" & !improve)) {
         # Find the greatest percentage improvement we can make while remaining above N_cov_points
-        ratchet_levels <- seq(1, 0.05, -0.05)
+        ratchet_levels <- c(seq(1, 0.05, -0.05),0.025,0.01,0.001)
         new_iter_valid_n <- 0
         for (ratchet_i1 in ratchet_levels) {
           # Get new bounds moving ratchet_i1 closer towards the stopping bounds
