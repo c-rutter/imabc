@@ -12,6 +12,7 @@ add_target(
   target,
   starting_range,
   stopping_range,
+  scale = NULL,
   target_name = NULL,
   FUN = NULL
 )
