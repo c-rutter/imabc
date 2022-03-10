@@ -25,7 +25,11 @@ target_distance <- function(dt, target_list, dist = getOption("imabc.target_eval
 
     }
 
-    return(((obs - sim)^2)/(final_scale^2))
+    if (dist_opt == "scale" & !is.na(scale)) {
+      return(sqrt((obs - sim)^2)/final_scale)
+    }else{
+      return(((obs - sim)^2)/(final_scale^2))
+    }
   }, dt = dt, target_list = target_list, dist_opt = dist)
 
   # If grouped targets exist, aggregate distances
