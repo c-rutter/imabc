@@ -314,6 +314,12 @@ imabc <- function(
 
   # Targets Handling ----------------------------------------------------------------------------------------------------
   # All the targets that are being simulated
+  stopifnot(
+    "Target Distance Evaluation methods zscore and weighted_euclidian require user specied scales for targets." =
+      (getOption("imabc.target_eval_distance") %in% c("zscore", "weighted_euclidian") & !any(is.na(targets$scales))) |
+      (!getOption("imabc.target_eval_distance") %in% c("zscore", "weighted_euclidian"))
+  )
+  getOption("imabc.target_eval_distance") %in% c("zscore", "weighted_euclidian") & !any(is.na(targets$scales))
   sim_target_names <- attr(targets, "target_names")
 
   # Initialize current iteration simulated target data.table
@@ -646,14 +652,14 @@ imabc <- function(
       improve <- FALSE
       if (improve_method %in% c("percentile", "both")) {
         # Sort targets based on overall distance of target distances still being calibrated
-        # Calculated tot_dist is "updating distance" that is based only on targets 
+        # Calculated tot_dist is "updating distance" that is based only on targets
         # whose bounds have not yet narrowed to stopping bounds
         good_target_dist$tot_dist <- total_distance(dt = good_target_dist, target_names = update_targets, scale = FALSE)
 
         # Find least amount of points that move us towards the stopping bounds while letting us have enough for the more
         #   complex resampling method
-        improve_step=min(trunc((current_good_n - N_cov_points)/10),100)
-        keep_points <- c(seq(N_cov_points,(current_good_n-improve_step),improve_step), current_good_n)
+        improve_step <- min(trunc((current_good_n - N_cov_points)/10), 100)
+        keep_points <- c(seq(N_cov_points, (current_good_n - improve_step), improve_step), current_good_n)
         for (test_n_iter in keep_points) {
           # If we can use less than the entire sample, calculate bounds with the subset. Otherwise, bounds do not change
           if (test_n_iter < current_good_n | test_n_iter == n_store) {
@@ -705,7 +711,7 @@ imabc <- function(
       # In future we would trigger this based on too few points thrown out in method 1 and current_good_n >= X*N_cov_points
       if (improve_method == "direct" | (improve_method == "both" & !improve)) {
         # Find the greatest percentage improvement we can make while remaining above N_cov_points
-        ratchet_levels <- c(seq(1, 0.05, -0.05),0.025,0.01,0.001)
+        ratchet_levels <- c(seq(1, 0.05, -0.05), 0.025, 0.01, 0.001)
         new_iter_valid_n <- 0
         for (ratchet_i1 in ratchet_levels) {
           # Get new bounds moving ratchet_i1 closer towards the stopping bounds
@@ -876,7 +882,7 @@ imabc <- function(
       n_best_draw <- 0
       center_draw_best <- NULL
       if (n_hiwt < N_centers) {
-        # Pull the draw numbers while ordering them based on tot_dist, equal to 
+        # Pull the draw numbers while ordering them based on tot_dist, equal to
         # "updating distance" when target bounds are  being narroed and total distance once stopping bound are reached
         draw_order <- good_target_dist$draw[good_row_range][order(good_target_dist$tot_dist[good_row_range])]
         n_best_draw <- min(current_good_n, (N_centers - n_hiwt))
