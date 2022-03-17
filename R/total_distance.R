@@ -8,7 +8,7 @@ total_distance <- function(dt, target_names, scale = FALSE, mu = NULL, sd = NULL
       #   and the calculation could blow up with a negative, I ensure the row max is a positive value
       distance <- abs(do.call(pmax, dt[, target_names, with = FALSE]))
     } else if (dist == "weighted_euclidian") {
-      distance <- sqrt(rowSums(dt[, target_names, with = FALSE]))
+      distance <- euclid_distance(dt[, target_names, with = FALSE])
     } else {
       # Simple Euclidian Distance
       # CM NOTE: Come back to whether we square the sums
@@ -27,4 +27,9 @@ total_distance <- function(dt, target_names, scale = FALSE, mu = NULL, sd = NULL
   }
 
   return(distance)
+}
+
+# Used in imabc as well as in total_distance
+euclid_distance <- function(dt) {
+  sqrt(rowSums(abs(dt)))
 }

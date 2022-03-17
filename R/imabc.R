@@ -171,7 +171,7 @@ imabc <- function(
 ) {
   # Environment setup ---------------------------------------------------------------------------------------------------
   # For CRAN checks
-  sample_wt <- tot_dist <- step <- iter <- n_good <- scaled_dist <- draw <- NULL
+  sample_wt <- tot_dist <- euclid_dist <- step <- iter <- n_good <- scaled_dist <- draw <- NULL
 
   # Check for priors and targets or previous_results directory
   if ((is.null(priors) || is.null(targets)) & is.null(previous_results_dir)) {
@@ -215,6 +215,12 @@ imabc <- function(
     previous_results$good_target_dist[, (target_distance_names) := eval_targets(
       sim_targets = previous_results$good_sim_target, target_list = targets, criteria = "start"
     )]
+    previous_results$good_target_dist$tot_dist <- total_distance(
+      dt = previous_results$good_target_dist, target_names = target_distance_names, scale = FALSE
+    )
+    previous_results$good_target_dist$euclid_dist <- euclid_distance(
+      dt = previous_results$good_target_dist[, target_distance_names, with = FALSE]
+    )
     previous_results$good_target_dist$n_good <- rowSums(
       previous_results$good_target_dist[, (target_distance_names), with = FALSE] >= 0, na.rm = TRUE
     )
@@ -491,6 +497,7 @@ imabc <- function(
       # Evaluate Targets, first based on whether they are in the appropriate range, second by euclidian distance
       iter_target_dist[, (target_distance_names) := eval_targets(sim_targets = iter_sim_target, target_list = targets, criteria = "start")]
       iter_target_dist$tot_dist <- total_distance(dt = iter_target_dist, target_names = target_distance_names, scale = FALSE)
+      iter_target_dist$euclid_dist <- euclid_distance(dt = iter_target_dist[, target_distance_names, with = FALSE])
       # Count the good points (points associated with positive distances)
       iter_target_dist$n_good[1:n_draw] <- rowSums(iter_target_dist[1:n_draw, (target_distance_names), with = FALSE] >= 0, na.rm = TRUE)
       iter_valid_n <- sum(iter_target_dist$n_good[iter_target_dist$step <= N_centers] == n_target_distances, na.rm = TRUE)
@@ -554,12 +561,18 @@ imabc <- function(
               target_names = target_distance_names,
               scale = FALSE
             )
+            good_target_dist[draw %in% keep_draws, ]$euclid_dist <- euclid_distance(
+              dt = good_target_dist[draw %in% keep_draws, target_distance_names, with = FALSE]
+            )
 
           } else { # length(update_targets) == 0
             good_target_dist[draw %in% keep_draws, ]$tot_dist <- total_distance(
               dt = good_target_dist[draw %in% keep_draws, ],
               target_names = update_targets,
               scale = FALSE
+            )
+            good_target_dist[draw %in% keep_draws, ]$euclid_dist <- euclid_distance(
+              dt = good_target_dist[draw %in% keep_draws, update_targets, with = FALSE]
             )
 
           } # ! length(update_targets) == 0
@@ -587,6 +600,7 @@ imabc <- function(
         iter_parm_draws[step == (N_centers + 1), (all_parm_names) := NA_real_]
         iter_sim_target[step == (N_centers + 1), (sim_target_names) := NA_real_]
         iter_target_dist[step == (N_centers + 1), c(target_distance_names, "tot_dist") := NA_real_]
+        iter_target_dist[step == (N_centers + 1), c(target_distance_names, "euclid_dist") := NA_real_]
         iter_target_dist[step == (N_centers + 1), n_good := 0L]
 
         # Total draws to be kept
@@ -601,7 +615,7 @@ imabc <- function(
         # Determine rows that will be kept in good_*
         n_keep <- ifelse(main_loop_iter != 1 & (current_good_n + iter_valid_n) > n_store, n_store - iter_valid_n, current_good_n)
         if (main_loop_iter != 1 & (current_good_n + iter_valid_n) > n_store) {
-          keep_draws <- good_target_dist$draw[order(-good_target_dist$n_good, good_target_dist$tot_dist)][1:n_keep]
+          keep_draws <- good_target_dist$draw[order(-good_target_dist$n_good, good_target_dist$tot_dist, good_target_dist$euclid_dist)][1:n_keep]
           good_parm_draws[1:n_keep, ] <- good_parm_draws[draw %in% keep_draws, ]
           good_sim_target [1:n_keep, ] <- good_sim_target[draw %in% keep_draws, ]
           good_target_dist[1:n_keep, ] <- good_target_dist[draw %in% keep_draws, ]
@@ -614,7 +628,9 @@ imabc <- function(
 
         # Determine rows that will be used to update from iter_*
         valid_rows <- iter_target_dist$n_good == n_target_distances & iter_target_dist$step < (N_centers + 1)
-        order_valid_rows <- order(-iter_target_dist$n_good[valid_rows], iter_target_dist$tot_dist[valid_rows])
+        order_valid_rows <- order(
+          -iter_target_dist$n_good[valid_rows], iter_target_dist$tot_dist[valid_rows], iter_target_dist$euclid_dist[valid_rows]
+        )
         add_draws <- sort(iter_target_dist$draw[valid_rows][order_valid_rows][1:length(update_row_range)])
 
         # Transfer good rows to results data.tables
@@ -630,11 +646,17 @@ imabc <- function(
             target_names = target_distance_names,
             scale = FALSE
           )]
+          good_target_dist[update_row_range, euclid_dist := euclid_distance(
+            dt = good_target_dist[update_row_range, target_distance_names, with = FALSE]
+          )]
         } else {
           good_target_dist[update_row_range, tot_dist := total_distance(
             dt = good_target_dist[update_row_range, ],
             target_names = update_targets,
             scale = FALSE
+          )]
+          good_target_dist[update_row_range, euclid_dist := euclid_distance(
+            dt = good_target_dist[update_row_range, update_targets, with = FALSE]
           )]
         }
       } # iter_valid_n > 0
@@ -655,6 +677,7 @@ imabc <- function(
         # Calculated tot_dist is "updating distance" that is based only on targets
         # whose bounds have not yet narrowed to stopping bounds
         good_target_dist$tot_dist <- total_distance(dt = good_target_dist, target_names = update_targets, scale = FALSE)
+        good_target_dist$euclid_dist <- total_distance(dt = good_target_dist[, update_targets, with = FALSE])
 
         # Find least amount of points that move us towards the stopping bounds while letting us have enough for the more
         #   complex resampling method
@@ -664,7 +687,7 @@ imabc <- function(
           # If we can use less than the entire sample, calculate bounds with the subset. Otherwise, bounds do not change
           if (test_n_iter < current_good_n | test_n_iter == n_store) {
             # Get the test_n_iter best draws to determine an empirical set of new bounds
-            get_draws <- good_target_dist$draw[order(good_target_dist$tot_dist)][1:test_n_iter]
+            get_draws <- good_target_dist$draw[order(good_target_dist$tot_dist, good_target_dist$euclid_dist)][1:test_n_iter]
 
             # Get new bounds using test_n_iter best draws
             targets <- get_new_bounds(
@@ -777,6 +800,7 @@ imabc <- function(
         good_sim_target[remove_rows, (sim_target_names) := NA_real_]
         good_target_dist[remove_rows, c("draw", "step", "iter", "n_good") := NA_integer_]
         good_target_dist[remove_rows, c(target_distance_names, "tot_dist") := NA_real_]
+        good_target_dist[remove_rows, c(target_distance_names, "euclid_dist") := NA_real_]
         setorder(good_parm_draws, draw, na.last = TRUE)
         setorder(good_sim_target, draw, na.last = TRUE)
         setorder(good_target_dist, draw, na.last = TRUE)
@@ -883,8 +907,10 @@ imabc <- function(
       center_draw_best <- NULL
       if (n_hiwt < N_centers) {
         # Pull the draw numbers while ordering them based on tot_dist, equal to
-        # "updating distance" when target bounds are  being narroed and total distance once stopping bound are reached
-        draw_order <- good_target_dist$draw[good_row_range][order(good_target_dist$tot_dist[good_row_range])]
+        # "updating distance" when target bounds are being narrowed and total distance once stopping bound are reached
+        draw_order <- good_target_dist$draw[good_row_range][
+          order(good_target_dist$tot_dist[good_row_range], good_target_dist$euclid_dist[good_row_range])
+        ]
         n_best_draw <- min(current_good_n, (N_centers - n_hiwt))
         center_draw_best <- draw_order[1:n_best_draw]
       } # n_hiwt < N_centers
@@ -907,6 +933,7 @@ imabc <- function(
       iter_parm_draws$seed <- NA_character_
       iter_sim_target[, (sim_target_names) := NA_real_]
       iter_target_dist[, c(target_distance_names, "tot_dist") := NA_real_]
+      iter_target_dist[, c(target_distance_names, "euclid_dist") := NA_real_]
       iter_target_dist$n_good <- 0L
 
       # New draw sampling

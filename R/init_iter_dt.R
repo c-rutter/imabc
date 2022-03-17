@@ -21,6 +21,7 @@ init_iter_dt <- function(n_row, cols, type = c("parm_draws", "targ_dists", "sim_
   } else if (type == "targ_dists") {
     dt[, (cols) := NA_real_]
     dt[, tot_dist := NA_real_]
+    dt[, euclid_dist := NA_real_]
     dt[, n_good := 0L]
 
   } else if (type == "sim_targs") {
