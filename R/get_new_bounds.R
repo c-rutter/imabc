@@ -14,7 +14,16 @@ get_new_bounds <- function(to_update, targets_list, sims = NULL, ratchet_pct = N
   )
   colnames(stoppin) <- targ_names
 
+  # Pull targets and scales
+  targs <- targets_list$targets[attributes(targets_list)$target_groups %in% to_update]
+  scals <- targets_list$scales[attributes(targets_list)$target_groups %in% to_update]
+
+  # Initialize new bounds
+  targets_list$new_lower_bounds <- targets_list$current_lower_bounds
+  targets_list$new_upper_bounds <- targets_list$current_upper_bounds
+
   if (!is.null(sims)) {
+    # Percentile Method
     # Calculate new bounds
     new_bounds <- apply(sims[, targ_names, with = FALSE], 2, range)
 
@@ -30,39 +39,46 @@ get_new_bounds <- function(to_update, targets_list, sims = NULL, ratchet_pct = N
     new_bounds[2, ] <- apply(tmp, 2, max)
 
     # Calculate movement towards the stopping bounds
-    deltas <- (current - new_bounds)/(current - stoppin)
-  } else if (!is.null(ratchet_pct)) {
-    # Calculate movement towards the stopping bounds
-    deltas <- ratchet_pct
-  }
-  deltas[is.na(deltas)] <- 999
+    deltas <- abs(t((t(new_bounds) - targs)/scals))
+    deltas[is.na(deltas)] <- 0
 
-  # Only check across groups for sample reduction method
-  if (!is.null(sims)) {
     # If grouped targets exist, Pick the least amount of movement within each group
     if (inherits(targets_list, "grouped")) {
       groups <- attr(targets_list[targ_names], which = "target_groups")
       for (i1 in unique(groups)) {
         subtargets <- names(groups[groups == i1])
         # Pick the least amount of movement (within target groups)
-        most_allowed <- apply(deltas[, subtargets, drop = FALSE], 1, min)
+        most_allowed <- apply(deltas[, subtargets, drop = FALSE], 1, max)
         deltas[, subtargets] <- matrix(rep(most_allowed, length(subtargets)), nrow = 2)
       }
     }
+
+    # Movements up from minimum bounds
+    targets_list$new_lower_bounds[targ_names] <- targs[targ_names] - scals*deltas[1, ]
+    # Movements down from maximum bounds
+    targets_list$new_upper_bounds[targ_names] <- targs[targ_names] + scals*deltas[2, ]
+  } else if (!is.null(ratchet_pct)) {
+    # Direct Method
+    # Calculate movement towards the stopping bounds
+    deltas <- ratchet_pct
+
+    # Convert this into an actual change for each subtarget
+    max_movement <- abs(current - stoppin)
+    final_movements <- max_movement*deltas
+
+    # Movements up from minimum bounds
+    targets_list$new_lower_bounds[targ_names] <- targets_list$new_lower_bounds[targ_names] + final_movements[1, ]
+    # Movements down from maximum bounds
+    targets_list$new_upper_bounds[targ_names] <- targets_list$new_upper_bounds[targ_names] - final_movements[2, ]
   }
 
-  # Convert this into an actual change for each subtarget
-  max_movement <- abs(current - stoppin)
-  final_movements <- max_movement*deltas
-
-  # Initialize new bounds
-  targets_list$new_lower_bounds <- targets_list$current_lower_bounds
-  targets_list$new_upper_bounds <- targets_list$current_upper_bounds
-
-  # Movements up from minimum bounds
-  targets_list$new_lower_bounds[targ_names] <- targets_list$new_lower_bounds[targ_names] + final_movements[1, ]
-  # Movements down from maximum bounds
-  targets_list$new_upper_bounds[targ_names] <- targets_list$new_upper_bounds[targ_names] - final_movements[2, ]
+  # Extra check to make sure bounds are not wider than before
+  targets_list$new_lower_bounds[targ_names] <- ifelse(
+    targets_list$new_lower_bounds[targ_names] <= current[1, ], current[1, ], targets_list$new_lower_bounds[targ_names]
+  )
+  targets_list$new_upper_bounds[targ_names] <- ifelse(
+    targets_list$new_upper_bounds[targ_names] >= current[2, ], current[2, ], targets_list$new_upper_bounds[targ_names]
+  )
 
   # Extra check to make sure bounds do not go beyond the stopping point
   targets_list$new_lower_bounds[targ_names] <- ifelse(
