@@ -302,6 +302,10 @@ imabc <- function(
 
   # Distances Handling --------------------------------------------------------------------------------------------------
   # All the distances that are being calculated (names of non-grouped targets + names of groups of targets)
+  stopifnot(
+    "Scales not provided for improve_method. Please provide scales for targets" =
+      improve_method != "direct" & !any(is.na(targets$scales))
+  )
   target_distance_names <- unique(attr(targets, "target_groups"))
   n_target_distances <- length(target_distance_names)
 
