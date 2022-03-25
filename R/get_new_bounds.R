@@ -13,6 +13,7 @@ get_new_bounds <- function(to_update, targets_list, sims = NULL, ratchet_pct = N
     nrow = 2, byrow = TRUE
   )
   colnames(stoppin) <- targ_names
+  target_calibrated <- current == stoppin
 
   # Pull targets and scales
   targs <- targets_list$targets[attributes(targets_list)$target_groups %in% to_update]
@@ -40,7 +41,7 @@ get_new_bounds <- function(to_update, targets_list, sims = NULL, ratchet_pct = N
 
     # Calculate movement towards the stopping bounds
     deltas <- abs(t((t(new_bounds) - targs)/scals))
-    deltas[is.na(deltas)] <- 0
+    deltas[is.na(deltas) | target_calibrated] <- 0
 
     # If grouped targets exist, Pick the least amount of movement within each group
     if (inherits(targets_list, "grouped")) {
