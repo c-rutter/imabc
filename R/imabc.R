@@ -231,6 +231,7 @@ imabc <- function(
     # Previous Run info
     previous_iter <- as.numeric(previous_results$prev_run_meta$value[previous_results$prev_run_meta$info == "current_iteration"])
     previous_draw <- as.numeric(previous_results$prev_run_meta$value[previous_results$prev_run_meta$info == "last_draw"])
+    N_centers <- as.numeric(previous_results$prev_run_meta$value[previous_results$prev_run_meta$info == "N_centers"])
 
     # Ensure mean_cov has proper number of iterations
     if (any(previous_results$mean_cov$iter > previous_iter)) {
