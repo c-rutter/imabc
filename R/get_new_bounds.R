@@ -90,8 +90,8 @@ get_new_bounds <- function(to_update, targets_list, sims = NULL, ratchet_pct = N
   )
 
 # significant digits for each target: max of sig digits for upper and lower bounds
-  sf_lb=sigfigs(targets$stopping_lower_bounds[targ_names])
-  sf_ub=sigfigs(targets$stopping_upper_bounds[targ_names])
+  sf_lb=sigfigs(targets_list$stopping_lower_bounds[targ_names])
+  sf_ub=sigfigs(targets_list$stopping_upper_bounds[targ_names])
   sdig=apply(rbind(sf_lb,sf_ub), 2, max)
 
 # set significant digits to match inputs
