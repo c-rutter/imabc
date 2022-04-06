@@ -1030,6 +1030,7 @@ imabc <- function(
           # Deal with parameters that don't have any variance
           if (any(diag(sample_cov) <= 0.05*prior_sds)) {
             # This occurs when adding a new parameter: it is set to default for all prior draws
+            message("Potentially over-concentrated sampling: Parameters with SD < 5% of prior SD")
             is_zero <- (diag(sample_cov) == 0)
             sd_next <- 0.05*prior_sds
             sd_next[!is_zero] <- 0
