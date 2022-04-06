@@ -782,8 +782,8 @@ imabc <- function(
       if (new_iter_valid_n >= N_cov_points & (new_iter_valid_n < current_good_n | new_iter_valid_n == n_store)) {
         # Check the new bounds are actually an improvement (matters for new_iter_valid_n == n_store case)
         improve <- any(
-          targets$new_lower_bounds != targets$current_lower_bounds |
-            targets$new_upper_bounds != targets$current_upper_bounds
+          signif(targets$new_lower_bounds,5) != signif(targets$current_lower_bounds,5) |
+            signif(targets$new_upper_bounds,5) != signif(targets$current_upper_bounds,5)
         )
 
         # Update current bounds to the newly calculated bounds
