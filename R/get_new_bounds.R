@@ -62,5 +62,14 @@ get_new_bounds <- function(to_update, targets_list, sims) {
     targets_list$new_upper_bounds[targ_names] <= stoppin[2, ], stoppin[2, ], targets_list$new_upper_bounds[targ_names]
   )
 
+# significant digits for each target: max of sig digits for upper and lower bounds
+  sf_lb=sigfigs(targets$stopping_lower_bounds[targ_names])
+  sf_ub=sigfigs(targets$stopping_upper_bounds[targ_names])
+  sdig=apply(rbind(sf_lb,sf_ub), 2, max)
+
+# set significant digits to match inputs
+  targets_list$new_lower_bounds[targ_names] <- signif(targets_list$new_lower_bounds[targ_names],sdig)
+  targets_list$new_upper_bounds[targ_names] <- signif(targets_list$new_upper_bounds[targ_names],sdig)
+
   return(targets_list)
 }
