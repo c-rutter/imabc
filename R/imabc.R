@@ -1028,14 +1028,17 @@ imabc <- function(
           sample_cov <- parm_covariance(var_data)
 
           # Deal with parameters that don't have any variance
-          if (any(diag(sample_cov) <= 0.05*prior_sds)) {
+          if (any(diag(sample_cov) <= 0.1*prior_sds^2)) {
             # This occurs when adding a new parameter: it is set to default for all prior draws
-            message("Potentially over-concentrated sampling: Parameters with SD < 5% of prior SD")
-            is_zero <- (diag(sample_cov) == 0)
-            sd_next <- 0.05*prior_sds
-            sd_next[!is_zero] <- 0
-            diag(sample_cov) <- diag(sample_cov) + (sd_next^2)
-          }
+            # it may also occur when sampling becomes over concentrated around center points
+            message("Potentially over-concentrated sampling: Parameters with sampling variance < 10% of prior variance")
+            is_small <- (diag(sample_cov)<= 0.1*prior_sds^2)
+            var_next <- 0.1*prior_sds^2
+            # limit variance to become no more than 10% of prior variance
+            # and set correlation with this parameter to zero
+            sample_cov[is_small,] = sample_cov[,is_small]=0
+            diag(sample_cov)[is_small] <- var_next[is_small]
+            }
 
           # Simulate Center_n random draws of calibrated parameters
           if (abs(sum(sample_cov) - sum(diag(sample_cov))) < 1e-10) {
