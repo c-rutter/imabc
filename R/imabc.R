@@ -1021,7 +1021,7 @@ imabc <- function(
           )
 
           # Find nearest points based on scaled distance
-          calc_cov_points <- 1:min(c(10000, current_good_n))
+          calc_cov_points <- 1:min(c(max(c(10000,N_cov_points)), current_good_n))
           var_data <- good_parm_draws[order(good_parm_draws$scaled_dist)[calc_cov_points], calibr_parm_names, with = FALSE]
 
           # Find center specific var-cov matrices using N_cov_points closest points
@@ -1033,11 +1033,12 @@ imabc <- function(
             # it may also occur when sampling becomes over concentrated around center points
             message("Potentially over-concentrated sampling: Parameters with sampling variance < 10% of prior variance")
             is_small <- (diag(sample_cov)<= 0.1*prior_sds^2)
-            var_next <- 0.1*prior_sds^2
-            # limit variance to become no more than 10% of prior variance
-            # and set correlation with this parameter to zero
-            sample_cov[is_small,] = sample_cov[,is_small]=0
-            diag(sample_cov)[is_small] <- var_next[is_small]
+            sample_sd <- sqrt(diag(sample_cov))
+            sd_next <- sqrt(0.1)*prior_sds
+
+            # limit variance to become no more than 10% of prior variance while retaining correlation structure
+            sample_sd[is_small] <- sd_next[is_small]
+            sample_cov <- increase_samplevar(var_data,sample_sd)
             }
 
           # Simulate Center_n random draws of calibrated parameters
