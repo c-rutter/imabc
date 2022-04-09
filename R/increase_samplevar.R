@@ -5,7 +5,7 @@ increase_samplevar <- function(df,sds) {
   }
 
   # Get covariance of data.table
-  sample_cor <- cor(df)
+  sample_cor <- stats::cor(df)
   # check that sample_cor is PSD. Use a diagonal matrix if near singularity
   if (test_singularity(sample_cor, 1e-8)) {
     sample_cor <- diag(rep(1,ncol(df))) # identity matrix
