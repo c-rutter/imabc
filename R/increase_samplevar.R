@@ -8,7 +8,7 @@ increase_samplevar <- function(df,sds) {
   sample_cor <- cor(df)
   # check that sample_cor is PSD. Use a diagonal matrix if near singularity
   if (test_singularity(sample_cor, 1e-8)) {
-    sample_cor <- diag(rep(1,ncol(df)) # identity matrix
+    sample_cor <- diag(rep(1,ncol(df))) # identity matrix
     rownames(sample_cor) <- names(df)
     colnames(sample_cor) <- names(df)
 
