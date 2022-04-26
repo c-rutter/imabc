@@ -571,7 +571,7 @@ as.data.frame.targets <- function(x, ...) {
   grouped_targets <- attributes(t)$grouped_targets[keep]
   target_groups <- attributes(t)$target_groups[keep]
   target_names <- attributes(t)$target_names[keep]
-  update <- intersect(attributes(t)$update, target_names)
+  update <- attributes(t)$update[names(attributes(t)$update) == intersect(names(attributes(t)$update), target_names)]
   # Add them to new target list
   attributes(subset_targets)$update <- update
   attributes(subset_targets)$grouped_targets <- grouped_targets
