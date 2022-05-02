@@ -31,12 +31,12 @@ get_new_bounds <- function(to_update, targets_list, sims = NULL, ratchet_pct = N
     # Restrict the min of new_bounds to be between the min of start and the min of stop
     tmp <- array(c(current[1, ], new_bounds[1, ]), dim = c(1, ncol(new_bounds), 2))
     new_bounds[1, ] <- apply(tmp, 2, max)
-    tmp <- array(c(new_bounds[1, ], stoppin[1, ]), dim = c(1, ncol(new_bounds), 2))
+    tmp <- array(c(new_bounds[1, ], targs), dim = c(1, ncol(new_bounds), 2))
     new_bounds[1, ] <- apply(tmp, 2, min)
     # Restrict the max of new_bounds to be between the max of start and the max of stop
     tmp <- array(c(current[2, ], new_bounds[2, ]), dim = c(1, ncol(new_bounds), 2))
     new_bounds[2, ] <- apply(tmp, 2, min)
-    tmp <- array(c(new_bounds[2, ], stoppin[2, ]), dim = c(1, ncol(new_bounds), 2))
+    tmp <- array(c(new_bounds[2, ], targs), dim = c(1, ncol(new_bounds), 2))
     new_bounds[2, ] <- apply(tmp, 2, max)
 
     # Calculate movement towards the stopping bounds
