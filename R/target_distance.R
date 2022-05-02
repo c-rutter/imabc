@@ -5,6 +5,8 @@ target_distance <- function(dt, target_list, dist = getOption("imabc.target_eval
     # Get desired target value
     obs <- target_list$targets[x]
     scale <- target_list$scales[x]
+    upper_stop <- target_list$stopping_upper_bounds[x]
+    lower_stop <- target_list$stopping_lower_bounds[x]
 
     # Control for 0 targets and give alternate distance metric
     if (!is.na(scale) & dist_opt == "zscore") {
@@ -20,7 +22,7 @@ target_distance <- function(dt, target_list, dist = getOption("imabc.target_eval
       # If the target value is 0, or the user requests it by setting:
       # options(imabc.target_eval_distance = "stopping_range")
       # The range of the stopping bounds times 0.5 is used to scale the distance for a given target
-      est_scale <- target_list$stopping_upper_bounds[x] - target_list$stopping_lower_bounds[x]
+      est_scale <- upper_stop - lower_stop
       est_scale <- est_scale*0.5
       final_dist <- ((obs - sim)^2)/(est_scale^2)
 
@@ -29,6 +31,9 @@ target_distance <- function(dt, target_list, dist = getOption("imabc.target_eval
       final_dist <- ((obs - sim)^2)/(obs^2)
 
     }
+    # Set distance to 0 if in stopping bounds
+    in_stop <- in_range(sim, low = lower_stop, high = upper_stop)
+    final_dist[in_stop] <- 0
 
     return(final_dist)
   }, dt = dt, target_list = target_list, dist_opt = dist)
