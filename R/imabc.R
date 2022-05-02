@@ -682,7 +682,7 @@ imabc <- function(
         # Calculated tot_dist is "updating distance" that is based only on targets
         # whose bounds have not yet narrowed to stopping bounds
         good_target_dist$tot_dist <- total_distance(dt = good_target_dist, target_names = update_targets, scale = FALSE)
-        good_target_dist$euclid_dist <- total_distance(dt = good_target_dist[, update_targets, with = FALSE])
+        good_target_dist$euclid_dist <- euclid_distance(dt = good_target_dist[, update_targets, with = FALSE])
 
         # Find least amount of points that move us towards the stopping bounds while letting us have enough for the more
         #   complex resampling method
@@ -779,11 +779,11 @@ imabc <- function(
       } # improve_method %in% c("direct", "both")
 
       # If we constricted our target ranges successfully
-      if (new_iter_valid_n >= N_cov_points & (new_iter_valid_n < current_good_n | new_iter_valid_n == n_store)) {
+      if (new_iter_valid_n >= N_cov_points & (new_iter_valid_n <= current_good_n | new_iter_valid_n == n_store)) {
         # Check the new bounds are actually an improvement (matters for new_iter_valid_n == n_store case)
         improve <- any(
-          signif(targets$new_lower_bounds,5) != signif(targets$current_lower_bounds,5) |
-            signif(targets$new_upper_bounds,5) != signif(targets$current_upper_bounds,5)
+          signif(targets$new_lower_bounds, 5) != signif(targets$current_lower_bounds, 5) |
+            signif(targets$new_upper_bounds, 5) != signif(targets$current_upper_bounds, 5)
         )
 
         # Update current bounds to the newly calculated bounds
