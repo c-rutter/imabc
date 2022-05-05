@@ -1,5 +1,5 @@
-target_distance <- function(dt, target_list, dist = getOption("imabc.target_eval_distance")) {
-  distance <- sapply(attr(target_list, which = "target_names"), FUN = function(x, dt, target_list, dist_opt) {
+target_distance <- function(dt, target_list, dist = getOption("imabc.target_eval_distance"), use_met_targets) {
+  distance <- sapply(attr(target_list, which = "target_names"), FUN = function(x, dt, target_list, dist_opt, met) {
     # Get simulated target value
     sim <- dt[[x]]
     # Get desired target value
@@ -32,24 +32,29 @@ target_distance <- function(dt, target_list, dist = getOption("imabc.target_eval
 
     }
     # Set distance to 0 if in stopping bounds
-    in_stop <- in_range(sim, low = lower_stop, high = upper_stop)
-    final_dist[in_stop] <- 0
+    if (!met) {
+      in_stop <- in_range(sim, low = lower_stop, high = upper_stop)
+      final_dist[in_stop & !(x %in% attr(target_list, which = "update"))] <- 0
+    }
 
     return(final_dist)
-  }, dt = dt, target_list = target_list, dist_opt = dist)
-
+  }, dt = dt, target_list = target_list, dist_opt = dist, met = use_met_targets)
+  if (!is.matrix(distance) && length(distance) > 0) {
+    distance <- as.matrix(t(distance))
+    colnames(distance) <- attr(target_list, which = "target_names")
+  }
+  groups <- attr(target_list, which = "target_groups")
+  groupings <- factor(groups, levels = unique(groups))
   # If grouped targets exist, aggregate distances
   if (inherits(target_list, "grouped")) {
     if (dist == "zscore") {
-      groups <- attr(target_list, which = "target_groups")
-      groupings <- factor(groups, levels = unique(groups))
       distance_list <- list()
       for (i1 in 1:nrow(distance)) {
         distance_list[[i1]] <- tapply(distance[i1, ], groupings, max)
       }
       distance <- do.call(rbind, distance_list)
     } else {
-      distance <- t(rowsum(t(distance), attr(target_list, which = "target_groups"), reorder = FALSE))
+      distance <- t(rowsum(t(distance), groups, reorder = FALSE))
     }
   }
 
