@@ -40,11 +40,13 @@ simple_calibration_test = function(x = c(0.5,1), y = c(1.5,0.5), target_biases =
     # G1: Grouped targets include T1 and T2
     G1 = group_targets(
       Y1 = add_target(
+        scale = 1,
         target = y[1] + target_biases[1],
         starting_range = c(y[1]*(1-initial_bounds_margin_of_error), y[1]*(1+initial_bounds_margin_of_error)),
         stopping_range = c(y[1]*(1-stopping_bounds_margin_of_error), y[1]*(1+stopping_bounds_margin_of_error))
       ),
       Y2 = add_target(
+        scale = 1,
         target = y[2] + target_biases[2],
         starting_range = c(y[2]*(1-initial_bounds_margin_of_error), y[2]*(1+initial_bounds_margin_of_error)),
         stopping_range = c(y[2]*(1-stopping_bounds_margin_of_error), y[2]*(1+stopping_bounds_margin_of_error))
@@ -181,3 +183,49 @@ warm_start_test = simple_calibration_test(
 test_that("warm start test", {
   expect_true(class(warm_start_test) == "list")
 })
+
+# zscore metric ------------------------------------------------
+
+options(imabc.target_eval_distance = "zscore")
+
+# Percentile method:
+zscore_percentile_rand_test = simple_calibration_test(
+  x = c(0.5,1),
+  y = c(1.5,0.5),
+  target_biases = c(0,0),
+  stopping_bounds_margin_of_error = 0.02,
+  initial_bounds_margin_of_error = 0.99,
+  priors_relative_width = 0.9,
+  with_randomness = T,
+  omit.y1 = F,
+  omit.y2 = F,
+  improve_method = "percentile",
+  max_iter = 10
+)
+
+test_that("test using the zscore metric", {
+  expect_true(class(zscore_percentile_rand_test) == "list")
+})
+
+options(imabc.target_eval_distance = "weighted_euclidian")
+
+# Percentile method:
+weuclid_percentile_rand_test = simple_calibration_test(
+  x = c(0.5,1),
+  y = c(1.5,0.5),
+  target_biases = c(0,0),
+  stopping_bounds_margin_of_error = 0.02,
+  initial_bounds_margin_of_error = 0.99,
+  priors_relative_width = 0.9,
+  with_randomness = T,
+  omit.y1 = F,
+  omit.y2 = F,
+  improve_method = "percentile",
+  max_iter = 10
+)
+
+test_that("test using the weighted_euclidian metric", {
+  expect_true(class(weuclid_percentile_rand_test) == "list")
+})
+
+
