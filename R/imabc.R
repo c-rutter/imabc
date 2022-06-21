@@ -1429,6 +1429,17 @@ imabc <- function(
     if (verbose & !is_first_continue_iter) { cat(sprintf("----------- End Iter %s -----------\n", main_loop_iter)) }
   } # main_loop_iter in start_iter:end_iter
 
+  # When all targets have been calibrated
+  good_target_dist[, (target_distance_names) := eval_targets(
+    sim_targets = good_sim_target, target_list = targets, criteria = "start"
+  )]
+  good_target_dist[, euclid_dist := euclid_distance(
+    dt = good_target_dist[, target_distance_names, with = FALSE]
+  )]
+  good_target_dist[, tot_dist := total_distance(
+    dt = good_target_dist, target_names = target_distance_names, scale = FALSE
+  )]
+
   # Prep final results
   # Valid Parameters
   good_parm_draws <- good_parm_draws[!is.na(draw), ]
