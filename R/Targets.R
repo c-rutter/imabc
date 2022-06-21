@@ -63,6 +63,7 @@ NULL
 #' @param starting_range numeric(2). The initial range of values imabc will consider as good when testing simulated parameters.
 #' @param stopping_range numeric(2). The range of values a target function's simulated value must be within to be considered
 #' calibrated.
+#' @param scale numeric(1). Denominator used to scale the target value. We recommend the user to pass the standard error of the target value.
 #' @param target_name Optional character(1). The name of the target.
 #' @param FUN Optional function. The function that takes parameters and calculated the target value. See Target Function.
 #'
