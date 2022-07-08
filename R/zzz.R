@@ -2,7 +2,9 @@
   # Set default package options
   op <- options()
   op.imabc <- list(
-    imabc.target_eval_distance = "chisquare"
+    imabc.target_eval_distance = "chisquare",
+    # minimum percentage of variance
+    imabc.min_sample_var_pct = 0.01
   )
   toset <- !(names(op.imabc) %in% names(op))
   if(any(toset)) options(op.imabc[toset])

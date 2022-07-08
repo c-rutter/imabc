@@ -12,6 +12,7 @@ add_target(
   target,
   starting_range,
   stopping_range,
+  scale = NULL,
   target_name = NULL,
   FUN = NULL
 )
@@ -29,6 +30,8 @@ as.targets(df, ...)
 
 \item{stopping_range}{numeric(2). The range of values a target function's simulated value must be within to be considered
 calibrated.}
+
+\item{scale}{numeric(1). Denominator used to scale the target value. We recommend the user to pass the standard error of the target value.}
 
 \item{target_name}{Optional character(1). The name of the target.}
 

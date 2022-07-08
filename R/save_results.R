@@ -2,7 +2,7 @@ save_results <- function(..., out_dir, append) {
   dots <- list(...)
 
   # Control for only a single file being saved
-  if (length(dots) == 2 && class(dots[[1]]) != "list") {
+  if (length(dots) == 2 && class(dots[[1]])[1] != "list") {
     dots <- list(dots)
   }
 

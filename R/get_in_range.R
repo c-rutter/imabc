@@ -13,6 +13,10 @@ get_in_range.targets <- function(compare_list, check_dt, criteria, out = "logica
       in_range(dt[[x]], compare_list$stopping_lower_bounds[x], compare_list$stopping_upper_bounds[x]) - 1
     }
   }, dt = check_dt, compare_list = compare_list)
+  if (!is.matrix(check) && length(check) > 0) {
+    check <- as.matrix(t(check))
+    colnames(check) <- attr(compare_list, which = "target_names")
+  }
 
   # If grouped targets exist, aggregate distances
   if (inherits(compare_list, "grouped")) {

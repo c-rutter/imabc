@@ -63,6 +63,7 @@ NULL
 #' @param starting_range numeric(2). The initial range of values imabc will consider as good when testing simulated parameters.
 #' @param stopping_range numeric(2). The range of values a target function's simulated value must be within to be considered
 #' calibrated.
+#' @param scale numeric(1). Denominator used to scale the target value. We recommend the user to pass the standard error of the target value.
 #' @param target_name Optional character(1). The name of the target.
 #' @param FUN Optional function. The function that takes parameters and calculated the target value. See Target Function.
 #'
@@ -74,7 +75,7 @@ NULL
 #' )
 #'
 #' @export
-add_target <- function(target, starting_range, stopping_range, target_name = NULL, FUN = NULL) {
+add_target <- function(target, starting_range, stopping_range, scale = NULL, target_name = NULL, FUN = NULL) {
   # Check inputs are appropriate
   stopifnot(
     "target must be numeric" = is.numeric(target),
@@ -96,6 +97,7 @@ add_target <- function(target, starting_range, stopping_range, target_name = NUL
     list(
       target_name = target_name,
       target = target,
+      scale = scale,
       current_lower_bound = starting_range[1],
       current_upper_bound = starting_range[2],
       stopping_lower_bound = stopping_range[1],
@@ -225,12 +227,14 @@ define_targets <- function(..., target_df = NULL) {
 
     # Pull all relevant information from targets list
     targets <- get_list_element(added_targets, "target", unlist = TRUE)
+    scales <- get_list_element(added_targets, "scale", unlist = TRUE)
     current_lower_bounds <- get_list_element(added_targets, "current_lower_bound", unlist = TRUE)
     current_upper_bounds <- get_list_element(added_targets, "current_upper_bound", unlist = TRUE)
     stopping_lower_bounds <- get_list_element(added_targets, "stopping_lower_bound", unlist = TRUE)
     stopping_upper_bounds <- get_list_element(added_targets, "stopping_upper_bound", unlist = TRUE)
     FUNS <- get_list_element(added_targets, "FUN", unlist = TRUE)
     names(targets) <- target_names
+    names(scales) <- target_names
     names(is_grouped) <- target_names
     names(target_groups) <- target_names
     names(current_lower_bounds) <- target_names
@@ -251,6 +255,7 @@ define_targets <- function(..., target_df = NULL) {
     # Rebuild Final targets list
     added_targets <- structure(list(
       targets = targets,
+      scales = scales,
       current_lower_bounds = current_lower_bounds,
       current_upper_bounds = current_upper_bounds,
       stopping_lower_bounds = stopping_lower_bounds,
@@ -456,6 +461,8 @@ as.targets <- function(df, ...) {
     add_target(
       target_name = dta[["target_names"]][i1],
       target = dta[["targets"]][i1],
+      # CM NOTE: Need to make sure this works if no scales are provided
+      scale = dta[["scales"]][i1],
       starting_range = c(dta[["current_lower_bounds"]][i1], dta[["current_upper_bounds"]][i1]),
       stopping_range = c(dta[["stopping_lower_bounds"]][i1], dta[["stopping_upper_bounds"]][i1])
     )
@@ -499,6 +506,7 @@ as.data.frame.targets <- function(x, ...) {
   # Get all values
   target_names <- attr(x, "target_names")
   targets <- x$targets
+  scales <- x$scales
   current_lower_bounds <- x$current_lower_bounds
   current_upper_bounds <- x$current_upper_bounds
   stopping_lower_bounds <- x$stopping_lower_bounds
@@ -510,13 +518,13 @@ as.data.frame.targets <- function(x, ...) {
     target_groups[!attr(x, "grouped_targets")] <- NA
 
     out_df <- data.frame(
-      target_names, target_groups, targets,
+      target_names, target_groups, targets, scales,
       current_lower_bounds, current_upper_bounds,
       stopping_lower_bounds, stopping_upper_bounds
     )
   } else {
     out_df <- data.frame(
-      target_names, targets,
+      target_names, targets, scales,
       current_lower_bounds, current_upper_bounds,
       stopping_lower_bounds, stopping_upper_bounds
     )
@@ -547,6 +555,7 @@ as.data.frame.targets <- function(x, ...) {
   # Add subset of target info to a new target lsit
   subset_targets <- structure(list(
     targets = t$targets[keep],
+    scales = t$scales[keep],
     current_lower_bounds = t$current_lower_bounds[keep],
     current_upper_bounds = t$current_upper_bounds[keep],
     stopping_lower_bounds = t$stopping_lower_bounds[keep],
@@ -563,7 +572,7 @@ as.data.frame.targets <- function(x, ...) {
   grouped_targets <- attributes(t)$grouped_targets[keep]
   target_groups <- attributes(t)$target_groups[keep]
   target_names <- attributes(t)$target_names[keep]
-  update <- intersect(attributes(t)$update, target_names)
+  update <- attributes(t)$update[names(attributes(t)$update) == intersect(names(attributes(t)$update), target_names)]
   # Add them to new target list
   attributes(subset_targets)$update <- update
   attributes(subset_targets)$grouped_targets <- grouped_targets
@@ -581,17 +590,36 @@ print.grouped <- function(x, ...) {
   group_ids <- attr(x, "target_groups")
   group_ids[!attr(x, "grouped_target")] <- paste0(random_string, which(!attr(x, "grouped_target")))
 
-  disp <- t(data.frame(
-    x$current_lower_bounds,
-    x$stopping_lower_bounds,
-    x$targets,
-    x$stopping_upper_bounds,
-    x$current_upper_bounds
-  ))
-  disp <- data.frame(
-    cols = c("Current Lower Bounds", "Lower Stopping Bounds", "Target", "Upper Stopping Bounds", "Current Upper Bounds"),
-    disp
-  )
+  if (any(!is.na(x$scales))) {
+    disp <- t(data.frame(
+      x$current_lower_bounds,
+      x$stopping_lower_bounds,
+      x$targets,
+      x$stopping_upper_bounds,
+      x$current_upper_bounds,
+      x$scales
+    ))
+    disp <- data.frame(
+      cols = c(
+        "Current Lower Bounds", "Lower Stopping Bounds", "Target", "Upper Stopping Bounds", "Current Upper Bounds", "Scale"
+      ),
+      disp
+    )
+  } else {
+    disp <- t(data.frame(
+      x$current_lower_bounds,
+      x$stopping_lower_bounds,
+      x$targets,
+      x$stopping_upper_bounds,
+      x$current_upper_bounds
+    ))
+    disp <- data.frame(
+      cols = c(
+        "Current Lower Bounds", "Lower Stopping Bounds", "Target", "Upper Stopping Bounds", "Current Upper Bounds"
+      ),
+      disp
+    )
+  }
 
   cols <- split(attr(x, "target_names"), group_ids)
   # Fix order
@@ -617,17 +645,36 @@ print.grouped <- function(x, ...) {
 print.targets <- function(x, ...) {
   digits <- getOption("digits")
 
-  disp <- t(data.frame(
-    x$current_lower_bounds,
-    x$stopping_lower_bounds,
-    x$targets,
-    x$stopping_upper_bounds,
-    x$current_upper_bounds
-  ))
-  disp <- data.frame(
-    cols = c("Current Lower Bounds", "Lower Stopping Bounds", "Target", "Upper Stopping Bounds", "Current Upper Bounds"),
-    disp
-  )
+  if (any(!is.na(x$scales))) {
+    disp <- t(data.frame(
+      x$current_lower_bounds,
+      x$stopping_lower_bounds,
+      x$targets,
+      x$stopping_upper_bounds,
+      x$current_upper_bounds,
+      x$scales
+    ))
+    disp <- data.frame(
+      cols = c(
+        "Current Lower Bounds", "Lower Stopping Bounds", "Target", "Upper Stopping Bounds", "Current Upper Bounds", "Scale"
+      ),
+      disp
+    )
+  } else {
+    disp <- t(data.frame(
+      x$current_lower_bounds,
+      x$stopping_lower_bounds,
+      x$targets,
+      x$stopping_upper_bounds,
+      x$current_upper_bounds
+    ))
+    disp <- data.frame(
+      cols = c(
+        "Current Lower Bounds", "Lower Stopping Bounds", "Target", "Upper Stopping Bounds", "Current Upper Bounds"
+      ),
+      disp
+    )
+  }
   colnames(disp)[1] <- ""
   print(disp, row.names = FALSE)
 

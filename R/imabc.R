@@ -171,7 +171,7 @@ imabc <- function(
 ) {
   # Environment setup ---------------------------------------------------------------------------------------------------
   # For CRAN checks
-  sample_wt <- tot_dist <- step <- iter <- n_good <- scaled_dist <- draw <- NULL
+  sample_wt <- tot_dist <- euclid_dist <- step <- iter <- n_good <- scaled_dist <- draw <- NULL
 
   # Check for priors and targets or previous_results directory
   if ((is.null(priors) || is.null(targets)) & is.null(previous_results_dir)) {
@@ -212,9 +212,19 @@ imabc <- function(
     # Evaluate good_distances to verify we can perform run
     target_distance_names <- unique(attr(targets, "target_groups"))
     n_target_distances <- length(target_distance_names)
+
     previous_results$good_target_dist[, (target_distance_names) := eval_targets(
       sim_targets = previous_results$good_sim_target, target_list = targets, criteria = "start"
     )]
+    previous_results$good_target_dist$euclid_dist <- euclid_distance(
+      dt = previous_results$good_target_dist[, target_distance_names, with = FALSE]
+    )
+    previous_results$good_target_dist[, (target_distance_names) := eval_targets(
+      sim_targets = previous_results$good_sim_target, target_list = targets, criteria = "start", use_met_targets = FALSE
+    )]
+    previous_results$good_target_dist$tot_dist <- total_distance(
+      dt = previous_results$good_target_dist, target_names = target_distance_names, scale = FALSE
+    )
     previous_results$good_target_dist$n_good <- rowSums(
       previous_results$good_target_dist[, (target_distance_names), with = FALSE] >= 0, na.rm = TRUE
     )
@@ -225,6 +235,7 @@ imabc <- function(
     # Previous Run info
     previous_iter <- as.numeric(previous_results$prev_run_meta$value[previous_results$prev_run_meta$info == "current_iteration"])
     previous_draw <- as.numeric(previous_results$prev_run_meta$value[previous_results$prev_run_meta$info == "last_draw"])
+    N_centers <- as.numeric(previous_results$prev_run_meta$value[previous_results$prev_run_meta$info == "N_centers"])
 
     # Ensure mean_cov has proper number of iterations
     if (any(previous_results$mean_cov$iter > previous_iter)) {
@@ -296,6 +307,10 @@ imabc <- function(
 
   # Distances Handling --------------------------------------------------------------------------------------------------
   # All the distances that are being calculated (names of non-grouped targets + names of groups of targets)
+  # stopifnot(
+  #   "Scales not provided for improve_method. Please provide scales for targets" =
+  #     improve_method != "direct" & !any(is.na(targets$scales))
+  # )
   target_distance_names <- unique(attr(targets, "target_groups"))
   n_target_distances <- length(target_distance_names)
 
@@ -314,6 +329,12 @@ imabc <- function(
 
   # Targets Handling ----------------------------------------------------------------------------------------------------
   # All the targets that are being simulated
+  stopifnot(
+    "Target Distance Evaluation methods zscore and weighted_euclidian require user specied scales for targets." =
+      (getOption("imabc.target_eval_distance") %in% c("zscore", "weighted_euclidian") & !any(is.na(targets$scales))) |
+      (!getOption("imabc.target_eval_distance") %in% c("zscore", "weighted_euclidian"))
+  )
+  getOption("imabc.target_eval_distance") %in% c("zscore", "weighted_euclidian") & !any(is.na(targets$scales))
   sim_target_names <- attr(targets, "target_names")
 
   # Initialize current iteration simulated target data.table
@@ -482,9 +503,49 @@ imabc <- function(
       # Store results
       total_draws <- total_draws + n_draw - sum(iter_parm_draws$step %in% (N_centers + 1))
       iter_sim_target[1:n_draw, (sim_target_names) := iter_sim_results]
-      # Evaluate Targets, first based on whether they are in the appropriate range, second by euclidian distance
-      iter_target_dist[, (target_distance_names) := eval_targets(sim_targets = iter_sim_target, target_list = targets, criteria = "start")]
-      iter_target_dist$tot_dist <- total_distance(dt = iter_target_dist, target_names = target_distance_names, scale = FALSE)
+      # Evaluate Targets, first based on whether they are in the appropriate range, second by euclidean distance
+      if (length(update_targets) == 0) {
+        # When all targets have been calibrated
+        iter_target_dist[, (target_distance_names) := eval_targets(
+          sim_targets = iter_sim_target, target_list = targets, criteria = "start"
+        )]
+        iter_target_dist$euclid_dist <- euclid_distance(dt = iter_target_dist[, target_distance_names, with = FALSE])
+        iter_target_dist$tot_dist <- total_distance(
+          dt = iter_target_dist, target_names = target_distance_names, scale = FALSE
+        )
+
+      } else if (length(attr(targets, which = "update")) == length(sim_target_names)) { # length(update_targets) == 0
+        # When no targets have been calibrated
+        iter_target_dist[, (target_distance_names) := eval_targets(
+          sim_targets = iter_sim_target, target_list = targets, criteria = "start"
+        )]
+        iter_target_dist$euclid_dist <- euclid_distance(dt = iter_target_dist[, target_distance_names, with = FALSE])
+        iter_target_dist$tot_dist <- total_distance(
+          dt = iter_target_dist, target_names = target_distance_names, scale = FALSE
+        )
+        # Set total distance to 0 for any observation that meets the stopping bounds
+        check <- get_in_range(compare_list = targets, check_dt = iter_sim_target, criteria = "stop", out = "logical")
+        iter_target_dist$tot_dist[rowSums(check) == n_target_distances] <- 0
+
+      } else { # length(attr(targets, which = "update")) == length(sim_target_names)
+        # When a subset of targets have been calibrated
+        iter_target_dist[, (target_distance_names) := eval_targets(
+          sim_targets = iter_sim_target, target_list = targets, criteria = "start"
+        )]
+        # Do euclid distance before updating target distances to exclude met targets
+        iter_target_dist$euclid_dist <- euclid_distance(dt = iter_target_dist[, update_targets, with = FALSE])
+        # Rerun target distances but exclude targets that have been their stopping bounds and whose values are actually
+        #   in the stopping bounds as well
+        iter_target_dist[, (target_distance_names) := eval_targets(
+          sim_targets = iter_sim_target, target_list = targets, criteria = "start", use_met_targets = FALSE
+        )]
+        iter_target_dist$tot_dist <- total_distance(
+          dt = iter_target_dist, target_names = update_targets, scale = FALSE
+        )
+        # Set total distance to 0 for any observation that meets the stopping bounds
+        check <- get_in_range(compare_list = targets, check_dt = iter_sim_target, criteria = "stop", out = "logical")
+        iter_target_dist$tot_dist[rowSums(check) == n_target_distances] <- 0
+      }
       # Count the good points (points associated with positive distances)
       iter_target_dist$n_good[1:n_draw] <- rowSums(iter_target_dist[1:n_draw, (target_distance_names), with = FALSE] >= 0, na.rm = TRUE)
       iter_valid_n <- sum(iter_target_dist$n_good[iter_target_dist$step <= N_centers] == n_target_distances, na.rm = TRUE)
@@ -543,20 +604,54 @@ imabc <- function(
           # if there are any centers that are kept, recalculate
           # Only use targets that are being updated (unless all are at stopping bounds)
           if (length(update_targets) == 0) {
-            good_target_dist[draw %in% keep_draws, ]$tot_dist <- total_distance(
-              dt = good_target_dist[draw %in% keep_draws, ],
-              target_names = target_distance_names,
-              scale = FALSE
-            )
+            # When all targets have been calibrated
+            good_target_dist[draw %in% keep_draws, (target_distance_names) := eval_targets(
+              sim_targets = good_sim_target[draw %in% keep_draws], target_list = targets, criteria = "start"
+            )]
+            good_target_dist[draw %in% keep_draws, euclid_dist := euclid_distance(
+              dt = good_target_dist[draw %in% keep_draws, target_distance_names, with = FALSE]
+            )]
+            good_target_dist[draw %in% keep_draws, tot_dist := total_distance(
+              dt = good_target_dist[draw %in% keep_draws], target_names = target_distance_names, scale = FALSE
+            )]
 
-          } else { # length(update_targets) == 0
-            good_target_dist[draw %in% keep_draws, ]$tot_dist <- total_distance(
-              dt = good_target_dist[draw %in% keep_draws, ],
-              target_names = update_targets,
-              scale = FALSE
-            )
+          } else if (length(attr(targets, which = "update")) == length(sim_target_names)) { # length(update_targets) == 0
+            # When no targets have been calibrated
+            good_target_dist[draw %in% keep_draws, (target_distance_names) := eval_targets(
+              sim_targets = good_sim_target[draw %in% keep_draws], target_list = targets, criteria = "start"
+            )]
+            good_target_dist[draw %in% keep_draws, euclid_dist := euclid_distance(
+              dt = good_target_dist[draw %in% keep_draws, target_distance_names, with = FALSE]
+            )]
+            good_target_dist[draw %in% keep_draws, tot_dist := total_distance(
+              dt = good_target_dist[draw %in% keep_draws], target_names = target_distance_names, scale = FALSE
+            )]
+            # Set total distance to 0 for any observation that meets the stopping bounds
+            check <- get_in_range(compare_list = targets, check_dt = good_sim_target, criteria = "stop", out = "logical")
+            good_target_dist[draw %in% keep_draws & rowSums(check) == n_target_distances, tot_dist := 0]
 
-          } # ! length(update_targets) == 0
+          } else { # length(attr(targets, which = "update")) == length(sim_target_names)
+            # When a subset of targets have been calibrated
+            good_target_dist[draw %in% keep_draws, (target_distance_names) := eval_targets(
+              sim_targets = good_sim_target[draw %in% keep_draws], target_list = targets, criteria = "start",
+            )]
+            # Do euclid distance before updating target distances to exclude met targets
+            good_target_dist[draw %in% keep_draws, euclid_dist := euclid_distance(
+              dt = good_target_dist[draw %in% keep_draws, update_targets, with = FALSE]
+            )]
+            # Rerun target distances but exclude targets that have been their stopping bounds and whose values are actually
+            #   in the stopping bounds as well
+            good_target_dist[draw %in% keep_draws, (target_distance_names) := eval_targets(
+              sim_targets = good_sim_target[draw %in% keep_draws], target_list = targets, criteria = "start", use_met_targets = FALSE
+            )]
+            good_target_dist[draw %in% keep_draws, tot_dist := total_distance(
+              dt = good_target_dist[draw %in% keep_draws], target_names = update_targets, scale = FALSE
+            )]
+            # Set total distance to 0 for any observation that meets the stopping bounds
+            check <- get_in_range(compare_list = targets, check_dt = good_sim_target, criteria = "stop", out = "logical")
+            good_target_dist[draw %in% keep_draws & rowSums(check) == n_target_distances, tot_dist := 0]
+          }
+
         } # length(keep_draws) > 0
 
         # Remove bad draws
@@ -581,6 +676,7 @@ imabc <- function(
         iter_parm_draws[step == (N_centers + 1), (all_parm_names) := NA_real_]
         iter_sim_target[step == (N_centers + 1), (sim_target_names) := NA_real_]
         iter_target_dist[step == (N_centers + 1), c(target_distance_names, "tot_dist") := NA_real_]
+        iter_target_dist[step == (N_centers + 1), c(target_distance_names, "euclid_dist") := NA_real_]
         iter_target_dist[step == (N_centers + 1), n_good := 0L]
 
         # Total draws to be kept
@@ -595,7 +691,7 @@ imabc <- function(
         # Determine rows that will be kept in good_*
         n_keep <- ifelse(main_loop_iter != 1 & (current_good_n + iter_valid_n) > n_store, n_store - iter_valid_n, current_good_n)
         if (main_loop_iter != 1 & (current_good_n + iter_valid_n) > n_store) {
-          keep_draws <- good_target_dist$draw[order(-good_target_dist$n_good, good_target_dist$tot_dist)][1:n_keep]
+          keep_draws <- good_target_dist$draw[order(-good_target_dist$n_good, good_target_dist$tot_dist, good_target_dist$euclid_dist)][1:n_keep]
           good_parm_draws[1:n_keep, ] <- good_parm_draws[draw %in% keep_draws, ]
           good_sim_target [1:n_keep, ] <- good_sim_target[draw %in% keep_draws, ]
           good_target_dist[1:n_keep, ] <- good_target_dist[draw %in% keep_draws, ]
@@ -608,7 +704,9 @@ imabc <- function(
 
         # Determine rows that will be used to update from iter_*
         valid_rows <- iter_target_dist$n_good == n_target_distances & iter_target_dist$step < (N_centers + 1)
-        order_valid_rows <- order(-iter_target_dist$n_good[valid_rows], iter_target_dist$tot_dist[valid_rows])
+        order_valid_rows <- order(
+          -iter_target_dist$n_good[valid_rows], iter_target_dist$tot_dist[valid_rows], iter_target_dist$euclid_dist[valid_rows]
+        )
         add_draws <- sort(iter_target_dist$draw[valid_rows][order_valid_rows][1:length(update_row_range)])
 
         # Transfer good rows to results data.tables
@@ -619,17 +717,52 @@ imabc <- function(
         # Make sure total distance is correct in good_target_dist
         # Only use targets that are being updated (unless all are at stopping bounds)
         if (length(update_targets) == 0) {
-          good_target_dist[update_row_range, tot_dist := total_distance(
-            dt = good_target_dist[update_row_range, ],
-            target_names = target_distance_names,
-            scale = FALSE
+          # When all targets have been calibrated
+          good_target_dist[update_row_range, (target_distance_names) := eval_targets(
+            sim_targets = good_sim_target[update_row_range], target_list = targets, criteria = "start"
           )]
-        } else {
-          good_target_dist[update_row_range, tot_dist := total_distance(
-            dt = good_target_dist[update_row_range, ],
-            target_names = update_targets,
-            scale = FALSE
+          good_target_dist[update_row_range, euclid_dist := euclid_distance(
+            dt = good_target_dist[update_row_range, target_distance_names, with = FALSE]
           )]
+          good_target_dist[update_row_range, tot_dist := total_distance(
+            dt = good_target_dist[update_row_range], target_names = target_distance_names, scale = FALSE
+          )]
+
+        } else if (length(attr(targets, which = "update")) == length(sim_target_names)) { # length(update_targets) == 0
+          # When no targets have been calibrated
+          good_target_dist[update_row_range, (target_distance_names) := eval_targets(
+            sim_targets = good_sim_target[update_row_range], target_list = targets, criteria = "start"
+          )]
+          good_target_dist[update_row_range, euclid_dist := euclid_distance(
+            dt = good_target_dist[update_row_range, target_distance_names, with = FALSE]
+          )]
+          good_target_dist[update_row_range, tot_dist := total_distance(
+            dt = good_target_dist[update_row_range], target_names = target_distance_names, scale = FALSE
+          )]
+          # Set total distance to 0 for any observation that meets the stopping bounds
+          check <- get_in_range(compare_list = targets, check_dt = good_sim_target, criteria = "stop", out = "logical")
+          good_target_dist[intersect(update_row_range, which(rowSums(check) == n_target_distances)), tot_dist := 0]
+
+        } else { # length(attr(targets, which = "update")) == length(sim_target_names)
+          # When a subset of targets have been calibrated
+          good_target_dist[update_row_range, (target_distance_names) := eval_targets(
+            sim_targets = good_sim_target[update_row_range], target_list = targets, criteria = "start",
+          )]
+          # Do euclid distance before updating target distances to exclude met targets
+          good_target_dist[update_row_range, euclid_dist := euclid_distance(
+            dt = good_target_dist[update_row_range, update_targets, with = FALSE]
+          )]
+          # Rerun target distances but exclude targets that have been their stopping bounds and whose values are actually
+          #   in the stopping bounds as well
+          good_target_dist[update_row_range, (target_distance_names) := eval_targets(
+            sim_targets = good_sim_target[update_row_range], target_list = targets, criteria = "start", use_met_targets = FALSE
+          )]
+          good_target_dist[update_row_range, tot_dist := total_distance(
+            dt = good_target_dist[update_row_range], target_names = update_targets, scale = FALSE
+          )]
+          # Set total distance to 0 for any observation that meets the stopping bounds
+          check <- get_in_range(compare_list = targets, check_dt = good_sim_target, criteria = "stop", out = "logical")
+          good_target_dist[intersect(update_row_range, which(rowSums(check) == n_target_distances)), tot_dist := 0]
         }
       } # iter_valid_n > 0
 
@@ -646,19 +779,62 @@ imabc <- function(
       improve <- FALSE
       if (improve_method %in% c("percentile", "both")) {
         # Sort targets based on overall distance of target distances still being calibrated
-        # Calculated tot_dist is "updating distance" that is based only on targets 
+        # Calculated tot_dist is "updating distance" that is based only on targets
         # whose bounds have not yet narrowed to stopping bounds
-        good_target_dist$tot_dist <- total_distance(dt = good_target_dist, target_names = update_targets, scale = FALSE)
+        # Double check all distances are correct
+        if (length(update_targets) == 0) {
+          # When all targets have been calibrated
+          good_target_dist[, (target_distance_names) := eval_targets(
+            sim_targets = good_sim_target, target_list = targets, criteria = "start"
+          )]
+          good_target_dist[, euclid_dist := euclid_distance(
+            dt = good_target_dist[, target_distance_names, with = FALSE]
+          )]
+          good_target_dist[, tot_dist := total_distance(
+            dt = good_target_dist, target_names = target_distance_names, scale = FALSE
+          )]
+        } else if (length(attr(targets, which = "update")) == length(sim_target_names)) { # length(update_targets) == 0
+          # When no targets have been calibrated
+          good_target_dist[, (target_distance_names) := eval_targets(
+            sim_targets = good_sim_target, target_list = targets, criteria = "start"
+          )]
+          good_target_dist[, euclid_dist := euclid_distance(
+            dt = good_target_dist[, target_distance_names, with = FALSE]
+          )]
+          good_target_dist[, tot_dist := total_distance(
+            dt = good_target_dist, target_names = target_distance_names, scale = FALSE
+          )]
+        } else { # length(attr(targets, which = "update")) == length(sim_target_names)
+          # When a subset of targets have been calibrated
+          good_target_dist[, (target_distance_names) := eval_targets(
+            sim_targets = good_sim_target, target_list = targets, criteria = "start",
+          )]
+          # Do euclid distance before updating target distances to exclude met targets
+          good_target_dist[, euclid_dist := euclid_distance(
+            dt = good_target_dist[, update_targets, with = FALSE]
+          )]
+          # Rerun target distances but exclude targets that have been their stopping bounds and whose values are actually
+          #   in the stopping bounds as well
+          good_target_dist[, (target_distance_names) := eval_targets(
+            sim_targets = good_sim_target, target_list = targets, criteria = "start", use_met_targets = FALSE
+          )]
+          good_target_dist[, tot_dist := total_distance(
+            dt = good_target_dist, target_names = update_targets, scale = FALSE
+          )]
+        }
+        # Set total distance to 0 for any observation that meets the stopping bounds
+        check <- get_in_range(compare_list = targets, check_dt = good_sim_target, criteria = "stop", out = "logical")
+        good_target_dist[which(rowSums(check) == n_target_distances), tot_dist := 0]
 
         # Find least amount of points that move us towards the stopping bounds while letting us have enough for the more
         #   complex resampling method
-        improve_step=min(trunc((current_good_n - N_cov_points)/10),100)
-        keep_points <- c(seq(N_cov_points,(current_good_n-improve_step),improve_step), current_good_n)
+        improve_step <- min(trunc((current_good_n - N_cov_points)/10), 100)
+        keep_points <- c(seq(N_cov_points, (current_good_n - improve_step), improve_step), current_good_n)
         for (test_n_iter in keep_points) {
           # If we can use less than the entire sample, calculate bounds with the subset. Otherwise, bounds do not change
           if (test_n_iter < current_good_n | test_n_iter == n_store) {
             # Get the test_n_iter best draws to determine an empirical set of new bounds
-            get_draws <- good_target_dist$draw[order(good_target_dist$tot_dist)][1:test_n_iter]
+            get_draws <- good_target_dist$draw[order(good_target_dist$tot_dist, good_target_dist$euclid_dist)][1:test_n_iter]
 
             # Get new bounds using test_n_iter best draws
             targets <- get_new_bounds(
@@ -705,7 +881,7 @@ imabc <- function(
       # In future we would trigger this based on too few points thrown out in method 1 and current_good_n >= X*N_cov_points
       if (improve_method == "direct" | (improve_method == "both" & !improve)) {
         # Find the greatest percentage improvement we can make while remaining above N_cov_points
-        ratchet_levels <- c(seq(1, 0.05, -0.05),0.025,0.01,0.001)
+        ratchet_levels <- c(seq(1, 0.05, -0.05), 0.025, 0.01, 0.001)
         new_iter_valid_n <- 0
         for (ratchet_i1 in ratchet_levels) {
           # Get new bounds moving ratchet_i1 closer towards the stopping bounds
@@ -745,11 +921,11 @@ imabc <- function(
       } # improve_method %in% c("direct", "both")
 
       # If we constricted our target ranges successfully
-      if (new_iter_valid_n >= N_cov_points & (new_iter_valid_n < current_good_n | new_iter_valid_n == n_store)) {
+      if (new_iter_valid_n >= N_cov_points) {
         # Check the new bounds are actually an improvement (matters for new_iter_valid_n == n_store case)
         improve <- any(
-          targets$new_lower_bounds != targets$current_lower_bounds |
-            targets$new_upper_bounds != targets$current_upper_bounds
+          signif(targets$new_lower_bounds, 5) != signif(targets$current_lower_bounds, 5) |
+            signif(targets$new_upper_bounds, 5) != signif(targets$current_upper_bounds, 5)
         )
 
         # Update current bounds to the newly calculated bounds
@@ -771,6 +947,7 @@ imabc <- function(
         good_sim_target[remove_rows, (sim_target_names) := NA_real_]
         good_target_dist[remove_rows, c("draw", "step", "iter", "n_good") := NA_integer_]
         good_target_dist[remove_rows, c(target_distance_names, "tot_dist") := NA_real_]
+        good_target_dist[remove_rows, c(target_distance_names, "euclid_dist") := NA_real_]
         setorder(good_parm_draws, draw, na.last = TRUE)
         setorder(good_sim_target, draw, na.last = TRUE)
         setorder(good_target_dist, draw, na.last = TRUE)
@@ -876,9 +1053,11 @@ imabc <- function(
       n_best_draw <- 0
       center_draw_best <- NULL
       if (n_hiwt < N_centers) {
-        # Pull the draw numbers while ordering them based on tot_dist, equal to 
-        # "updating distance" when target bounds are  being narroed and total distance once stopping bound are reached
-        draw_order <- good_target_dist$draw[good_row_range][order(good_target_dist$tot_dist[good_row_range])]
+        # Pull the draw numbers while ordering them based on tot_dist, equal to
+        # "updating distance" when target bounds are being narrowed and total distance once stopping bound are reached
+        draw_order <- good_target_dist$draw[good_row_range][
+          order(good_target_dist$tot_dist[good_row_range], good_target_dist$euclid_dist[good_row_range])
+        ]
         n_best_draw <- min(current_good_n, (N_centers - n_hiwt))
         center_draw_best <- draw_order[1:n_best_draw]
       } # n_hiwt < N_centers
@@ -901,6 +1080,7 @@ imabc <- function(
       iter_parm_draws$seed <- NA_character_
       iter_sim_target[, (sim_target_names) := NA_real_]
       iter_target_dist[, c(target_distance_names, "tot_dist") := NA_real_]
+      iter_target_dist[, c(target_distance_names, "euclid_dist") := NA_real_]
       iter_target_dist$n_good <- 0L
 
       # New draw sampling
@@ -983,20 +1163,25 @@ imabc <- function(
           )
 
           # Find nearest points based on scaled distance
-          calc_cov_points <- 1:max(c(N_cov_points, trunc(current_good_n/N_centers)))
+          calc_cov_points <- 1:min(c(max(c(10000,N_cov_points)), current_good_n))
           var_data <- good_parm_draws[order(good_parm_draws$scaled_dist)[calc_cov_points], calibr_parm_names, with = FALSE]
 
           # Find center specific var-cov matrices using N_cov_points closest points
           sample_cov <- parm_covariance(var_data)
 
+          min_sample_var_pct <- getOption("imabc.min_sample_var_pct")
           # Deal with parameters that don't have any variance
-          if (any(diag(sample_cov) <= 0.05*prior_sds)) {
+          is_small <- (diag(sample_cov)<= min_sample_var_pct*prior_sds^2)
+          if (any(is_small)) {
             # This occurs when adding a new parameter: it is set to default for all prior draws
-            is_zero <- (diag(sample_cov) == 0)
-            sd_next <- 0.05*prior_sds
-            sd_next[!is_zero] <- 0
-            diag(sample_cov) <- diag(sample_cov) + (sd_next^2)
-          }
+            # it may also occur when sampling becomes over concentrated around center points
+            message(paste0("Potentially over-concentrated sampling: Parameters with sampling variance < ", min_sample_var_pct, " * prior variance. One can change this threshold by setting the imabc.min_sample_var_pct option."))
+            sample_sd <- sqrt(diag(sample_cov))
+            sd_next <- sqrt(min_sample_var_pct)*prior_sds
+            # limit variance to become no more than min_sample_var_pct * prior variance while retaining correlation structure
+            sample_sd[is_small] <- sd_next[is_small]
+            sample_cov <- increase_samplevar(var_data,sample_sd)
+            }
 
           # Simulate Center_n random draws of calibrated parameters
           if (abs(sum(sample_cov) - sum(diag(sample_cov))) < 1e-10) {
@@ -1243,6 +1428,17 @@ imabc <- function(
     # } # Save iteration results
     if (verbose & !is_first_continue_iter) { cat(sprintf("----------- End Iter %s -----------\n", main_loop_iter)) }
   } # main_loop_iter in start_iter:end_iter
+
+  # When all targets have been calibrated
+  good_target_dist[, (target_distance_names) := eval_targets(
+    sim_targets = good_sim_target, target_list = targets, criteria = "start"
+  )]
+  good_target_dist[, euclid_dist := euclid_distance(
+    dt = good_target_dist[, target_distance_names, with = FALSE]
+  )]
+  good_target_dist[, tot_dist := total_distance(
+    dt = good_target_dist, target_names = target_distance_names, scale = FALSE
+  )]
 
   # Prep final results
   # Valid Parameters
