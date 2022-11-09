@@ -2,5 +2,8 @@ pandoc: 2.19.2
 pkgdown: 2.0.6
 pkgdown_sha: ~
 articles: {}
-last_built: 2022-11-08T19:27Z
+last_built: 2022-11-09T21:01Z
+urls:
+  reference: https://c-rutter.github.io/imabc/reference
+  article: https://c-rutter.github.io/imabc/articles
 

@@ -1,33 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>/404.html</loc>
+    <loc>https://c-rutter.github.io/imabc/404.html</loc>
   </url>
   <url>
-    <loc>/authors.html</loc>
+    <loc>https://c-rutter.github.io/imabc/authors.html</loc>
   </url>
   <url>
-    <loc>/index.html</loc>
+    <loc>https://c-rutter.github.io/imabc/index.html</loc>
   </url>
   <url>
-    <loc>/news/index.html</loc>
+    <loc>https://c-rutter.github.io/imabc/news/index.html</loc>
   </url>
   <url>
-    <loc>/reference/PriorsSpecification.html</loc>
+    <loc>https://c-rutter.github.io/imabc/reference/PriorsSpecification.html</loc>
   </url>
   <url>
-    <loc>/reference/TargetsSpecifications.html</loc>
+    <loc>https://c-rutter.github.io/imabc/reference/TargetsSpecifications.html</loc>
   </url>
   <url>
-    <loc>/reference/define_target_function.html</loc>
+    <loc>https://c-rutter.github.io/imabc/reference/define_target_function.html</loc>
   </url>
   <url>
-    <loc>/reference/imabc.html</loc>
+    <loc>https://c-rutter.github.io/imabc/reference/imabc.html</loc>
   </url>
   <url>
-    <loc>/reference/index.html</loc>
+    <loc>https://c-rutter.github.io/imabc/reference/index.html</loc>
   </url>
   <url>
-    <loc>/reference/read_previous_results.html</loc>
+    <loc>https://c-rutter.github.io/imabc/reference/read_previous_results.html</loc>
   </url>
 </urlset>
