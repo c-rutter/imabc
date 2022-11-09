@@ -1,0 +1,24 @@
+---
+title: "imabc"
+output: rmarkdown::html_vignette
+bibliography: references.bib
+vignette: >
+  %\VignetteIndexEntry{imabc}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Introduction to IMABC
+
+```{r setup}
+library(imabc)
+```
+
+A thorough introduction to Incremental Mixture Approximate Bayesian Computation (IMABC) can be found in @rutter_microsimulation_2019.

@@ -5,12 +5,6 @@ Version: 1.0.2
 Authors@R: 
     c(
       person(
-        given = "Christopher, E.",
-        family = "Maerzluft",
-        role = c("aut", "cre"),
-        email = "cmaerzlu@fredhutch.org"
-      ),
-      person(
         given = "Carolyn",
         family = "Rutter",
         role = c("aut", "cph"),
@@ -30,6 +24,12 @@ Authors@R:
         role = c("aut"),
         email = "ncollier@anl.gov",
         comment = c(ORCID = "0000-0002-2376-4156")
+      ),
+      person(
+        given = "Christopher, E.",
+        family = "Maerzluft",
+        role = c("aut", "cre"),
+        email = "cmaerzlu@fredhutch.org"
       )
     )
 Description: Provides functionality to perform a likelihood-free method for estimating the parameters of complex models
@@ -49,3 +49,7 @@ Imports:
     MASS, data.table, foreach, parallel, truncnorm, lhs, methods, stats, utils
 Encoding: UTF-8
 RoxygenNote: 7.1.1
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr

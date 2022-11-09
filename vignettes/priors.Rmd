@@ -1,0 +1,43 @@
+---
+title: "Defining Priors"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Defining Priors}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(imabc)
+```
+
+# Defining Prior Distributions
+
+Parameters must have unique names (a unique name will be supplied if not given)
+```{r priors, eval = FALSE}
+priors <- define_priors(
+  # x1: Uniform Prior (from base R)
+  x1 = add_prior(
+    dist_base_name = "unif",
+    min = 0.2, max = 0.9
+  ),
+  # x2: Truncated Normal (from truncnorm package)
+  add_prior(
+    parameter_name = "x2",
+    density_fn = "dtruncnorm",
+    mean = 0.5, sd = 0.05, a = 0.4, b = 0.8, # a = min and b = max
+    min = 0.4, max = 0.8 # User must specify both in truncnorm
+  ),
+  # V3: Fixed parameter (not calibrated)
+  add_prior(0.5)
+)
+```
+
+More to come...
