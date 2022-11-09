@@ -11,35 +11,61 @@ knitr::opts_chunk$set(
   fig.path = "man/figures/README-",
   out.width = "100%"
 )
+
+# library(ggplot2)
+# library(ggridges)
+# library(truncnorm)
+# set.seed(1)
+# n <- 1000
+# plt <- ggplot(
+#   data = data.frame(
+#     y = c(rep("unif", n), rep("trunc2", n/10), rep("trunc1", n)), 
+#     x = c(runif(n), rtruncnorm(n = n/10, a = 0.2, b = 0.9, mean = 0.6, sd = 0.3), rtruncnorm(n = n, a = 0, b = 0.85, mean = 0.7, sd = 0.1))
+#   ), aes(x = x, y = y, fill = y)
+# ) + geom_density_ridges(aes(rel_min_height = 0.001, scale = 0.85), quantile_lines = TRUE, quantile_fun = mean) +
+#   theme_void() +
+#   theme_transparent() +
+#   scale_fill_viridis_d(option = "A", begin = 0.5) +
+#   theme(
+#     axis.title = element_blank(),
+#     axis.text = element_blank(),
+#     axis.ticks = element_blank() ,
+#     legend.position = "none"
+#   )
+# hexSticker::sticker(
+#   package = "imabc", p_size = 20, p_y = 1.5,
+#   subplot = plt, s_x = 1, s_y = 0.75, s_width = 1.75, s_height = 1.2,
+#   spotlight = TRUE, l_x = 1, l_y = 1.5,
+#   h_size = 1, h_color = "black", h_fill = "#1A365D",
+#   url = "Incremental Mixture Approximate Bayesian Computation", u_angle = -30, u_x = 0.18, u_y = 0.53, u_color = "white", u_size = 3,
+#   filename = "man/figures/logo.png"
+# )
 ```
 
-# IMABC
-
+# IMABC <a href='https://c-rutter.github.io/imabc/'><img src='man/figures/logo.png' align="right" height="139" /></a>
 <!-- badges: start -->
+[![CRAN status](https://www.r-pkg.org/badges/version/imabc)](https://CRAN.R-project.org/package=imabc)
+[![R-CMD-check](https://github.com/c-rutter/imabc/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/c-rutter/imabc/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 ## Installation
 
-You can install the release version from CRAN with:
-``` r
-# install.packages("imabc")
+You can install the latest released version from CRAN with:
+```{r, eval = FALSE}
+install.packages("imabc")
 ```
 
 You can install the development version from [GitHub](https://github.com/) with:
-``` r
-# install.packages("devtools")
-# devtools::install_github("carolyner/imabc")
-# library(imabc)
+```{r, eval = FALSE}
+install.packages("devtools")
+devtools::install_github("c-rutter/imabc")
 ```
+
 Other packages needed are:
-* MASS
-* data.table
-* tidyverse
-* parallel
-* foreach
-* doParallel
-* lhs
-* truncnorm
+
+```{r, echo = FALSE, results = 'asis', eval = TRUE}
+cat(paste("*", tools::package_dependencies("imabc")$imabc, sep = " ", collapse = "\n"))
+```
 
 ## Running the Code
 ### Define Model Parameters/Priors
