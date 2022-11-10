@@ -33,7 +33,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">imabc</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.3</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -93,11 +93,93 @@
 <div class="section level2">
 <h2 id="introduction-to-imabc">Introduction to IMABC<a class="anchor" aria-label="anchor" href="#introduction-to-imabc"></a>
 </h2>
+<p>A thorough introduction to Incremental Mixture Approximate Bayesian
+Computation (IMABC) method can be found in <span class="citation">C. M.
+Rutter et al. (2019)</span>. Here we will walk through the code found in
+<span class="citation">C. Rutter et al. (2022)</span>.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/c-rutter/imabc" class="external-link">imabc</a></span><span class="op">)</span></span></code></pre></div>
-<p>A thorough introduction to Incremental Mixture Approximate Bayesian
-Computation (IMABC) can be found in <span class="citation">Rutter et al.
-(2019)</span>.</p>
+<div class="section level3">
+<h3 id="step-1---define-the-priors">Step 1 - Define the priors<a class="anchor" aria-label="anchor" href="#step-1---define-the-priors"></a>
+</h3>
+<p>For a more detailed explanation of how the priors functions work, see
+the <code><a href="../articles/priors.html">vignette("priors")</a></code></p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">priors</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/PriorsSpecification.html">define_priors</a></span><span class="op">(</span></span>
+<span>  <span class="co"># x1: Uniform Prior (from base R)</span></span>
+<span>  x1 <span class="op">=</span> <span class="fu"><a href="../reference/PriorsSpecification.html">add_prior</a></span><span class="op">(</span></span>
+<span>    dist_base_name <span class="op">=</span> <span class="st">"unif"</span>,</span>
+<span>    min <span class="op">=</span> <span class="fl">0.2</span>, max <span class="op">=</span> <span class="fl">0.9</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  <span class="co"># x2: Truncated Normal (from truncnorm package)</span></span>
+<span>  <span class="fu"><a href="../reference/PriorsSpecification.html">add_prior</a></span><span class="op">(</span></span>
+<span>    parameter_name <span class="op">=</span> <span class="st">"x2"</span>,</span>
+<span>    density_fn <span class="op">=</span> <span class="st">"dtruncnorm"</span>,</span>
+<span>    mean <span class="op">=</span> <span class="fl">0.5</span>, sd <span class="op">=</span> <span class="fl">0.05</span>, a <span class="op">=</span> <span class="fl">0.4</span>, b <span class="op">=</span> <span class="fl">0.8</span>, <span class="co"># a = min and b = max</span></span>
+<span>    min <span class="op">=</span> <span class="fl">0.4</span>, max <span class="op">=</span> <span class="fl">0.8</span> <span class="co"># User must specify both in truncnorm</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  <span class="co"># V3: Fixed parameter (not calibrated)</span></span>
+<span>  <span class="fu"><a href="../reference/PriorsSpecification.html">add_prior</a></span><span class="op">(</span><span class="fl">0.5</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="step-2---define-target-values">Step 2 - Define target values<a class="anchor" aria-label="anchor" href="#step-2---define-target-values"></a>
+</h3>
+<p>A more detailed description will be available in the near future at
+<code>vignette("targets")</code></p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">targets</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/TargetsSpecifications.html">define_targets</a></span><span class="op">(</span></span>
+<span>  <span class="co"># G1: Grouped targets include T1 and T2</span></span>
+<span>  G1 <span class="op">=</span> <span class="fu"><a href="../reference/TargetsSpecifications.html">group_targets</a></span><span class="op">(</span></span>
+<span>    T1 <span class="op">=</span> <span class="fu"><a href="../reference/TargetsSpecifications.html">add_target</a></span><span class="op">(</span></span>
+<span>      target <span class="op">=</span> <span class="fl">1.5</span>,</span>
+<span>      starting_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.0</span>, <span class="fl">2.0</span><span class="op">)</span>,</span>
+<span>      stopping_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.49</span>, <span class="fl">1.51</span><span class="op">)</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/TargetsSpecifications.html">add_target</a></span><span class="op">(</span></span>
+<span>      target_name <span class="op">=</span> <span class="st">"T2"</span>,</span>
+<span>      target <span class="op">=</span> <span class="fl">0.5</span>,</span>
+<span>      starting_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.2</span>, <span class="fl">0.9</span><span class="op">)</span>,</span>
+<span>      stopping_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.49</span>, <span class="fl">0.51</span><span class="op">)</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="step-3---define-the-target-function">Step 3 - Define the target function<a class="anchor" aria-label="anchor" href="#step-3---define-the-target-function"></a>
+</h3>
+<p>A more detailed description will be available in the near future at
+<code>vignette("target_functions")</code></p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fn1</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x1</span>, <span class="va">x2</span><span class="op">)</span> <span class="op">{</span> <span class="va">x1</span> <span class="op">+</span> <span class="va">x2</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span><span class="op">*</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">0</span>, <span class="fl">0.1</span><span class="op">)</span> <span class="op">}</span></span>
+<span><span class="va">fn2</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x1</span>, <span class="va">x2</span><span class="op">)</span> <span class="op">{</span> <span class="va">x1</span> <span class="op">*</span> <span class="va">x2</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span><span class="op">*</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">0</span>, <span class="fl">0.1</span><span class="op">)</span> <span class="op">}</span></span>
+<span><span class="va">fn</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x1</span>, <span class="va">x2</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>  <span class="va">res</span><span class="op">[</span><span class="st">"T2"</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu">fn1</span><span class="op">(</span><span class="va">x1</span>, <span class="va">x2</span><span class="op">)</span></span>
+<span>  <span class="va">res</span><span class="op">[</span><span class="st">"T1"</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu">fn2</span><span class="op">(</span><span class="va">x1</span>, <span class="va">x2</span><span class="op">)</span></span>
+<span>  <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span><span class="va">target_fun</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/define_target_function.html">define_target_function</a></span><span class="op">(</span></span>
+<span>  <span class="va">targets</span>, <span class="va">priors</span>, FUN <span class="op">=</span> <span class="va">fn</span>, use_seed <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="step-4---calibrate-the-model">Step 4 - Calibrate the model<a class="anchor" aria-label="anchor" href="#step-4---calibrate-the-model"></a>
+</h3>
+<p>The primary function is imabc(). The inputs and their descriptions
+are as follows:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">calibration_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/imabc.html">imabc</a></span><span class="op">(</span></span>
+<span>  priors <span class="op">=</span> <span class="va">priors</span>,</span>
+<span>  targets <span class="op">=</span> <span class="va">targets_nogroup</span>,</span>
+<span>  target_fun <span class="op">=</span> <span class="va">target_fun</span>,</span>
+<span>  seed <span class="op">=</span> <span class="fl">54321</span>,</span>
+<span>  N_start <span class="op">=</span> <span class="fl">2000</span>,</span>
+<span>  N_centers <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>  Center_n <span class="op">=</span> <span class="fl">500</span>,</span>
+<span>  N_cov_points <span class="op">=</span> <span class="fl">50</span>,</span>
+<span>  N_post <span class="op">=</span> <span class="fl">100</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 <div id="refs" class="references csl-bib-body hanging-indent">
 <div id="ref-rutter_microsimulation_2019" class="csl-entry">
 Rutter, Carolyn M., Jonathan Ozik, Maria Deyoreo, and Nicholson Collier.
@@ -105,9 +187,16 @@ Rutter, Carolyn M., Jonathan Ozik, Maria Deyoreo, and Nicholson Collier.
 Approximate Bayesian Computation.”</span> <em>Annals of Applied
 Statistics</em> 13 (4): 2189–2212. <a href="https://doi.org/10.1214/19-AOAS1279" class="external-link">https://doi.org/10.1214/19-AOAS1279</a>.
 </div>
+<div id="ref-imabc_pkg" class="csl-entry">
+Rutter, Carolyn, Jonathan Ozik, Nicholson Collier, and Christopher E.
+Maerzluft. 2022. <em>Imabc: Incremental Mixture Approximate Bayesian
+Computation (IMABC)</em>. <a href="https://github.com/c-rutter/imabc" class="external-link">https://github.com/c-rutter/imabc</a>.
 </div>
 </div>
-  </main>
+</div>
+</div>
+  </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
+    </nav></aside>
 </div>
 
 
