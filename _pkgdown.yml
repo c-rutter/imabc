@@ -2,4 +2,11 @@ url: https://c-rutter.github.io/imabc/
 template:
   bootstrap: 5
   bootswatch: flatly
+  includes:
+    after_body: >
+      <script data-goatcounter="https://crutter-imabc.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 
+navbar:
+  structure:
+    left:  [intro, articles, reference, tutorials, news]
+    right: [search, github]
