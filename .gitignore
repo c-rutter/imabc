@@ -6,3 +6,5 @@
 ..Rcheck
 docs
 inst/doc
+.secrets.txt
+pkgdown/
