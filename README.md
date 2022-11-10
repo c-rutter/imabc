@@ -234,3 +234,6 @@ imabc, run `options(imabc.target_eval_distance = "stopping_range")`)
 - Allow for continuing runs
   - target modification
   - parameter modification
+- Add
+  [codecov](https://www.r-bloggers.com/2017/06/how-to-add-code-coverage-codecov-to-your-r-package/)
+  badge
