@@ -46,6 +46,7 @@ Parameters must have unique names (a unique name will be supplied if not
 given)
 
 ``` r
+library(imabc)
 priors <- define_priors(
   # x1: Uniform Prior (from base R)
   x1 = add_prior(
@@ -103,8 +104,8 @@ fn1 <- function(x1, x2) { x1 + x2 + sample(c(-1, 1), 1)*rnorm(1, 0, 0.1) }
 fn2 <- function(x1, x2) { x1 * x2 + sample(c(-1, 1), 1)*rnorm(1, 0, 0.1) }
 fn <- function(x1, x2) {
   res <- c()
-  res["T2"] <- fn1(x1, x2)
-  res["T1"] <- fn2(x1, x2)
+  res["T1"] <- fn1(x1, x2)
+  res["T2"] <- fn2(x1, x2)
   return(res)
 }
 target_fun <- define_target_function(
@@ -120,7 +121,7 @@ as follows:
 ``` r
 calibration_results <- imabc(
   priors = priors,
-  targets = targets_nogroup,
+  targets = targets,
   target_fun = target_fun,
   seed = 54321,
   N_start = 2000,
