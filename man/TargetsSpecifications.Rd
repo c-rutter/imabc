@@ -57,8 +57,10 @@ Helper functions that can be used to create an imabc targets object used by imab
 }
 \section{Target Values}{
 
-When specifying values the following condition must always hold true:\preformatted{starting_range[1] <= stopping_range[1] <= target <= stopping_range[2] <= starting_range[2]
-}
+When specifying values the following condition must always hold true:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{starting_range[1] <= stopping_range[1] <= target <= stopping_range[2] <= starting_range[2]
+}\if{html}{\out{</div>}}
 
 As imabc simulates parameters, it will test them using the target function(s) against the starting range. Parameters whose
 values fall within the starting range will be kept through to the next iteration and will be used to generate new parameters
@@ -94,8 +96,10 @@ in add_target. The inputs to the target function can either be a single object (
 whose name is equal to the parameter they represent (e.g. function(x1, x2)). If a single object is used, the user can
 assume that a name vector with all parameters specified in the priors object will be passed to the function and the order
 of the vector will be the same as the order in which they were specified with define_priors. For example, if someone
-specified three parameters named x1, x3, and x2 respectively then the following specifications would all be equivalent:\preformatted{function(x1, x3) \{ x1 + x3 \} == function(x) \{ x["x1"] + x["x3"] \} == function(x) \{ x[1] + x[2] \}
-}
+specified three parameters named x1, x3, and x2 respectively then the following specifications would all be equivalent:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{function(x1, x3) \{ x1 + x3 \} == function(x) \{ x["x1"] + x["x3"] \} == function(x) \{ x[1] + x[2] \}
+}\if{html}{\out{</div>}}
 
 Additionally, for more complex situations the user may also reference the targets object and priors object within a
 target function but they must specify them as inputs (e.g. function(x, targets, priors)) and use the objects as they

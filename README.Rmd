@@ -49,15 +49,15 @@ Parameters must have unique names (a unique name will be supplied if not given)
 priors <- define_priors(
   # x1: Uniform Prior (from base R)
   x1 = add_prior(
-    dist_base_name = "unif",
-    min = 0.2, max = 0.9
+    dist_base_name = "unif"#,
+    # min = 0.2, max = 0.9
   ),
   # x2: Truncated Normal (from truncnorm package)
   add_prior(
     parameter_name = "x2",
-    density_fn = "dtruncnorm",
-    mean = 0.5, sd = 0.05, a = 0.4, b = 0.8, # a = min and b = max
-    min = 0.4, max = 0.8 # User must specify both in truncnorm
+    density_fn = "dunif"#,
+    # mean = 0.5, sd = 0.1, a = 0.4, b = 0.9, # a = min and b = max
+    # min = 0.4, max = 0.9 # User must specify both in truncnorm
   ),
   # V3: Fixed parameter (not calibrated)
   add_prior(0.5)
@@ -72,14 +72,14 @@ targets <- define_targets(
   G1 = group_targets(
     T1 = add_target(
       target = 1.5,
-      starting_range = c(1.0, 2.0),
-      stopping_range = c(1.49, 1.51)
+      starting_range = c(0, 3),
+      stopping_range = c(1.45, 1.55)
     ),
     add_target(
       target_name = "T2",
       target = 0.5,
-      starting_range = c(0.2, 0.9),
-      stopping_range = c(0.49, 0.51)
+      starting_range = c(0, 1),
+      stopping_range = c(0.45, 0.55)
     )
   )
 )
@@ -92,8 +92,8 @@ fn1 <- function(x1, x2) { x1 + x2 + sample(c(-1, 1), 1)*rnorm(1, 0, 0.1) }
 fn2 <- function(x1, x2) { x1 * x2 + sample(c(-1, 1), 1)*rnorm(1, 0, 0.1) }
 fn <- function(x1, x2) {
   res <- c()
-  res["T2"] <- fn1(x1, x2)
-  res["T1"] <- fn2(x1, x2)
+  res["T1"] <- fn1(x1, x2)
+  res["T2"] <- fn2(x1, x2)
   return(res)
 }
 target_fun <- define_target_function(
@@ -106,13 +106,14 @@ The primary function is imabc(). The inputs and their descriptions are as follow
 ```{r imabc, eval = FALSE}
 calibration_results <- imabc(
   priors = priors,
-  targets = targets_nogroup,
+  targets = targets,
   target_fun = target_fun,
+  improve_method = "direct",
   seed = 54321,
-  N_start = 2000,
+  N_start = 200,
   N_centers = 2,
   Center_n = 500,
-  N_cov_points = 50,
+  N_cov_points = 500,
   N_post = 100
 )
 ```

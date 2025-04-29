@@ -14,10 +14,11 @@ imabc(
   N_cov_points = 0,
   N_post = 100,
   sample_inflate = 1.5,
-  max_iter = 1000,
+  max_iter = 50,
   max_fail_iter = max_iter,
   seed = NULL,
   latinHypercube = TRUE,
+  priority_sets = FALSE,
   starting_draws = NULL,
   improve_method = c("percentile", "direct", "both"),
   backend_fun = NULL,
@@ -64,6 +65,10 @@ simulated to ensure enough valid (within range) parameters draws are simulated f
 
 \item{latinHypercube}{logical(1). Should algorithm use a Latin Hypercube to generate first set of parameters. Ignored
 if starting_draws is provided.}
+
+\item{priority_sets}{logical(1). While calibrating and not all targets have met their stopping bounds, set the total
+distance of parameter sets that are fully within all target stopping bounds to zero for the purposes of selecting centers.
+Does not effect Euclidian distance which is user to further sort sets when selecting centers as well.}
 
 \item{starting_draws}{Optional data.frame. a data.frame containing an initial sample of draws for the first set of
 parameters. Must have the same number of columns as parameters specified in the priors object. If names are provided
