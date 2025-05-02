@@ -19,6 +19,7 @@ imabc(
   seed = NULL,
   latinHypercube = TRUE,
   priority_sets = FALSE,
+  calib_targets_wt = 1,
   starting_draws = NULL,
   improve_method = c("percentile", "direct", "both"),
   backend_fun = NULL,
@@ -69,6 +70,8 @@ if starting_draws is provided.}
 \item{priority_sets}{logical(1). While calibrating and not all targets have met their stopping bounds, set the total
 distance of parameter sets that are fully within all target stopping bounds to zero for the purposes of selecting centers.
 Does not effect Euclidian distance which is user to further sort sets when selecting centers as well.}
+
+\item{calib_targets_wt}{numeric(1). The weight to apply to the total distance of calibrated targets or target groups.}
 
 \item{starting_draws}{Optional data.frame. a data.frame containing an initial sample of draws for the first set of
 parameters. Must have the same number of columns as parameters specified in the priors object. If names are provided

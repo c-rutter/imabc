@@ -71,13 +71,13 @@ targets <- define_targets(
   # G1: Grouped targets include T1 and T2
   G1 = group_targets(
     T1 = add_target(
-      target = 1.5,
+      target = 1.5, scale = 0.1,
       starting_range = c(0, 3),
       stopping_range = c(1.45, 1.55)
     ),
     add_target(
       target_name = "T2",
-      target = 0.5,
+      target = 0.5, scale = 0.1,
       starting_range = c(0, 1),
       stopping_range = c(0.45, 0.55)
     )
