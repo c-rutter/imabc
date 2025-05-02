@@ -7,7 +7,7 @@ total_distance <- function(dt, target_names, scale = FALSE, mu = NULL, sd = NULL
       #   by whether the total distance is negative or positive. Still, just in case a calculation is done on all draws
       #   and the calculation could blow up with a negative, I ensure the row max is a positive value
       distance <- abs(do.call(pmax, dt[, target_names, with = FALSE]))
-    } else if (dist == "weighted_euclidian") {
+    } else if (dist %in% c("chisquare", "weighted_euclidian")) {
       distance <- euclid_distance(dt[, target_names, with = FALSE])
     } else {
       # Simple Euclidian Distance
