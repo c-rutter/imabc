@@ -512,6 +512,7 @@ imabc <- function(
       iter_sim_target[1:n_draw, (sim_target_names) := iter_sim_results]
       # Evaluate Targets, first based on whether they are in the appropriate range, second by euclidean distance
       if (length(update_targets) == 0) {
+        print("1A")
         # When all targets have been calibrated
         iter_target_dist[, (target_distance_names) := eval_targets(
           sim_targets = iter_sim_target, target_list = targets, criteria = "start"
@@ -522,6 +523,7 @@ imabc <- function(
         )
 
       } else if (length(attr(targets, which = "update")) == length(sim_target_names)) { # length(update_targets) == 0
+        print("1B")
         # When no targets have been calibrated
         iter_target_dist[, (target_distance_names) := eval_targets(
           sim_targets = iter_sim_target, target_list = targets, criteria = "start"
@@ -537,6 +539,7 @@ imabc <- function(
         }
 
       } else { # length(attr(targets, which = "update")) == length(sim_target_names)
+        print("1C")
         # When a subset of targets have been calibrated
         iter_target_dist[, (target_distance_names) := eval_targets(
           sim_targets = iter_sim_target, target_list = targets, criteria = "start"
@@ -619,6 +622,7 @@ imabc <- function(
           # if there are any centers that are kept, recalculate
           # Only use targets that are being updated (unless all are at stopping bounds)
           if (length(update_targets) == 0) {
+            print("2A")
             # When all targets have been calibrated
             good_target_dist[draw %in% keep_draws, (target_distance_names) := eval_targets(
               sim_targets = good_sim_target[draw %in% keep_draws], target_list = targets, criteria = "start"
@@ -631,6 +635,7 @@ imabc <- function(
             )]
 
           } else if (length(attr(targets, which = "update")) == length(sim_target_names)) { # length(update_targets) == 0
+            print("2B")
             # When no targets have been calibrated
             good_target_dist[draw %in% keep_draws, (target_distance_names) := eval_targets(
               sim_targets = good_sim_target[draw %in% keep_draws], target_list = targets, criteria = "start"
@@ -647,6 +652,7 @@ imabc <- function(
               good_target_dist[draw %in% keep_draws & rowSums(check) == n_target_distances, tot_dist := 0]
             }
           } else { # length(attr(targets, which = "update")) == length(sim_target_names)
+            print("2C")
             # When a subset of targets have been calibrated
             good_target_dist[draw %in% keep_draws, (target_distance_names) := eval_targets(
               sim_targets = good_sim_target[draw %in% keep_draws], target_list = targets, criteria = "start",
@@ -697,6 +703,7 @@ imabc <- function(
         iter_parm_draws[step == (N_centers + 1), (all_parm_names) := NA_real_]
         iter_sim_target[step == (N_centers + 1), (sim_target_names) := NA_real_]
         iter_target_dist[step == (N_centers + 1), c(target_distance_names, "tot_dist") := NA_real_]
+        print("Q1")
         iter_target_dist[step == (N_centers + 1), c(target_distance_names, "euclid_dist") := NA_real_]
         iter_target_dist[step == (N_centers + 1), n_good := 0L]
 
@@ -738,6 +745,7 @@ imabc <- function(
         # Make sure total distance is correct in good_target_dist
         # Only use targets that are being updated (unless all are at stopping bounds)
         if (length(update_targets) == 0) {
+          print("3A")
           # When all targets have been calibrated
           good_target_dist[update_row_range, (target_distance_names) := eval_targets(
             sim_targets = good_sim_target[update_row_range], target_list = targets, criteria = "start"
@@ -750,6 +758,7 @@ imabc <- function(
           )]
 
         } else if (length(attr(targets, which = "update")) == length(sim_target_names)) { # length(update_targets) == 0
+          print("3B")
           # When no targets have been calibrated
           good_target_dist[update_row_range, (target_distance_names) := eval_targets(
             sim_targets = good_sim_target[update_row_range], target_list = targets, criteria = "start"
@@ -766,6 +775,7 @@ imabc <- function(
             good_target_dist[intersect(update_row_range, which(rowSums(check) == n_target_distances)), tot_dist := 0]
           }
         } else { # length(attr(targets, which = "update")) == length(sim_target_names)
+          print("3C")
           # When a subset of targets have been calibrated
           good_target_dist[update_row_range, (target_distance_names) := eval_targets(
             sim_targets = good_sim_target[update_row_range], target_list = targets, criteria = "start",
@@ -810,6 +820,7 @@ imabc <- function(
         # whose bounds have not yet narrowed to stopping bounds
         # Double check all distances are correct
         if (length(update_targets) == 0) {
+          print("4A")
           # When all targets have been calibrated
           good_target_dist[, (target_distance_names) := eval_targets(
             sim_targets = good_sim_target, target_list = targets, criteria = "start"
@@ -821,6 +832,7 @@ imabc <- function(
             dt = good_target_dist, target_names = target_distance_names, scale = FALSE
           )]
         } else if (length(attr(targets, which = "update")) == length(sim_target_names)) { # length(update_targets) == 0
+          print("4B")
           # When no targets have been calibrated
           good_target_dist[, (target_distance_names) := eval_targets(
             sim_targets = good_sim_target, target_list = targets, criteria = "start"
@@ -832,6 +844,7 @@ imabc <- function(
             dt = good_target_dist, target_names = target_distance_names, scale = FALSE
           )]
         } else { # length(attr(targets, which = "update")) == length(sim_target_names)
+          print("4C")
           # When a subset of targets have been calibrated
           good_target_dist[, (target_distance_names) := eval_targets(
             sim_targets = good_sim_target, target_list = targets, criteria = "start",
@@ -979,6 +992,7 @@ imabc <- function(
         good_sim_target[remove_rows, (sim_target_names) := NA_real_]
         good_target_dist[remove_rows, c("draw", "step", "iter", "n_good") := NA_integer_]
         good_target_dist[remove_rows, c(target_distance_names, "tot_dist") := NA_real_]
+        print("Q2")
         good_target_dist[remove_rows, c(target_distance_names, "euclid_dist") := NA_real_]
         setorder(good_parm_draws, draw, na.last = TRUE)
         setorder(good_sim_target, draw, na.last = TRUE)
@@ -1125,6 +1139,7 @@ imabc <- function(
       iter_parm_draws$seed <- NA_character_
       iter_sim_target[, (sim_target_names) := NA_real_]
       iter_target_dist[, c(target_distance_names, "tot_dist") := NA_real_]
+      print("Q3")
       iter_target_dist[, c(target_distance_names, "euclid_dist") := NA_real_]
       iter_target_dist$n_good <- 0L
 
@@ -1490,6 +1505,7 @@ imabc <- function(
   good_target_dist[, (target_distance_names) := eval_targets(
     sim_targets = good_sim_target, target_list = targets, criteria = "start"
   )]
+  print("Q4")
   good_target_dist[, euclid_dist := euclid_distance(
     dt = good_target_dist[, target_distance_names, with = FALSE]
   )]

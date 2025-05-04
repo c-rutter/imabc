@@ -1,7 +1,7 @@
 Package: imabc
 Type: Package
 Title: Incremental Mixture Approximate Bayesian Computation (IMABC)
-Version: 1.0.5.0002
+Version: 1.0.5.0003
 Authors@R: 
     c(
       person(
