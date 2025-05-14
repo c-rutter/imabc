@@ -23,6 +23,9 @@
 #' @param seed numeric(1). The seed to set for reproducibility.
 #' @param latinHypercube logical(1). Should algorithm use a Latin Hypercube to generate first set of parameters. Ignored
 #' if starting_draws is provided.
+#' @param priority_sets logical(1). While calibrating and not all targets have met their stopping bounds, set the total
+#' distance of parameter sets that are fully within all target stopping bounds to zero for the purposes of selecting centers.
+#' Does not effect Euclidian distance which is user to further sort sets when selecting centers as well.
 #' @param starting_draws Optional data.frame. a data.frame containing an initial sample of draws for the first set of
 #' parameters. Must have the same number of columns as parameters specified in the priors object. If names are provided
 #' they must be the same as the parameters specified in the priors object. If names are not provided, imabc will assume
@@ -159,6 +162,7 @@ imabc <- function(
   max_fail_iter = max_iter,
   seed = NULL,
   latinHypercube = TRUE,
+  priority_sets = FALSE,
   starting_draws = NULL,
   improve_method = c("percentile", "direct", "both"),
   backend_fun = NULL,
@@ -524,8 +528,10 @@ imabc <- function(
           dt = iter_target_dist, target_names = target_distance_names, scale = FALSE
         )
         # Set total distance to 0 for any observation that meets the stopping bounds
-        check <- get_in_range(compare_list = targets, check_dt = iter_sim_target, criteria = "stop", out = "logical")
-        iter_target_dist$tot_dist[rowSums(check) == n_target_distances] <- 0
+        if (priority_sets) {
+          check <- get_in_range(compare_list = targets, check_dt = iter_sim_target, criteria = "stop", out = "logical")
+          iter_target_dist$tot_dist[rowSums(check) == n_target_distances] <- 0
+        }
 
       } else { # length(attr(targets, which = "update")) == length(sim_target_names)
         # When a subset of targets have been calibrated
@@ -543,8 +549,10 @@ imabc <- function(
           dt = iter_target_dist, target_names = update_targets, scale = FALSE
         )
         # Set total distance to 0 for any observation that meets the stopping bounds
-        check <- get_in_range(compare_list = targets, check_dt = iter_sim_target, criteria = "stop", out = "logical")
-        iter_target_dist$tot_dist[rowSums(check) == n_target_distances] <- 0
+        if (priority_sets) {
+          check <- get_in_range(compare_list = targets, check_dt = iter_sim_target, criteria = "stop", out = "logical")
+          iter_target_dist$tot_dist[rowSums(check) == n_target_distances] <- 0
+        }
       }
       # Count the good points (points associated with positive distances)
       iter_target_dist$n_good[1:n_draw] <- rowSums(iter_target_dist[1:n_draw, (target_distance_names), with = FALSE] >= 0, na.rm = TRUE)
@@ -627,8 +635,10 @@ imabc <- function(
               dt = good_target_dist[draw %in% keep_draws], target_names = target_distance_names, scale = FALSE
             )]
             # Set total distance to 0 for any observation that meets the stopping bounds
-            check <- get_in_range(compare_list = targets, check_dt = good_sim_target, criteria = "stop", out = "logical")
-            good_target_dist[draw %in% keep_draws & rowSums(check) == n_target_distances, tot_dist := 0]
+            if (priority_sets) {
+              check <- get_in_range(compare_list = targets, check_dt = good_sim_target, criteria = "stop", out = "logical")
+              good_target_dist[draw %in% keep_draws & rowSums(check) == n_target_distances, tot_dist := 0]
+            }
 
           } else { # length(attr(targets, which = "update")) == length(sim_target_names)
             # When a subset of targets have been calibrated
@@ -648,8 +658,10 @@ imabc <- function(
               dt = good_target_dist[draw %in% keep_draws], target_names = update_targets, scale = FALSE
             )]
             # Set total distance to 0 for any observation that meets the stopping bounds
-            check <- get_in_range(compare_list = targets, check_dt = good_sim_target, criteria = "stop", out = "logical")
-            good_target_dist[draw %in% keep_draws & rowSums(check) == n_target_distances, tot_dist := 0]
+            if (priority_sets) {
+              check <- get_in_range(compare_list = targets, check_dt = good_sim_target, criteria = "stop", out = "logical")
+              good_target_dist[draw %in% keep_draws & rowSums(check) == n_target_distances, tot_dist := 0]
+            }
           }
 
         } # length(keep_draws) > 0
@@ -740,8 +752,10 @@ imabc <- function(
             dt = good_target_dist[update_row_range], target_names = target_distance_names, scale = FALSE
           )]
           # Set total distance to 0 for any observation that meets the stopping bounds
-          check <- get_in_range(compare_list = targets, check_dt = good_sim_target, criteria = "stop", out = "logical")
-          good_target_dist[intersect(update_row_range, which(rowSums(check) == n_target_distances)), tot_dist := 0]
+          if (priority_sets) {
+            check <- get_in_range(compare_list = targets, check_dt = good_sim_target, criteria = "stop", out = "logical")
+            good_target_dist[intersect(update_row_range, which(rowSums(check) == n_target_distances)), tot_dist := 0]
+          }
 
         } else { # length(attr(targets, which = "update")) == length(sim_target_names)
           # When a subset of targets have been calibrated
@@ -761,8 +775,10 @@ imabc <- function(
             dt = good_target_dist[update_row_range], target_names = update_targets, scale = FALSE
           )]
           # Set total distance to 0 for any observation that meets the stopping bounds
-          check <- get_in_range(compare_list = targets, check_dt = good_sim_target, criteria = "stop", out = "logical")
-          good_target_dist[intersect(update_row_range, which(rowSums(check) == n_target_distances)), tot_dist := 0]
+          if (priority_sets) {
+            check <- get_in_range(compare_list = targets, check_dt = good_sim_target, criteria = "stop", out = "logical")
+            good_target_dist[intersect(update_row_range, which(rowSums(check) == n_target_distances)), tot_dist := 0]
+          }
         }
       } # iter_valid_n > 0
 
@@ -823,8 +839,10 @@ imabc <- function(
           )]
         }
         # Set total distance to 0 for any observation that meets the stopping bounds
-        check <- get_in_range(compare_list = targets, check_dt = good_sim_target, criteria = "stop", out = "logical")
-        good_target_dist[which(rowSums(check) == n_target_distances), tot_dist := 0]
+        if (priority_sets) {
+          check <- get_in_range(compare_list = targets, check_dt = good_sim_target, criteria = "stop", out = "logical")
+          good_target_dist[which(rowSums(check) == n_target_distances), tot_dist := 0]
+        }
 
         # Find least amount of points that move us towards the stopping bounds while letting us have enough for the more
         #   complex resampling method
