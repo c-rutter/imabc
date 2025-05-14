@@ -30,6 +30,23 @@ total_distance <- function(dt, target_names, scale = FALSE, mu = NULL, sd = NULL
 }
 
 # Used in imabc as well as in total_distance
-euclid_distance <- function(dt) {
-  sqrt(rowSums(abs(dt)))
+euclid_distance <- function(dt, target_names = NULL, update_targets = NULL, wt = 0) {
+  if (!is.null(update_targets)) {
+    done_targets <- target_names[!target_names %in% update_targets]
+    res <- rep(0, nrow(dt))
+
+    if (length(update_targets) > 0) {
+      up_ts <- rowSums(abs(dt[, update_targets, with = FALSE]))
+      res <- res + up_ts
+    }
+    if (length(done_targets) > 0) {
+      done_ts <- rowSums(abs(dt[, done_targets, with = FALSE]*wt))
+      res <- res + done_ts
+    }
+    res <- sqrt(res)
+  } else {
+    res <- sqrt(rowSums(abs(dt)))
+  }
+
+  return(res)
 }

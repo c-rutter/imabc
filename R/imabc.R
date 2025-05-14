@@ -26,6 +26,7 @@
 #' @param priority_sets logical(1). While calibrating and not all targets have met their stopping bounds, set the total
 #' distance of parameter sets that are fully within all target stopping bounds to zero for the purposes of selecting centers.
 #' Does not effect Euclidian distance which is user to further sort sets when selecting centers as well.
+#' @param calib_targets_wt numeric(1). The weight to apply to the total distance of calibrated targets or target groups.
 #' @param starting_draws Optional data.frame. a data.frame containing an initial sample of draws for the first set of
 #' parameters. Must have the same number of columns as parameters specified in the priors object. If names are provided
 #' they must be the same as the parameters specified in the priors object. If names are not provided, imabc will assume
@@ -158,11 +159,12 @@ imabc <- function(
   N_cov_points = 0,
   N_post = 100,
   sample_inflate = 1.5,
-  max_iter = 1000,
+  max_iter = 40,
   max_fail_iter = max_iter,
   seed = NULL,
   latinHypercube = TRUE,
-  priority_sets = FALSE,
+  priority_sets = TRUE,
+  calib_targets_wt = 0,
   starting_draws = NULL,
   improve_method = c("percentile", "direct", "both"),
   backend_fun = NULL,
@@ -539,7 +541,9 @@ imabc <- function(
           sim_targets = iter_sim_target, target_list = targets, criteria = "start"
         )]
         # Do euclid distance before updating target distances to exclude met targets
-        iter_target_dist$euclid_dist <- euclid_distance(dt = iter_target_dist[, update_targets, with = FALSE])
+        iter_target_dist$euclid_dist <- euclid_distance(
+          dt = iter_target_dist, target_names = target_distance_names, update_targets = update_targets,
+          wt = calib_targets_wt)
         # Rerun target distances but exclude targets that have been their stopping bounds and whose values are actually
         #   in the stopping bounds as well
         iter_target_dist[, (target_distance_names) := eval_targets(
@@ -647,7 +651,9 @@ imabc <- function(
             )]
             # Do euclid distance before updating target distances to exclude met targets
             good_target_dist[draw %in% keep_draws, euclid_dist := euclid_distance(
-              dt = good_target_dist[draw %in% keep_draws, update_targets, with = FALSE]
+              dt = good_target_dist[draw %in% keep_draws],
+              target_names = target_distance_names, update_targets = update_targets,
+              wt = calib_targets_wt
             )]
             # Rerun target distances but exclude targets that have been their stopping bounds and whose values are actually
             #   in the stopping bounds as well
@@ -764,7 +770,9 @@ imabc <- function(
           )]
           # Do euclid distance before updating target distances to exclude met targets
           good_target_dist[update_row_range, euclid_dist := euclid_distance(
-            dt = good_target_dist[update_row_range, update_targets, with = FALSE]
+            dt = good_target_dist[update_row_range],
+            target_names = target_distance_names, update_targets = update_targets,
+            wt = calib_targets_wt
           )]
           # Rerun target distances but exclude targets that have been their stopping bounds and whose values are actually
           #   in the stopping bounds as well
@@ -827,7 +835,9 @@ imabc <- function(
           )]
           # Do euclid distance before updating target distances to exclude met targets
           good_target_dist[, euclid_dist := euclid_distance(
-            dt = good_target_dist[, update_targets, with = FALSE]
+            dt = good_target_dist,
+            target_names = target_distance_names, update_targets = update_targets,
+            wt = calib_targets_wt
           )]
           # Rerun target distances but exclude targets that have been their stopping bounds and whose values are actually
           #   in the stopping bounds as well
@@ -1051,13 +1061,14 @@ imabc <- function(
       # Find the N_center in range draws with model predictions closest to targets
       # Check for high-weight points, defined as $\theta_i$ with $w_i> 10/\sum_{i=1}^{N_{(t+1)}}$, meaning that the
       #   maximum weight is 10 times greater than expected for a simple random sample from in-range points
+      n_mean <- 1
       n_hiwt <- 0
       center_draw_hiwt <- NULL
       if (length(update_targets) == 0 & main_loop_iter > 1) {
         max_wt <- max(good_parm_draws$sample_wt[good_parm_draws$draw %in% in_draws])
         if (max_wt >= 10/current_good_n) {
           draw_order <- setorder(good_parm_draws[good_row_range, ], -sample_wt, na.last = TRUE)$draw
-          n_hiwt <- min(N_centers, length(draw_order))
+          n_hiwt <- min((N_centers - n_mean), length(draw_order))
           center_draw_hiwt <- draw_order[1:n_hiwt]
 
           # Print information
@@ -1070,20 +1081,32 @@ imabc <- function(
       # If we didn't get enough centers from high-weight points, use total distance instead
       n_best_draw <- 0
       center_draw_best <- NULL
-      if (n_hiwt < N_centers) {
+      if ((n_hiwt + n_mean) < N_centers) {
         # Pull the draw numbers while ordering them based on tot_dist, equal to
         # "updating distance" when target bounds are being narrowed and total distance once stopping bound are reached
         draw_order <- good_target_dist$draw[good_row_range][
           order(good_target_dist$tot_dist[good_row_range], good_target_dist$euclid_dist[good_row_range])
         ]
-        n_best_draw <- min(current_good_n, (N_centers - n_hiwt))
+        n_best_draw <- min(current_good_n, (N_centers - n_hiwt - n_mean))
         center_draw_best <- draw_order[1:n_best_draw]
       } # n_hiwt < N_centers
 
+      # Calculate overall mean draw (and add to good_parm_draws)
+      if (main_loop_iter > 1) {
+        mean_draw <- good_parm_draws[, lapply(
+          .SD, weighted.mean, w = sample_wt, na.rm = TRUE), .SDcols = all_parm_names]
+      } else {
+        mean_draw <- good_parm_draws[, lapply(
+          .SD, mean, na.rm = TRUE), .SDcols = all_parm_names]
+      }
+
       # Create center info objects for calculations
-      num_centers <- n_best_draw + n_hiwt
+      num_centers <- n_best_draw + n_hiwt + n_mean
       center_draw <- sort(c(center_draw_best, center_draw_hiwt))
-      center_next <- as.matrix(good_parm_draws[draw %in% center_draw, all_parm_names, with = FALSE])
+      center_next <- rbind(
+        as.matrix(mean_draw),
+        as.matrix(good_parm_draws[draw %in% center_draw, all_parm_names, with = FALSE]))
+      center_draw <- c(0, center_draw)
 
       # Calculate number of new draws and new steps (excluding centers)
       n_draw <- num_centers*Center_n # + num_centers
@@ -1385,6 +1408,18 @@ imabc <- function(
       if (n_cons_fail_update >= max_fail_iter) {
         warning("Unable to improve bounds after max_fail_iter tries. Stopping imabc early.")
         break
+      }
+
+      # Add overall mean to good parms for next iteration update
+      if (good_parm_draws[draw == 0, .N] > 0) {
+        good_parm_draws[draw == 0, let(iter = main_loop_iter, step = (N_centers + 1))]
+        good_parm_draws[draw == 0, (all_parm_names)] <- mean_draw
+      } else {
+        good_parm_draws[current_good_n + 1, let(iter = main_loop_iter, draw = 0, step = (N_centers + 1))]
+        good_parm_draws[current_good_n + 1, (all_parm_names)] <- mean_draw
+        good_sim_target[current_good_n + 1, let(iter = main_loop_iter, draw = 0, step = (N_centers + 1))]
+        good_target_dist[current_good_n + 1, let(iter = main_loop_iter, draw = 0, step = (N_centers + 1))]
+
       }
     } # if (main_loop_iter < end_iter)
 

@@ -71,15 +71,28 @@ targets <- define_targets(
   # G1: Grouped targets include T1 and T2
   G1 = group_targets(
     T1 = add_target(
-      target = 1.5,
+      target = 1.5, scale = 0.1,
       starting_range = c(1.0, 2.0),
-      stopping_range = c(1.49, 1.51)
+      stopping_range = c(1.499999999, 1.50000001)
     ),
     add_target(
       target_name = "T2",
-      target = 0.5,
+      target = 0.5, scale = 0.1,
       starting_range = c(0.2, 0.9),
       stopping_range = c(0.49, 0.51)
+    )
+  ),
+  G2 = group_targets(
+    T3 = add_target(
+      target = 1.5, scale = 0.1,
+      starting_range = c(1.0, 2.0),
+      stopping_range = c(1.0, 2.0)
+    ),
+    add_target(
+      target_name = "T4",
+      target = 0.5, scale = 0.1,
+      starting_range = c(0.2, 0.9),
+      stopping_range = c(0.25, 0.85)
     )
   )
 )
@@ -92,8 +105,11 @@ fn1 <- function(x1, x2) { x1 + x2 + sample(c(-1, 1), 1)*rnorm(1, 0, 0.1) }
 fn2 <- function(x1, x2) { x1 * x2 + sample(c(-1, 1), 1)*rnorm(1, 0, 0.1) }
 fn <- function(x1, x2) {
   res <- c()
-  res["T2"] <- fn1(x1, x2)
-  res["T1"] <- fn2(x1, x2)
+  res["T1"] <- fn1(x1, x2)
+  res["T2"] <- fn2(x1, x2)
+  
+  res["T3"] <- fn1(x1, x2)
+  res["T4"] <- fn2(x1, x2)
   return(res)
 }
 target_fun <- define_target_function(
@@ -106,11 +122,11 @@ The primary function is imabc(). The inputs and their descriptions are as follow
 ```{r imabc, eval = FALSE}
 calibration_results <- imabc(
   priors = priors,
-  targets = targets_nogroup,
+  targets = targets,
   target_fun = target_fun,
   seed = 54321,
   N_start = 2000,
-  N_centers = 2,
+  N_centers = 10,
   Center_n = 500,
   N_cov_points = 50,
   N_post = 100
