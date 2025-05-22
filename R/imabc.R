@@ -214,7 +214,8 @@ imabc <- function(
     n_target_distances <- length(target_distance_names)
 
     previous_results$good_target_dist[, (target_distance_names) := eval_targets(
-      sim_targets = previous_results$good_sim_target, target_list = targets, criteria = "start"
+      sim_targets = previous_results$good_sim_target, target_list = targets, criteria = "start",
+      dist = "chisquare"
     )]
     previous_results$good_target_dist$euclid_dist <- euclid_distance(
       dt = previous_results$good_target_dist[, target_distance_names, with = FALSE]
@@ -507,9 +508,13 @@ imabc <- function(
       if (length(update_targets) == 0) {
         # When all targets have been calibrated
         iter_target_dist[, (target_distance_names) := eval_targets(
-          sim_targets = iter_sim_target, target_list = targets, criteria = "start"
+          sim_targets = iter_sim_target, target_list = targets, criteria = "start",
+          dist = "chisquare"
         )]
         iter_target_dist$euclid_dist <- euclid_distance(dt = iter_target_dist[, target_distance_names, with = FALSE])
+        iter_target_dist[, (target_distance_names) := eval_targets(
+          sim_targets = iter_sim_target, target_list = targets, criteria = "start"
+        )]
         iter_target_dist$tot_dist <- total_distance(
           dt = iter_target_dist, target_names = target_distance_names, scale = FALSE
         )
@@ -517,9 +522,13 @@ imabc <- function(
       } else if (length(attr(targets, which = "update")) == length(sim_target_names)) { # length(update_targets) == 0
         # When no targets have been calibrated
         iter_target_dist[, (target_distance_names) := eval_targets(
-          sim_targets = iter_sim_target, target_list = targets, criteria = "start"
+          sim_targets = iter_sim_target, target_list = targets, criteria = "start",
+          dist = "chisquare"
         )]
         iter_target_dist$euclid_dist <- euclid_distance(dt = iter_target_dist[, target_distance_names, with = FALSE])
+        iter_target_dist[, (target_distance_names) := eval_targets(
+          sim_targets = iter_sim_target, target_list = targets, criteria = "start"
+        )]
         iter_target_dist$tot_dist <- total_distance(
           dt = iter_target_dist, target_names = target_distance_names, scale = FALSE
         )
@@ -530,7 +539,8 @@ imabc <- function(
       } else { # length(attr(targets, which = "update")) == length(sim_target_names)
         # When a subset of targets have been calibrated
         iter_target_dist[, (target_distance_names) := eval_targets(
-          sim_targets = iter_sim_target, target_list = targets, criteria = "start"
+          sim_targets = iter_sim_target, target_list = targets, criteria = "start",
+          dist = "chisquare"
         )]
         # Do euclid distance before updating target distances to exclude met targets
         iter_target_dist$euclid_dist <- euclid_distance(dt = iter_target_dist[, update_targets, with = FALSE])
@@ -606,10 +616,14 @@ imabc <- function(
           if (length(update_targets) == 0) {
             # When all targets have been calibrated
             good_target_dist[draw %in% keep_draws, (target_distance_names) := eval_targets(
-              sim_targets = good_sim_target[draw %in% keep_draws], target_list = targets, criteria = "start"
+              sim_targets = good_sim_target[draw %in% keep_draws], target_list = targets, criteria = "start",
+              dist = "chisquare"
             )]
             good_target_dist[draw %in% keep_draws, euclid_dist := euclid_distance(
               dt = good_target_dist[draw %in% keep_draws, target_distance_names, with = FALSE]
+            )]
+            good_target_dist[draw %in% keep_draws, (target_distance_names) := eval_targets(
+              sim_targets = good_sim_target[draw %in% keep_draws], target_list = targets, criteria = "start"
             )]
             good_target_dist[draw %in% keep_draws, tot_dist := total_distance(
               dt = good_target_dist[draw %in% keep_draws], target_names = target_distance_names, scale = FALSE
@@ -618,10 +632,14 @@ imabc <- function(
           } else if (length(attr(targets, which = "update")) == length(sim_target_names)) { # length(update_targets) == 0
             # When no targets have been calibrated
             good_target_dist[draw %in% keep_draws, (target_distance_names) := eval_targets(
-              sim_targets = good_sim_target[draw %in% keep_draws], target_list = targets, criteria = "start"
+              sim_targets = good_sim_target[draw %in% keep_draws], target_list = targets, criteria = "start",
+              dist = "chisquare"
             )]
             good_target_dist[draw %in% keep_draws, euclid_dist := euclid_distance(
               dt = good_target_dist[draw %in% keep_draws, target_distance_names, with = FALSE]
+            )]
+            good_target_dist[draw %in% keep_draws, (target_distance_names) := eval_targets(
+              sim_targets = good_sim_target[draw %in% keep_draws], target_list = targets, criteria = "start"
             )]
             good_target_dist[draw %in% keep_draws, tot_dist := total_distance(
               dt = good_target_dist[draw %in% keep_draws], target_names = target_distance_names, scale = FALSE
@@ -634,6 +652,7 @@ imabc <- function(
             # When a subset of targets have been calibrated
             good_target_dist[draw %in% keep_draws, (target_distance_names) := eval_targets(
               sim_targets = good_sim_target[draw %in% keep_draws], target_list = targets, criteria = "start",
+              dist = "chisquare"
             )]
             # Do euclid distance before updating target distances to exclude met targets
             good_target_dist[draw %in% keep_draws, euclid_dist := euclid_distance(
@@ -719,10 +738,14 @@ imabc <- function(
         if (length(update_targets) == 0) {
           # When all targets have been calibrated
           good_target_dist[update_row_range, (target_distance_names) := eval_targets(
-            sim_targets = good_sim_target[update_row_range], target_list = targets, criteria = "start"
+            sim_targets = good_sim_target[update_row_range], target_list = targets, criteria = "start",
+            dist = "chisquare"
           )]
           good_target_dist[update_row_range, euclid_dist := euclid_distance(
             dt = good_target_dist[update_row_range, target_distance_names, with = FALSE]
+          )]
+          good_target_dist[update_row_range, (target_distance_names) := eval_targets(
+            sim_targets = good_sim_target[update_row_range], target_list = targets, criteria = "start"
           )]
           good_target_dist[update_row_range, tot_dist := total_distance(
             dt = good_target_dist[update_row_range], target_names = target_distance_names, scale = FALSE
@@ -731,10 +754,14 @@ imabc <- function(
         } else if (length(attr(targets, which = "update")) == length(sim_target_names)) { # length(update_targets) == 0
           # When no targets have been calibrated
           good_target_dist[update_row_range, (target_distance_names) := eval_targets(
-            sim_targets = good_sim_target[update_row_range], target_list = targets, criteria = "start"
+            sim_targets = good_sim_target[update_row_range], target_list = targets, criteria = "start",
+            dist = "chisquare"
           )]
           good_target_dist[update_row_range, euclid_dist := euclid_distance(
             dt = good_target_dist[update_row_range, target_distance_names, with = FALSE]
+          )]
+          good_target_dist[update_row_range, (target_distance_names) := eval_targets(
+            sim_targets = good_sim_target[update_row_range], target_list = targets, criteria = "start"
           )]
           good_target_dist[update_row_range, tot_dist := total_distance(
             dt = good_target_dist[update_row_range], target_names = target_distance_names, scale = FALSE
@@ -747,6 +774,7 @@ imabc <- function(
           # When a subset of targets have been calibrated
           good_target_dist[update_row_range, (target_distance_names) := eval_targets(
             sim_targets = good_sim_target[update_row_range], target_list = targets, criteria = "start",
+            dist = "chisquare"
           )]
           # Do euclid distance before updating target distances to exclude met targets
           good_target_dist[update_row_range, euclid_dist := euclid_distance(
@@ -785,10 +813,14 @@ imabc <- function(
         if (length(update_targets) == 0) {
           # When all targets have been calibrated
           good_target_dist[, (target_distance_names) := eval_targets(
-            sim_targets = good_sim_target, target_list = targets, criteria = "start"
+            sim_targets = good_sim_target, target_list = targets, criteria = "start",
+            dist = "chisquare"
           )]
           good_target_dist[, euclid_dist := euclid_distance(
             dt = good_target_dist[, target_distance_names, with = FALSE]
+          )]
+          good_target_dist[, (target_distance_names) := eval_targets(
+            sim_targets = good_sim_target, target_list = targets, criteria = "start"
           )]
           good_target_dist[, tot_dist := total_distance(
             dt = good_target_dist, target_names = target_distance_names, scale = FALSE
@@ -796,10 +828,14 @@ imabc <- function(
         } else if (length(attr(targets, which = "update")) == length(sim_target_names)) { # length(update_targets) == 0
           # When no targets have been calibrated
           good_target_dist[, (target_distance_names) := eval_targets(
-            sim_targets = good_sim_target, target_list = targets, criteria = "start"
+            sim_targets = good_sim_target, target_list = targets, criteria = "start",
+            dist = "chisquare"
           )]
           good_target_dist[, euclid_dist := euclid_distance(
             dt = good_target_dist[, target_distance_names, with = FALSE]
+          )]
+          good_target_dist[, (target_distance_names) := eval_targets(
+            sim_targets = good_sim_target, target_list = targets, criteria = "start"
           )]
           good_target_dist[, tot_dist := total_distance(
             dt = good_target_dist, target_names = target_distance_names, scale = FALSE
@@ -808,6 +844,7 @@ imabc <- function(
           # When a subset of targets have been calibrated
           good_target_dist[, (target_distance_names) := eval_targets(
             sim_targets = good_sim_target, target_list = targets, criteria = "start",
+            dist = "chisquare"
           )]
           # Do euclid distance before updating target distances to exclude met targets
           good_target_dist[, euclid_dist := euclid_distance(
@@ -1431,10 +1468,14 @@ imabc <- function(
 
   # When all targets have been calibrated
   good_target_dist[, (target_distance_names) := eval_targets(
-    sim_targets = good_sim_target, target_list = targets, criteria = "start"
+    sim_targets = good_sim_target, target_list = targets, criteria = "start",
+    dist = "chisquare"
   )]
   good_target_dist[, euclid_dist := euclid_distance(
     dt = good_target_dist[, target_distance_names, with = FALSE]
+  )]
+  good_target_dist[, (target_distance_names) := eval_targets(
+    sim_targets = good_sim_target, target_list = targets, criteria = "start"
   )]
   good_target_dist[, tot_dist := total_distance(
     dt = good_target_dist, target_names = target_distance_names, scale = FALSE
