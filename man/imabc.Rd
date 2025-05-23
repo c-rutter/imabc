@@ -14,6 +14,8 @@ imabc(
   N_cov_points = 0,
   N_post = 100,
   sample_inflate = 1.5,
+  tiebraker_dist_fn = getOption("imabc.target_eval_distance"),
+  tiebraker_dist_avg = FALSE,
   max_iter = 1000,
   max_fail_iter = max_iter,
   seed = NULL,

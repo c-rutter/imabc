@@ -115,7 +115,9 @@ calibration_results <- imabc(
   Center_n = 500,
   N_cov_points = 50,
   N_post = 100,
-  improve_method = "percentile"
+  improve_method = "percentile",
+  # tiebraker_dist_fn = "chisquare",
+  # tiebraker_dist_avg = TRUE
 )
 ```
 

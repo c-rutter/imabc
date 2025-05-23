@@ -155,6 +155,8 @@ imabc <- function(
   N_cov_points = 0,
   N_post = 100,
   sample_inflate = 1.5,
+  tiebraker_dist_fn = getOption("imabc.target_eval_distance"),
+  tiebraker_dist_avg = FALSE,
   max_iter = 1000,
   max_fail_iter = max_iter,
   seed = NULL,
@@ -215,10 +217,11 @@ imabc <- function(
 
     previous_results$good_target_dist[, (target_distance_names) := eval_targets(
       sim_targets = previous_results$good_sim_target, target_list = targets, criteria = "start",
-      dist = "chisquare"
+      dist = tiebraker_dist_fn
     )]
     previous_results$good_target_dist$euclid_dist <- euclid_distance(
-      dt = previous_results$good_target_dist[, target_distance_names, with = FALSE]
+      dt = previous_results$good_target_dist[, target_distance_names, with = FALSE],
+      tiebraker_dist_avg = tiebraker_dist_avg
     )
     previous_results$good_target_dist[, (target_distance_names) := eval_targets(
       sim_targets = previous_results$good_sim_target, target_list = targets, criteria = "start", use_met_targets = FALSE
@@ -509,9 +512,11 @@ imabc <- function(
         # When all targets have been calibrated
         iter_target_dist[, (target_distance_names) := eval_targets(
           sim_targets = iter_sim_target, target_list = targets, criteria = "start",
-          dist = "chisquare"
+          dist = tiebraker_dist_fn
         )]
-        iter_target_dist$euclid_dist <- euclid_distance(dt = iter_target_dist[, target_distance_names, with = FALSE])
+        iter_target_dist$euclid_dist <- euclid_distance(
+          dt = iter_target_dist[, target_distance_names, with = FALSE],
+          tiebraker_dist_avg = tiebraker_dist_avg)
         iter_target_dist[, (target_distance_names) := eval_targets(
           sim_targets = iter_sim_target, target_list = targets, criteria = "start"
         )]
@@ -523,9 +528,11 @@ imabc <- function(
         # When no targets have been calibrated
         iter_target_dist[, (target_distance_names) := eval_targets(
           sim_targets = iter_sim_target, target_list = targets, criteria = "start",
-          dist = "chisquare"
+          dist = tiebraker_dist_fn
         )]
-        iter_target_dist$euclid_dist <- euclid_distance(dt = iter_target_dist[, target_distance_names, with = FALSE])
+        iter_target_dist$euclid_dist <- euclid_distance(
+          dt = iter_target_dist[, target_distance_names, with = FALSE],
+          tiebraker_dist_avg = tiebraker_dist_avg)
         iter_target_dist[, (target_distance_names) := eval_targets(
           sim_targets = iter_sim_target, target_list = targets, criteria = "start"
         )]
@@ -540,10 +547,12 @@ imabc <- function(
         # When a subset of targets have been calibrated
         iter_target_dist[, (target_distance_names) := eval_targets(
           sim_targets = iter_sim_target, target_list = targets, criteria = "start",
-          dist = "chisquare"
+          dist = tiebraker_dist_fn
         )]
         # Do euclid distance before updating target distances to exclude met targets
-        iter_target_dist$euclid_dist <- euclid_distance(dt = iter_target_dist[, update_targets, with = FALSE])
+        iter_target_dist$euclid_dist <- euclid_distance(
+          dt = iter_target_dist[, update_targets, with = FALSE],
+          tiebraker_dist_avg = tiebraker_dist_avg)
         # Rerun target distances but exclude targets that have been their stopping bounds and whose values are actually
         #   in the stopping bounds as well
         iter_target_dist[, (target_distance_names) := eval_targets(
@@ -617,10 +626,11 @@ imabc <- function(
             # When all targets have been calibrated
             good_target_dist[draw %in% keep_draws, (target_distance_names) := eval_targets(
               sim_targets = good_sim_target[draw %in% keep_draws], target_list = targets, criteria = "start",
-              dist = "chisquare"
+              dist = tiebraker_dist_fn
             )]
             good_target_dist[draw %in% keep_draws, euclid_dist := euclid_distance(
-              dt = good_target_dist[draw %in% keep_draws, target_distance_names, with = FALSE]
+              dt = good_target_dist[draw %in% keep_draws, target_distance_names, with = FALSE],
+              tiebraker_dist_avg = tiebraker_dist_avg
             )]
             good_target_dist[draw %in% keep_draws, (target_distance_names) := eval_targets(
               sim_targets = good_sim_target[draw %in% keep_draws], target_list = targets, criteria = "start"
@@ -633,10 +643,11 @@ imabc <- function(
             # When no targets have been calibrated
             good_target_dist[draw %in% keep_draws, (target_distance_names) := eval_targets(
               sim_targets = good_sim_target[draw %in% keep_draws], target_list = targets, criteria = "start",
-              dist = "chisquare"
+              dist = tiebraker_dist_fn
             )]
             good_target_dist[draw %in% keep_draws, euclid_dist := euclid_distance(
-              dt = good_target_dist[draw %in% keep_draws, target_distance_names, with = FALSE]
+              dt = good_target_dist[draw %in% keep_draws, target_distance_names, with = FALSE],
+              tiebraker_dist_avg = tiebraker_dist_avg
             )]
             good_target_dist[draw %in% keep_draws, (target_distance_names) := eval_targets(
               sim_targets = good_sim_target[draw %in% keep_draws], target_list = targets, criteria = "start"
@@ -652,11 +663,12 @@ imabc <- function(
             # When a subset of targets have been calibrated
             good_target_dist[draw %in% keep_draws, (target_distance_names) := eval_targets(
               sim_targets = good_sim_target[draw %in% keep_draws], target_list = targets, criteria = "start",
-              dist = "chisquare"
+              dist = tiebraker_dist_fn
             )]
             # Do euclid distance before updating target distances to exclude met targets
             good_target_dist[draw %in% keep_draws, euclid_dist := euclid_distance(
-              dt = good_target_dist[draw %in% keep_draws, update_targets, with = FALSE]
+              dt = good_target_dist[draw %in% keep_draws, update_targets, with = FALSE],
+              tiebraker_dist_avg = tiebraker_dist_avg
             )]
             # Rerun target distances but exclude targets that have been their stopping bounds and whose values are actually
             #   in the stopping bounds as well
@@ -739,10 +751,11 @@ imabc <- function(
           # When all targets have been calibrated
           good_target_dist[update_row_range, (target_distance_names) := eval_targets(
             sim_targets = good_sim_target[update_row_range], target_list = targets, criteria = "start",
-            dist = "chisquare"
+            dist = tiebraker_dist_fn
           )]
           good_target_dist[update_row_range, euclid_dist := euclid_distance(
-            dt = good_target_dist[update_row_range, target_distance_names, with = FALSE]
+            dt = good_target_dist[update_row_range, target_distance_names, with = FALSE],
+            tiebraker_dist_avg = tiebraker_dist_avg
           )]
           good_target_dist[update_row_range, (target_distance_names) := eval_targets(
             sim_targets = good_sim_target[update_row_range], target_list = targets, criteria = "start"
@@ -755,10 +768,11 @@ imabc <- function(
           # When no targets have been calibrated
           good_target_dist[update_row_range, (target_distance_names) := eval_targets(
             sim_targets = good_sim_target[update_row_range], target_list = targets, criteria = "start",
-            dist = "chisquare"
+            dist = tiebraker_dist_fn
           )]
           good_target_dist[update_row_range, euclid_dist := euclid_distance(
-            dt = good_target_dist[update_row_range, target_distance_names, with = FALSE]
+            dt = good_target_dist[update_row_range, target_distance_names, with = FALSE],
+            tiebraker_dist_avg = tiebraker_dist_avg
           )]
           good_target_dist[update_row_range, (target_distance_names) := eval_targets(
             sim_targets = good_sim_target[update_row_range], target_list = targets, criteria = "start"
@@ -774,11 +788,12 @@ imabc <- function(
           # When a subset of targets have been calibrated
           good_target_dist[update_row_range, (target_distance_names) := eval_targets(
             sim_targets = good_sim_target[update_row_range], target_list = targets, criteria = "start",
-            dist = "chisquare"
+            dist = tiebraker_dist_fn
           )]
           # Do euclid distance before updating target distances to exclude met targets
           good_target_dist[update_row_range, euclid_dist := euclid_distance(
-            dt = good_target_dist[update_row_range, update_targets, with = FALSE]
+            dt = good_target_dist[update_row_range, update_targets, with = FALSE],
+            tiebraker_dist_avg = tiebraker_dist_avg
           )]
           # Rerun target distances but exclude targets that have been their stopping bounds and whose values are actually
           #   in the stopping bounds as well
@@ -814,10 +829,11 @@ imabc <- function(
           # When all targets have been calibrated
           good_target_dist[, (target_distance_names) := eval_targets(
             sim_targets = good_sim_target, target_list = targets, criteria = "start",
-            dist = "chisquare"
+            dist = tiebraker_dist_fn
           )]
           good_target_dist[, euclid_dist := euclid_distance(
-            dt = good_target_dist[, target_distance_names, with = FALSE]
+            dt = good_target_dist[, target_distance_names, with = FALSE],
+            tiebraker_dist_avg = tiebraker_dist_avg
           )]
           good_target_dist[, (target_distance_names) := eval_targets(
             sim_targets = good_sim_target, target_list = targets, criteria = "start"
@@ -829,10 +845,11 @@ imabc <- function(
           # When no targets have been calibrated
           good_target_dist[, (target_distance_names) := eval_targets(
             sim_targets = good_sim_target, target_list = targets, criteria = "start",
-            dist = "chisquare"
+            dist = tiebraker_dist_fn
           )]
           good_target_dist[, euclid_dist := euclid_distance(
-            dt = good_target_dist[, target_distance_names, with = FALSE]
+            dt = good_target_dist[, target_distance_names, with = FALSE],
+            tiebraker_dist_avg = tiebraker_dist_avg
           )]
           good_target_dist[, (target_distance_names) := eval_targets(
             sim_targets = good_sim_target, target_list = targets, criteria = "start"
@@ -844,11 +861,12 @@ imabc <- function(
           # When a subset of targets have been calibrated
           good_target_dist[, (target_distance_names) := eval_targets(
             sim_targets = good_sim_target, target_list = targets, criteria = "start",
-            dist = "chisquare"
+            dist = tiebraker_dist_fn
           )]
           # Do euclid distance before updating target distances to exclude met targets
           good_target_dist[, euclid_dist := euclid_distance(
-            dt = good_target_dist[, update_targets, with = FALSE]
+            dt = good_target_dist[, update_targets, with = FALSE],
+            tiebraker_dist_avg = tiebraker_dist_avg
           )]
           # Rerun target distances but exclude targets that have been their stopping bounds and whose values are actually
           #   in the stopping bounds as well
@@ -1469,10 +1487,11 @@ imabc <- function(
   # When all targets have been calibrated
   good_target_dist[, (target_distance_names) := eval_targets(
     sim_targets = good_sim_target, target_list = targets, criteria = "start",
-    dist = "chisquare"
+    dist = tiebraker_dist_fn
   )]
   good_target_dist[, euclid_dist := euclid_distance(
-    dt = good_target_dist[, target_distance_names, with = FALSE]
+    dt = good_target_dist[, target_distance_names, with = FALSE],
+    tiebraker_dist_avg = tiebraker_dist_avg
   )]
   good_target_dist[, (target_distance_names) := eval_targets(
     sim_targets = good_sim_target, target_list = targets, criteria = "start"

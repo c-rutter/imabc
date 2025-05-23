@@ -30,6 +30,10 @@ total_distance <- function(dt, target_names, scale = FALSE, mu = NULL, sd = NULL
 }
 
 # Used in imabc as well as in total_distance
-euclid_distance <- function(dt) {
-  sqrt(rowSums(abs(dt)))
+euclid_distance <- function(dt, tiebraker_dist_avg = FALSE) {
+  if (tiebraker_dist_avg) {
+    sqrt(rowMeans(abs(dt)))
+  } else {
+    sqrt(rowSums(abs(dt)))
+  }
 }
