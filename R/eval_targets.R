@@ -1,12 +1,13 @@
 eval_targets <- function(
     sim_targets, target_list, criteria = c("start", "update", "stop"), use_met_targets = TRUE,
-    dist = getOption("imabc.target_eval_distance")) {
+    dist = getOption("imabc.target_eval_distance"), tiebraker_dist_avg = FALSE) {
   # selected criteria point
   criteria <- match.arg(criteria, c("start", "update", "stop"))
 
   # Calculate distances (by group if target groups exist)
   distances <- target_distance(
-    dt = sim_targets, target_list = target_list, use_met_targets = use_met_targets, dist = dist)
+    dt = sim_targets, target_list = target_list, use_met_targets = use_met_targets,
+    dist = dist, tiebraker_dist_avg = tiebraker_dist_avg)
 
   # Determine which targets are in range (by group if target groups exist)
   check <- get_in_range(compare_list = target_list, check_dt = sim_targets, criteria = criteria, out = "numeric")

@@ -1,7 +1,7 @@
 Package: imabc
 Type: Package
 Title: Incremental Mixture Approximate Bayesian Computation (IMABC)
-Version: 1.0.3.0003
+Version: 1.0.3.0004
 Authors@R: 
     c(
       person(
@@ -46,7 +46,7 @@ BugReports: https://github.com/carolyner/imabc/issues
 Depends: 
     R (>= 3.2.0)
 Imports:
-    MASS, data.table, foreach, parallel, truncnorm, lhs, methods, stats, utils
+    MASS, data.table, foreach, parallel, truncnorm, lhs, methods, stats, utils, TrajectoryUtils
 Encoding: UTF-8
 RoxygenNote: 7.3.2
 Suggests: 

@@ -1,4 +1,6 @@
-target_distance <- function(dt, target_list, dist = getOption("imabc.target_eval_distance"), use_met_targets) {
+target_distance <- function(
+    dt, target_list, dist = getOption("imabc.target_eval_distance"),
+    use_met_targets, tiebraker_dist_avg = FALSE) {
   distance <- sapply(attr(target_list, which = "target_names"), FUN = function(x, dt, target_list, dist_opt, met) {
     # Get simulated target value
     sim <- dt[[x]]
@@ -54,7 +56,11 @@ target_distance <- function(dt, target_list, dist = getOption("imabc.target_eval
       }
       distance <- do.call(rbind, distance_list)
     } else {
-      distance <- t(rowsum(t(distance), groups, reorder = FALSE))
+      if (tiebraker_dist_avg) {
+        distance <- t(TrajectoryUtils::rowmean(t(distance), groups))
+      } else {
+        distance <- t(rowsum(t(distance), groups, reorder = FALSE))
+      }
     }
   }
 
