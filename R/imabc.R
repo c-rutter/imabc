@@ -552,7 +552,7 @@ imabc <- function(
         )]
         # Do euclid distance before updating target distances to exclude met targets
         iter_target_dist$euclid_dist <- euclid_distance(
-          dt = iter_target_dist[, update_targets, with = FALSE],
+          dt = iter_target_dist[, target_distance_names, with = FALSE],
           tiebraker_dist_avg = tiebraker_dist_avg_sums)
         # Rerun target distances but exclude targets that have been their stopping bounds and whose values are actually
         #   in the stopping bounds as well
@@ -668,7 +668,7 @@ imabc <- function(
             )]
             # Do euclid distance before updating target distances to exclude met targets
             good_target_dist[draw %in% keep_draws, euclid_dist := euclid_distance(
-              dt = good_target_dist[draw %in% keep_draws, update_targets, with = FALSE],
+              dt = good_target_dist[draw %in% keep_draws, target_distance_names, with = FALSE],
               tiebraker_dist_avg = tiebraker_dist_avg_sums
             )]
             # Rerun target distances but exclude targets that have been their stopping bounds and whose values are actually
@@ -793,7 +793,7 @@ imabc <- function(
           )]
           # Do euclid distance before updating target distances to exclude met targets
           good_target_dist[update_row_range, euclid_dist := euclid_distance(
-            dt = good_target_dist[update_row_range, update_targets, with = FALSE],
+            dt = good_target_dist[update_row_range, target_distance_names, with = FALSE],
             tiebraker_dist_avg = tiebraker_dist_avg_sums
           )]
           # Rerun target distances but exclude targets that have been their stopping bounds and whose values are actually
@@ -866,7 +866,7 @@ imabc <- function(
           )]
           # Do euclid distance before updating target distances to exclude met targets
           good_target_dist[, euclid_dist := euclid_distance(
-            dt = good_target_dist[, update_targets, with = FALSE],
+            dt = good_target_dist[, target_distance_names, with = FALSE],
             tiebraker_dist_avg = tiebraker_dist_avg_sums
           )]
           # Rerun target distances but exclude targets that have been their stopping bounds and whose values are actually
