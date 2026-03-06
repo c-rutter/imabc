@@ -1063,6 +1063,7 @@ imabc <- function(
 
       # Calculate effective sample size using Kish formula. Here sum(sample_wt) = 1
       ESS <- 1/sum(good_parm_draws$sample_wt[good_parm_draws$draw %in% in_draws]^2)
+      if (is.na(ESS) | is.infinite(ESS)) { ESS <- 0 }
 
       # Print information
       if (verbose & !is_first_continue_iter) {
@@ -1071,7 +1072,7 @@ imabc <- function(
     } # current_good_n >= N_post | length(update_targets) == 0 | (main_loop_iter >= end_iter & current_good_n > 0)
 
     # Check Completion --------------------------------------------------------------------------------------------------
-    if (ESS >= N_post & length(update_targets) == 0) {
+    if (!is.na(ESS) & ESS >= N_post & length(update_targets) == 0) {
       # Print information
       if (verbose) {
         n_info <- sprintf("Final in range draws = %s", current_good_n)

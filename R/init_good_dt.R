@@ -33,7 +33,7 @@ init_good_dt <- function(final_n, current_n = 0, previous_dt = NULL, cols, type 
       dt[, seed := NA_character_]
       dt[, (cols) := NA_real_]
       dt[, scaled_dist := NA_real_]
-      dt[, sample_wt := 0]
+      dt[, sample_wt := 1]
 
     } else if (type == "targ_dists") {
       dt[, (cols) := NA_real_]

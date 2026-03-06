@@ -15,7 +15,11 @@ increase_samplevar <- function(df,sds) {
     warning("Singular correlation matrix, Using identity matrix")
   }
 
-  sample_cov <- diag(sds) %*% sample_cor %*% diag(sds)
+  if (length(sds) > 1) {
+    sample_cov <- diag(sds) %*% sample_cor %*% diag(sds)
+  } else {
+    sample_cov <- sds * sample_cor * sds
+  }
 
   # check that sample_cov is PSD. Use a diagonal matrix if near singularity
   if (test_singularity(sample_cov, 1e-8)) {

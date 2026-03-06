@@ -16,7 +16,7 @@ init_iter_dt <- function(n_row, cols, type = c("parm_draws", "targ_dists", "sim_
     dt[, seed := NA_character_]
     dt[, (cols) := NA_real_]
     dt[, scaled_dist := NA_real_]
-    dt[, sample_wt := 0]
+    dt[, sample_wt := 1]
 
   } else if (type == "targ_dists") {
     dt[, (cols) := NA_real_]
