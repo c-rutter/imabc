@@ -1,4 +1,4 @@
-increase_samplevar <- function(df,sds) {
+increase_samplevar <- function(df, sds) {
   # Calculate the correlation matrix of calibrated parameters.............
   if (anyNA(df)) {
     stop("Missing data in correlation matrix")

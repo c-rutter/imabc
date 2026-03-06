@@ -1237,7 +1237,7 @@ imabc <- function(
             sd_next <- sqrt(min_sample_var_pct)*prior_sds
             # limit variance to become no more than min_sample_var_pct * prior variance while retaining correlation structure
             sample_sd[is_small] <- sd_next[is_small]
-            sample_cov <- increase_samplevar(var_data,sample_sd)
+            sample_cov <- increase_samplevar(var_data, sample_sd)
             }
 
           # Simulate Center_n random draws of calibrated parameters
@@ -1246,7 +1246,7 @@ imabc <- function(
             x <- draw_parms(
               n_add = Center_n,
               mu = as.matrix(t(sample_mean_i1)),
-              sigma = as.matrix(t(diag(sample_cov))),
+              sigma = as.matrix(t(sqrt(diag(sample_cov)))),
               priors_list = priors[calibr_parm_names]
             )
 

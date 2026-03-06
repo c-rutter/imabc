@@ -23,8 +23,8 @@ get_sampling_d <- function(parms, parm_names, mixture_file) {
     center_i1 <- as.vector(as.numeric(
       mean_cov[iter == iter_i1 & step == step_i1 & parm == 0, parm_names, with = FALSE]
     ))
-    # Pull the standard deviation
-    sigma_i1 <-  as.matrix(sapply(
+    # Pull the variance matrix
+    Sigma_i1 <-  as.matrix(sapply(
       mean_cov[iter == iter_i1 & step == step_i1 & parm > 0, parm_names, with = FALSE],
       as.numeric
     ))
@@ -32,16 +32,16 @@ get_sampling_d <- function(parms, parm_names, mixture_file) {
     # Only use calibrated parameters
     is_calib <- (1:length(center_i1))[!is.na(center_i1)]
     center_i1 <- center_i1[is_calib]
-    sigma_i1 <- sigma_i1[, is_calib]
+    Sigma_i1 <- Sigma_i1[, is_calib]
 
     # If the variance matrix isn't square send an error
-    stopifnot("Variance Matrix is not square" = nrow(sigma_i1) == ncol(sigma_i1))
+    stopifnot("Variance Matrix is not square" = nrow(Sigma_i1) == ncol(Sigma_i1))
 
     # Calculate the Multivariate Normal Density and add to previous results
-    if (length(center_i1) == 1 && is.null(nrow(sigma_i1))) {
-      sum_H <- sum_H + B_i1*dnorm(x = parm_mat[, is_calib], mean = center_i1, sd = sigma_i1)
+    if (length(center_i1) == 1 && is.null(nrow(Sigma_i1))) {
+      sum_H <- sum_H + B_i1*dnorm(x = parm_mat[, is_calib], mean = center_i1, sd = sqrt(Sigma_i1))
     } else {
-      sum_H <- sum_H + B_i1*dMvn(X = parm_mat[, is_calib], mu = center_i1, Sigma = sigma_i1)
+      sum_H <- sum_H + B_i1*dMvn(X = parm_mat[, is_calib], mu = center_i1, Sigma = Sigma_i1)
     }
   }
 

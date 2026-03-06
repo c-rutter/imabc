@@ -12,7 +12,7 @@ get_mean_cov <- function(iter, mu, sd, center, B_in, parm_names) {
     colnames(mu) <- parm_names
   }
   mu <- data.frame(mu)
-  sd <- data.frame(sd)
+  var <- data.frame(sd^2)
 
   # Get data size
   n_parm <- length(parm_names)
@@ -22,8 +22,8 @@ get_mean_cov <- function(iter, mu, sd, center, B_in, parm_names) {
   mu_use <- mu[, which(names(mu) %in% parm_names), drop = FALSE]
 
   # Handle standard deviation in similar manner to means
-  names(sd) <- names(mu)
-  sd_use <- sd[, which(names(mu) %in% parm_names), drop = FALSE]
+  names(var) <- names(mu)
+  var_use <- var[, which(names(mu) %in% parm_names), drop = FALSE]
 
   # Initialize results holder
   x_out <- setnames(
@@ -38,9 +38,9 @@ get_mean_cov <- function(iter, mu, sd, center, B_in, parm_names) {
   for (i1 in 1:n_centers) {
     x_out[((i1 - 1)*(n_parm + 1) + 1), ] <- mu_use[i1, ]
     if (n_parm > 1) {
-      x_out[((i1 - 1)*(n_parm + 1) + 2):(i1*(n_parm + 1)), ] <- setnames(data.frame(diag(sd_use[i1, ])), parm_names)
+      x_out[((i1 - 1)*(n_parm + 1) + 2):(i1*(n_parm + 1)), ] <- setnames(data.frame(diag(var_use[i1, ])), parm_names)
     } else {
-      x_out[((i1 - 1)*(n_parm + 1) + 2):(i1*(n_parm + 1)), ] <- setnames(data.frame(sd_use[i1, ]), parm_names)
+      x_out[((i1 - 1)*(n_parm + 1) + 2):(i1*(n_parm + 1)), ] <- setnames(data.frame(var_use[i1, ]), parm_names)
     }
   }
 
