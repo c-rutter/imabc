@@ -1,5 +1,5 @@
 init_good_dt <- function(final_n, current_n = 0, previous_dt = NULL, cols, type = c("parm_draws", "targ_dists", "sim_targs")) {
-  seed <- scaled_dist <- sample_wt <- tot_dist <- n_good <- NULL
+  seed <- scaled_dist <- sample_wt <- tot_dist <- euclid_dist <- n_good <- NULL
 
   # Type to return
   type <- match.arg(type)

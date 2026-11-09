@@ -49,6 +49,7 @@ Imports:
     MASS, data.table, foreach, parallel, truncnorm, lhs, methods, stats, utils, TrajectoryUtils
 Encoding: UTF-8
 RoxygenNote: 7.3.2
-Suggests: 
-    testthat (>= 3.0.0)
+Suggests:
+    testthat (>= 3.0.0),
+    torch
 Config/testthat/edition: 3

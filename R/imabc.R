@@ -19,6 +19,12 @@
 #' algorithm.
 #' @param sample_inflate numeric(1). When generating new results for a given center, how many additional samples should be
 #' simulated to ensure enough valid (within range) parameters draws are simulated for the center.
+#' @param tiebraker_dist_fn character(1). The distance metric used to rank draws that all meet the current bounds.
+#' Defaults to getOption("imabc.target_eval_distance").
+#' @param tiebraker_dist_sum_avgs logical(1). While target bounds are still being narrowed, average each target group's
+#' distances before summing the groups, rather than summing all target distances directly.
+#' @param tiebraker_dist_avg_sums logical(1). Once every target bound is at its stopping value, average the target group
+#' sums rather than summing them.
 #' @param max_iter numeric(1). The maximum number of iterations to attempt.
 #' @param seed numeric(1). The seed to set for reproducibility.
 #' @param latinHypercube logical(1). Should algorithm use a Latin Hypercube to generate first set of parameters. Ignored
@@ -30,6 +36,9 @@
 #' @param backend_fun function. For advanced users only. Lets to user evaluate the target function(s) using their own
 #' backend, i.e., simulate targets with an alternative parallel method. Only necessary if the backend method is
 #' not compatible with foreach. See details for requirements.
+#' @param emulator character(1). "none" (default) runs the target function(s) for every draw. "replace" runs them for
+#' the first iteration only, trains a neural network ensemble on those results, and evaluates every later iteration
+#' with it. Requires the torch package, and cannot be combined with previous_results_dir.
 #' @param output_directory character(1). Path to save results to. If NULL (default), no results are saved. If a path is
 #' provided results are saved/updated every iteration. See details for more information.
 #' @param output_tag character(1). Tag to add to result files names. "timestamp" (default) is a special code that adds
@@ -165,6 +174,7 @@ imabc <- function(
   starting_draws = NULL,
   improve_method = c("percentile", "direct", "both"),
   backend_fun = NULL,
+  emulator = c("none", "replace"),
   output_directory = NULL,
   output_tag = "timestamp",
   previous_results_dir = NULL,
@@ -182,6 +192,13 @@ imabc <- function(
   }
   if (!is.null(starting_draws)) {
     stopifnot("starting_draws must be a matrix or data.frame" = length(dim(starting_draws)) == 2)
+  }
+
+  # An emulator mode wraps the model backend in a neural one: see R/neural_backend.R
+  emulator <- match.arg(emulator)
+  if (emulator != "none") {
+    neural <- neural_init(emulator, backend_fun, previous_results_dir, verbose)
+    backend_fun <- neural_backend(neural)
   }
 
   # If path to previous results are provided, load the results into environment
@@ -1613,6 +1630,7 @@ imabc <- function(
       metaddata = metaddata
     )
   }
+  if (emulator != "none") { out_list$neural <- neural_result(neural, output_directory, output_tag) }
 
   return(out_list)
 }
