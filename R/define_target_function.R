@@ -24,8 +24,8 @@
 #' Whether specifying target functions individually or through the FUN input, the inputs must follow a certain set of rules
 #' in order to be applied correctly. It is important to remember that the input(s) are ultimately based on the values
 #' specified in the priors object. Thus the target function(s) inputs will have to reference those parameters. This can
-#' be done either as a single vector of values (e.g. `function(x) { ... }`), or individual inputs for each parameter
-#' (e.g. `function(x1, x2) { ... }`). If a single vector is used, all parameters will be passed to the target function as
+#' be done either as a single vector of values (e.g. `function(x) \{ ... \}`), or individual inputs for each parameter
+#' (e.g. `function(x1, x2) \{ ... \}`). If a single vector is used, all parameters will be passed to the target function as
 #' a named vector and the user can reference that vector by either using the parameter names (e.g. `x["x1"]`) or by using
 #' the order a parameter was added in define_priors as the index number (e.g. `x[1]`). If individual inputs are given for
 #' each parameter, then only the ones specified as inputs will be sent to the given target function. If this route is

@@ -15,7 +15,8 @@ imabc(
   N_post = 100,
   sample_inflate = 1.5,
   tiebraker_dist_fn = getOption("imabc.target_eval_distance"),
-  tiebraker_dist_avg = FALSE,
+  tiebraker_dist_sum_avgs = FALSE,
+  tiebraker_dist_avg_sums = FALSE,
   max_iter = 1000,
   max_fail_iter = max_iter,
   seed = NULL,
@@ -23,6 +24,7 @@ imabc(
   starting_draws = NULL,
   improve_method = c("percentile", "direct", "both"),
   backend_fun = NULL,
+  emulator = c("none", "replace"),
   output_directory = NULL,
   output_tag = "timestamp",
   previous_results_dir = NULL,
@@ -58,6 +60,15 @@ algorithm.}
 \item{sample_inflate}{numeric(1). When generating new results for a given center, how many additional samples should be
 simulated to ensure enough valid (within range) parameters draws are simulated for the center.}
 
+\item{tiebraker_dist_fn}{character(1). The distance metric used to rank draws that all meet the current bounds.
+Defaults to getOption("imabc.target_eval_distance").}
+
+\item{tiebraker_dist_sum_avgs}{logical(1). While target bounds are still being narrowed, average each target group's
+distances before summing the groups, rather than summing all target distances directly.}
+
+\item{tiebraker_dist_avg_sums}{logical(1). Once every target bound is at its stopping value, average the target group
+sums rather than summing them.}
+
 \item{max_iter}{numeric(1). The maximum number of iterations to attempt.}
 
 \item{max_fail_iter}{numeric(1). Number of iterations that imabc will stop after no updates of the target bounds.}
@@ -77,6 +88,10 @@ they are in the same order as the parameters specified in the priors object.}
 \item{backend_fun}{function. For advanced users only. Lets to user evaluate the target function(s) using their own
 backend, i.e., simulate targets with an alternative parallel method. Only necessary if the backend method is
 not compatible with foreach. See details for requirements.}
+
+\item{emulator}{character(1). "none" (default) runs the target function(s) for every draw. "replace" runs them for
+the first iteration only, trains a neural network ensemble on those results, and evaluates every later iteration
+with it. Requires the torch package, and cannot be combined with previous_results_dir.}
 
 \item{output_directory}{character(1). Path to save results to. If NULL (default), no results are saved. If a path is
 provided results are saved/updated every iteration. See details for more information.}
